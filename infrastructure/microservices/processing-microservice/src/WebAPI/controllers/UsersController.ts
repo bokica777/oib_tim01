@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import { ILogerService } from "../../Domain/services/ILogerService";
-import { IUsersService } from "../../Domain/services/IUsersService";
+import { IUsersService } from "../../Domain/services/IProcessingService";
 
 export class UsersController {
   private readonly router: Router;
