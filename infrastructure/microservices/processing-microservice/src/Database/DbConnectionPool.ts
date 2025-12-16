@@ -1,7 +1,7 @@
 import "reflect-metadata";
 import { DataSource } from "typeorm";
 import dotenv from "dotenv";
-import { User } from "../Domain/models/User";
+import { User } from "../Domain/models/Perfume";
 
 dotenv.config();
 

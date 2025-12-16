@@ -4,7 +4,7 @@ import "reflect-metadata";
 import { initialize_database } from './Database/InitializeConnection';
 import dotenv from 'dotenv';
 import { Repository } from 'typeorm';
-import { User } from './Domain/models/User';
+import { User } from './Domain/models/Perfume';
 import { Db } from './Database/DbConnectionPool';
 import { IUsersService } from './Domain/services/IUsersService';
 import { UsersService } from './Services/UsersService';

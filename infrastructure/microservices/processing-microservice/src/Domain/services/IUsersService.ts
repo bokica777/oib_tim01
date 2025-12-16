@@ -1,4 +1,4 @@
-import { UserDTO } from "../DTOs/UserDTO";
+import { UserDTO } from "../DTOs/PerfumeDTO";
 
 export interface IUsersService {
   getAllUsers(): Promise<UserDTO[]>;
