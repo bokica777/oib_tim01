@@ -2,9 +2,9 @@ import { Router, Request, Response } from "express";
 import { ProcessingService } from "../../Services/ProcessingService";
 import { LogerService } from "../../Services/LogerService";
 import { Db } from "../../Database/DbConnectionPool";
-import { Perfume } from "../../Domain/models/Perfume";
+import { Perfume } from "../../Domain/models/StoragePackage";
 import { validateDTO } from "../../middleware/ValidationMiddleware";
-import { ProcessRequestDTO } from "../../Domain/DTOs/ProcessRequestDTO";
+import { ProcessRequestDTO } from "../../Domain/DTOs/StoragePackageDTO";
 
 export class ProcessingController {
   private router: Router;

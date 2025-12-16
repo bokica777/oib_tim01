@@ -1,4 +1,4 @@
-import { PerfumeDTO } from "../DTOs/PerfumeDTO";
+import { PerfumeDTO } from "../DTOs/SendRequestDTO";
 import { PerfumeType } from "../enums/PerfumeType";
 
 export interface IProcessingService {

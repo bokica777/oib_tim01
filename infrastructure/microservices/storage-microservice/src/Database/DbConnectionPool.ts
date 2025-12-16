@@ -1,7 +1,7 @@
 import "reflect-metadata";
 import { DataSource } from "typeorm";
 import dotenv from "dotenv";
-import { Warehouse } from "../Domain/models/Warehouse"; 
+import { Warehouse } from "../Domain/models/Warehouse";  
 import { StoragePackage } from "../Domain/models/StoragePackage";
 
 dotenv.config();
