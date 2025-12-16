@@ -1,12 +1,20 @@
+import AuditClient, { AuditType } from "../clients/AuditClient";
 import { ILogerService } from "../Domain/services/ILogerService";
 
 export class LogerService implements ILogerService {
-    constructor() {
-        console.log(`\x1b[35m[Logger@1.45.4]\x1b[0m Service started`);
-    }
+  private audit = new AuditClient();
+  constructor() {
+    console.log("\x1b[35m[Logger@processing]\x1b[0m started");
+  }
 
-    async log(message: string): Promise<boolean> {
-        console.log(`\x1b[35m[Logger@1.45.4]\x1b[0m ${message}`);
-        return true;
+  async log(message: string, type: AuditType = "INFO", meta?: any): Promise<boolean> {
+    try {
+      console.log(`\x1b[35m[Logger@processing]\x1b[0m [${type}] ${message}`, meta ?? "");
+      await this.audit.log(message, type, "processing", meta);
+      return true;
+    } catch (err) {
+      console.error("[Logger] audit failed", (err as Error).message);
+      return false;
     }
+  }
 }
