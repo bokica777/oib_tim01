@@ -1,6 +1,6 @@
 import { Repository } from "typeorm";
 import { Perfume } from "../Domain/models/Perfume";
-import { ProductionClient } from "../clients/ProductionClient";
+import { ProductionClient } from "../clients/PackagingClient";
 import { PerfumeType } from "../Domain/enums/PerfumeType";
 import { PerfumeStatus } from "../Domain/enums/PerfumeStatus";
 import { IProcessingService } from "../Domain/services/IProcessingService";
