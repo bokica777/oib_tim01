@@ -7,7 +7,10 @@ import { RegistrationUserDTO } from "../Domain/DTOs/RegistrationUserDTO";
 import { AuthResponseType } from "../Domain/types/AuthResponse";
 
 export class AuthService implements IAuthService {
-  private readonly saltRounds: number = parseInt(process.env.SALT_ROUNDS || "10", 10);
+  private readonly saltRounds: number = parseInt(
+    process.env.SALT_ROUNDS || "10",
+    10
+  );
 
   constructor(private userRepository: Repository<User>) {}
 
@@ -15,11 +18,22 @@ export class AuthService implements IAuthService {
    * Login user
    */
   async login(data: LoginUserDTO): Promise<AuthResponseType> {
-    const user = await this.userRepository.findOne({ where: { username: data.username } });
-    if (!user) return { authenificated: false };
+    const user = await this.userRepository.findOne({
+      where: { username: data.username },
+    });
 
-    const passwordMatches = await bcrypt.compare(data.password, user.password);
-    if (!passwordMatches) return { authenificated: false };
+    if (!user) {
+      return { authenificated: false };
+    }
+
+    const passwordMatches = await bcrypt.compare(
+      data.password,
+      user.password
+    );
+
+    if (!passwordMatches) {
+      return { authenificated: false };
+    }
 
     return {
       authenificated: true,
@@ -40,16 +54,23 @@ export class AuthService implements IAuthService {
       where: [{ username: data.username }, { email: data.email }],
     });
 
-    if (existingUser) return { authenificated: false };
+    if (existingUser) {
+      return { authenificated: false };
+    }
 
-    const hashedPassword = await bcrypt.hash(data.password, this.saltRounds);
+    const hashedPassword = await bcrypt.hash(
+      data.password,
+      this.saltRounds
+    );
 
     const newUser = this.userRepository.create({
       username: data.username,
       email: data.email,
       role: data.role,
       password: hashedPassword,
-      profileImage: data.profileImage ?? null,
+      firstName: data.firstName,
+      lastName: data.lastName,
+      profileImage: data.profileImage,
     });
 
     const savedUser = await this.userRepository.save(newUser);

@@ -20,4 +20,10 @@ export class User {
 
   @Column({ type: "longtext", nullable: true })
   profileImage!: string | null;
+
+  @Column({ type: "varchar", length: 100 })
+  firstName!: string;
+
+  @Column({ type: "varchar", length: 100 })
+  lastName!: string;
 }

@@ -21,6 +21,7 @@ function App() {
           }
         /> */}
         <Route path="/" element={<AuthPage authAPI={auth_api} />} />
+        <Route path="*" element={<AuthPage authAPI={auth_api} />} />
       </Routes>
     </>
   );
