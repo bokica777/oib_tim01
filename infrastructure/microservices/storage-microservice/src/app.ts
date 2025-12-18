@@ -4,8 +4,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import "reflect-metadata";
 import { initialize_database } from "./Database/InitializeConnection";
-import { Db } from "./Database/DbConnectionPool";
-import { ProcessingController } from "./WebAPI/controllers/ProcessingController";
+import { StorageController } from "./WebAPI/controllers/StorageController";
 import { gatewayAuth } from "./middleware/GatewayAuth";
 
 dotenv.config();
@@ -18,8 +17,8 @@ app.use(cors({ origin: corsOrigin, methods: corsMethods }));
 
 initialize_database();
 
-const processingController = new ProcessingController();
-app.use("/api/v1", gatewayAuth, processingController.getRouter());
+const storageController = new StorageController();
+app.use("/api/v1", gatewayAuth, storageController.router);
 
 app.get("/health", (req, res) => res.status(200).json({ ok: true }));
 
