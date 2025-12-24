@@ -52,13 +52,19 @@ export const AuthPage: React.FC<AuthPageProps> = ({ authAPI }) => {
           </div>
 
           {/* Content */}
-          <div style={{ padding: "24px" }}>
-            {activeTab === "login" ? (
-              <LoginForm authAPI={authAPI} />
-            ) : (
-              <RegisterForm authAPI={authAPI} />
-            )}
-          </div>
+          <div
+          style={{
+            padding: "24px",
+            maxHeight: "70vh",
+            overflowY: "auto",
+          }}
+        >
+          {activeTab === "login" ? (
+            <LoginForm authAPI={authAPI} />
+          ) : (
+            <RegisterForm authAPI={authAPI} />
+          )}
+        </div>
         </div>
       </div>
     </div>

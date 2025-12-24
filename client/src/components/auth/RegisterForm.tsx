@@ -16,6 +16,8 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ authAPI }) => {
     password: "",
     role: UserRole.SELLER,
     profileImage: "",
+    firstName: "",
+    lastName: "",
   });
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string>("");
@@ -103,6 +105,44 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ authAPI }) => {
           value={formData.email}
           onChange={handleChange}
           placeholder="your.email@example.com"
+          required
+          disabled={isLoading}
+        />
+      </div>
+
+      <div>
+      <label
+        htmlFor="firstName"
+        style={{ display: "block", marginBottom: "8px", fontSize: "14px", fontWeight: 600 }}
+      >
+        First Name
+      </label>
+        <input
+          type="text"
+          id="firstName"
+          name="firstName"
+          value={formData.firstName}
+          onChange={handleChange}
+          placeholder="Your first name"
+          required
+          disabled={isLoading}
+        />
+      </div>
+
+      <div>
+        <label
+          htmlFor="lastName"
+          style={{ display: "block", marginBottom: "8px", fontSize: "14px", fontWeight: 600 }}
+        >
+          Last Name
+        </label>
+        <input
+          type="text"
+          id="lastName"
+          name="lastName"
+          value={formData.lastName}
+          onChange={handleChange}
+          placeholder="Your last name"
           required
           disabled={isLoading}
         />

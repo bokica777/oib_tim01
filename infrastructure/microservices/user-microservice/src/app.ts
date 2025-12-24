@@ -8,7 +8,7 @@ import { User } from './Domain/models/User';
 import { Db } from './Database/DbConnectionPool';
 import { IUsersService } from './Domain/services/IUsersService';
 import { UsersService } from './Services/UsersService';
-import { UsersController } from './WebAPI/controllers/UsersController';
+import { UsersController } from './WebAPI/controllers/controllers/controllers/UsersController';
 import { ILogerService } from './Domain/services/ILogerService';
 import { LogerService } from './Services/LogerService';
 
