@@ -1,7 +1,7 @@
 import { Request, Response, Router } from "express";
 import { IGatewayService } from "../Domain/services/IGatewayService";
-import { LoginUserDTO } from "../Domain/DTOs/LoginUserDTO";
-import { RegistrationUserDTO } from "../Domain/DTOs/RegistrationUserDTO";
+import { LoginUserDTO } from "../Domain/DTOs/user/LoginUserDTO";
+import { RegistrationUserDTO } from "../Domain/DTOs/user/RegistrationUserDTO";
 import { authenticate } from "../Middlewares/authentification/AuthMiddleware";
 import { authorize } from "../Middlewares/authorization/AuthorizeMiddleware";
 

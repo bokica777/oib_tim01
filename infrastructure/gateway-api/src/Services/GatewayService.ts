@@ -1,9 +1,9 @@
 import axios, { AxiosInstance } from "axios";
 import { IGatewayService } from "../Domain/services/IGatewayService";
-import { LoginUserDTO } from "../Domain/DTOs/LoginUserDTO";
-import { RegistrationUserDTO } from "../Domain/DTOs/RegistrationUserDTO";
+import { LoginUserDTO } from "../Domain/DTOs/user/LoginUserDTO";
+import { RegistrationUserDTO } from "../Domain/DTOs/user/RegistrationUserDTO"; 
 import { AuthResponseType } from "../Domain/types/AuthResponse";
-import { UserDTO } from "../Domain/DTOs/UserDTO";
+import { UserDTO } from "../Domain/DTOs/user/UserDTO";
 
 export class GatewayService implements IGatewayService {
   private readonly authClient: AxiosInstance;

@@ -1,6 +1,6 @@
-import { LoginUserDTO } from "../DTOs/LoginUserDTO";
-import { RegistrationUserDTO } from "../DTOs/RegistrationUserDTO";
-import { UserDTO } from "../DTOs/UserDTO";
+import { LoginUserDTO } from "../DTOs/user/LoginUserDTO"; 
+import { RegistrationUserDTO } from "../DTOs/user/RegistrationUserDTO";
+import { UserDTO } from "../DTOs/user/UserDTO"; 
 import { AuthResponseType } from "../types/AuthResponse";
 
 export interface IGatewayService {
