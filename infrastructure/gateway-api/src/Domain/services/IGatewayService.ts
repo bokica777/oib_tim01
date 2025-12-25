@@ -35,6 +35,22 @@ export interface IGatewayService {
   getOrderById(id: number, internalHeaders: Record<string,string>): Promise<any>;
   listOrders(internalHeaders: Record<string,string>): Promise<any[]>;
 
-  // Audit
+  // Performance analysis
+  runSimulation(algorithmName: string, internalHeaders: Record<string,string>): Promise<any>;
+  getAllPerformanceReports(internalHeaders: Record<string,string>): Promise<any[]>;
+  getPerformanceReportById(id: number, internalHeaders: Record<string,string>): Promise<any>;
+
+  // Audit logs
+  createAuditLog(dto: any): Promise<any>;
+  getAuditLogs(): Promise<any[]>;
+
+  // Analytics & Receipts
+  getTopPerfumes(query: Record<string,any>, internalHeaders: Record<string,string>): Promise<any>;
+  createReceipt(dto: any, internalHeaders: Record<string,string>): Promise<any>;
+  listReceipts(internalHeaders: Record<string,string>): Promise<any[]>;
+  getDailyRevenue(date: string, internalHeaders: Record<string,string>): Promise<any>;
+  getSalesByProduct(internalHeaders: Record<string,string>): Promise<any[]>;
+
+  // Audit helper (generic)
   logAudit(message: string, type?: string, source?: string, meta?: any): Promise<boolean>;
 }

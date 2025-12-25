@@ -14,6 +14,8 @@ export class GatewayService implements IGatewayService {
   private packagingClient?: AxiosInstance;
   private salesClient?: AxiosInstance;
   private auditClient?: AxiosInstance;
+  private performanceClient?: AxiosInstance;
+  private analyticsClient?: AxiosInstance;
 
   constructor() {
     this.authClient = axios.create({
@@ -28,52 +30,30 @@ export class GatewayService implements IGatewayService {
       timeout: 5000,
     });
 
-    if (process.env.PRODUCTION_URL) {
-      this.productionClient = axios.create({
-        baseURL: process.env.PRODUCTION_URL,
-        headers: { "Content-Type": "application/json" },
-        timeout: 10000,
-      });
+        if (process.env.PRODUCTION_URL) {
+      this.productionClient = axios.create({ baseURL: process.env.PRODUCTION_URL, headers: { "Content-Type": "application/json" }, timeout: 10000 });
     }
-
     if (process.env.PROCESSING_URL) {
-      this.processingClient = axios.create({
-        baseURL: process.env.PROCESSING_URL,
-        headers: { "Content-Type": "application/json" },
-        timeout: 10000,
-      });
+      this.processingClient = axios.create({ baseURL: process.env.PROCESSING_URL, headers: { "Content-Type": "application/json" }, timeout: 10000 });
     }
-
     if (process.env.STORAGE_URL) {
-      this.storageClient = axios.create({
-        baseURL: process.env.STORAGE_URL,
-        headers: { "Content-Type": "application/json" },
-        timeout: 10000,
-      });
+      this.storageClient = axios.create({ baseURL: process.env.STORAGE_URL, headers: { "Content-Type": "application/json" }, timeout: 10000 });
     }
-
     if (process.env.PACKAGING_URL) {
-      this.packagingClient = axios.create({
-        baseURL: process.env.PACKAGING_URL,
-        headers: { "Content-Type": "application/json" },
-        timeout: 8000,
-      });
+      this.packagingClient = axios.create({ baseURL: process.env.PACKAGING_URL, headers: { "Content-Type": "application/json" }, timeout: 8000 });
     }
-
     if (process.env.SALES_URL) {
-      this.salesClient = axios.create({
-        baseURL: process.env.SALES_URL,
-        headers: { "Content-Type": "application/json" },
-        timeout: 10000,
-      });
+      this.salesClient = axios.create({ baseURL: process.env.SALES_URL, headers: { "Content-Type": "application/json" }, timeout: 10000 });
     }
-
     if (process.env.AUDIT_URL) {
-      this.auditClient = axios.create({
-        baseURL: process.env.AUDIT_URL,
-        headers: { "Content-Type": "application/json" },
-        timeout: 5000,
-      });
+      this.auditClient = axios.create({ baseURL: process.env.AUDIT_URL, headers: { "Content-Type": "application/json" }, timeout: 5000 });
+    }
+    if (process.env.PERFORMANCE_URL) {
+      this.performanceClient = axios.create({ baseURL: process.env.PERFORMANCE_URL, headers: { "Content-Type": "application/json" }, timeout: 10000 });
+    }
+    // Analytics/Receipts (your analytics + receipts microservice listens on 6754 in code)
+    if (process.env.ANALYTICS_URL) {
+      this.analyticsClient = axios.create({ baseURL: process.env.ANALYTICS_URL, headers: { "Content-Type": "application/json" }, timeout: 10000 });
     }
   }
 
@@ -190,14 +170,90 @@ export class GatewayService implements IGatewayService {
     return resp.data;
   }
 
-  // Audit
+  // Performance analysis
+  async runSimulation(algorithmName: string, headers: Record<string,string>) {
+    if (!this.performanceClient) throw new Error("PERFORMANCE_URL not configured");
+    const resp = await this.performanceClient.post("/simulate", { algorithmName }, { headers });
+    return resp.data;
+  }
+  async getAllPerformanceReports(headers: Record<string,string>) {
+    if (!this.performanceClient) throw new Error("PERFORMANCE_URL not configured");
+    const resp = await this.performanceClient.get("/reports", { headers });
+    return resp.data;
+  }
+  async getPerformanceReportById(id: number, headers: Record<string,string>) {
+    if (!this.performanceClient) throw new Error("PERFORMANCE_URL not configured");
+    const resp = await this.performanceClient.get(`/reports/${id}`, { headers });
+    return resp.data;
+  }
+
+  // Audit logs 
+  async createAuditLog(dto: any) {
+    if (!this.auditClient) throw new Error("AUDIT_URL not configured");
+    // audit microservice expects POST /  (but some clients call /log). Try both.
+    try {
+      const resp = await this.auditClient.post("/log", dto);
+      return resp.data;
+    } catch {
+      const resp = await this.auditClient.post("/", dto);
+      return resp.data;
+    }
+  }
+
+  async getAuditLogs() {
+    if (!this.auditClient) throw new Error("AUDIT_URL not configured");
+    const resp = await this.auditClient.get("/");
+    return resp.data;
+  }
+
+  // Analytics & Receipts 
+  async getTopPerfumes(query: Record<string,any>, headers: Record<string,string>) {
+    if (!this.analyticsClient) throw new Error("ANALYTICS_URL not configured");
+    const q = new URLSearchParams();
+    Object.entries(query ?? {}).forEach(([k,v]) => { if (v !== undefined && v !== null) q.append(k, String(v)); });
+    const resp = await this.analyticsClient.get(`/analysis/top-perfumes?${q.toString()}`, { headers });
+    return resp.data;
+  }
+
+  async createReceipt(dto: any, headers: Record<string,string>) {
+    if (!this.analyticsClient) throw new Error("ANALYTICS_URL not configured");
+    const resp = await this.analyticsClient.post("/receipts", dto, { headers });
+    return resp.data;
+  }
+
+  async listReceipts(headers: Record<string,string>) {
+    if (!this.analyticsClient) throw new Error("ANALYTICS_URL not configured");
+    const resp = await this.analyticsClient.get("/receipts", { headers });
+    return resp.data;
+  }
+
+  async getDailyRevenue(date: string, headers: Record<string,string>) {
+    if (!this.analyticsClient) throw new Error("ANALYTICS_URL not configured");
+    const resp = await this.analyticsClient.get(`/receipts/daily?date=${encodeURIComponent(date)}`, { headers });
+    return resp.data;
+  }
+
+  async getSalesByProduct(headers: Record<string,string>) {
+    if (!this.analyticsClient) throw new Error("ANALYTICS_URL not configured");
+    const resp = await this.analyticsClient.get("/receipts/sales-by-product", { headers });
+    return resp.data;
+  }
+
+  // Generic audit helper used by gateway to log its own events
   async logAudit(message: string, type = "INFO", source = "gateway", meta?: any) {
     if (!this.auditClient) return false;
+    const payload = { type, message, meta };
+    // try /log then fallback /
     try {
-      await this.auditClient.post("/log", { message, type, source, meta, timestamp: new Date().toISOString() });
+      await this.auditClient.post("/log", payload);
       return true;
     } catch {
-      return false;
+      try {
+        await this.auditClient.post("/", payload);
+        return true;
+      } catch {
+        return false;
+      }
     }
   }
 }
