@@ -162,6 +162,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ authAPI }) => {
         >
           <option value={UserRole.SELLER}>Seller</option>
           <option value={UserRole.ADMIN}>Admin</option>
+          <option value={UserRole.SALES_MANAGER}>Sales manager</option>
         </select>
       </div>
 
@@ -210,7 +211,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ authAPI }) => {
           name="profileImage"
           value={formData.profileImage}
           onChange={handleChange}
-          placeholder="https://example.com/avatar.jpg"
+          placeholder="data:image/png;base64"
           disabled={isLoading}
         />
       </div>
