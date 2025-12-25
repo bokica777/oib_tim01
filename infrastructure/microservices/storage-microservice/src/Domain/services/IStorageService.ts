@@ -1,4 +1,3 @@
-// src/Domain/services/IStorageCenter.ts
 import { StoragePackage } from "../models/StoragePackage";
 
 export interface IStorageCenter {
