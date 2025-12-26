@@ -73,11 +73,40 @@ export class GatewayController {
   }
 
   // Auth handlers
-  private async login(req: Request, res: Response): Promise<void> {
-    const data: LoginUserDTO = req.body;
-    const result = await this.gatewayService.login(data);
-    res.status(200).json(result);
+private async login(req: Request, res: Response): Promise<void> {
+  const data: LoginUserDTO = req.body;
+  try {
+    const result: any = await this.gatewayService.login(data);
+
+   if (result && (result.token || result.accessToken)) {
+      const token = result.token ?? result.accessToken;
+      res.status(200).json({ success: true, token, message: result.message ?? "OK" });
+      return;
+    }
+    if (result && result.authenificated && result.userData) {
+      const claims = result.userData;
+      const secret = process.env.JWT_SECRET ?? "";
+      const expiresIn = process.env.JWT_EXPIRES_IN ?? "30m";
+      const token = require("jsonwebtoken").sign(
+        { id: claims.id, username: claims.username, role: claims.role },
+        secret,
+        { expiresIn }
+      );
+      res.status(200).json({ success: true, token, message: "OK", userData: claims });
+      return;
+    }
+
+    res.status(200).json({ success: false, message: result?.message ?? "Authentication failed" });
+    return;
+  } catch (err: any) {
+    if (err?.response?.data) {
+      res.status(err.response?.status ?? 500).json({ success: false, ...err.response.data });
+      return;
+    }
+    res.status(500).json({ success: false, message: err.message ?? "Internal server error" });
+    return;
   }
+}
 
   private async register(req: Request, res: Response): Promise<void> {
     const data: RegistrationUserDTO = req.body;

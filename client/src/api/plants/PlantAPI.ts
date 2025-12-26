@@ -1,5 +1,5 @@
 import axios, { AxiosInstance, AxiosResponse } from "axios";
-import { PlantDTO } from "../../models/plants/PlantDTO";
+import { PlantDTO } from "../../models/plants/PlantDTO"; 
 import { IPlantAPI } from "./IPlantAPI";
 
 export class PlantAPI implements IPlantAPI {
