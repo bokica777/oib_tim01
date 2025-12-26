@@ -1,9 +1,17 @@
-import { PlantDTO } from "../../models/plants/PlantDTO";
+// src/api/plant/IPlantAPI.ts
+import { Plant } from "../../types/Plant";
 
 export interface IPlantAPI {
-  getAllPlants(token: string): Promise<PlantDTO[]>;
-  getPlantById(id: number, token: string): Promise<PlantDTO>;
-  createPlant(plant: PlantDTO, token: string): Promise<PlantDTO>;
-  updatePlant(id: number, plant: PlantDTO, token: string): Promise<PlantDTO>;
-  deletePlant(id: number, token: string): Promise<void>;
+  // 🌿 Dohvat dostupnih biljaka
+  getPlants(token: string, count?: number): Promise<Plant[]>;
+
+  // 🌱 Sadnja nove biljke
+  plantNew(plant: Partial<Plant>, token: string): Promise<Plant>;
+
+  // ⚖️ Balans arome (processing → production)
+  plantAndScale(
+    sourceStrength: number,
+    factor: number,
+    token: string
+  ): Promise<Plant>;
 }

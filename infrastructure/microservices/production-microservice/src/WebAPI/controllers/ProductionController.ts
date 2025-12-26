@@ -26,13 +26,16 @@ export class ProductionController {
   }
 
   async plantNew(req: Request, res: Response) {
-    try {
-      const p = await this.service.plantNew(req.body);
-      res.status(201).json(p);
-    } catch (err) {
-      res.status(400).json({ message: (err as Error).message });
-    }
+  try {
+    const p = await this.service.plantNew(req.body);
+    await this.logger.log("Plant planted", "INFO", { plantId: p.id });
+    res.status(201).json(p);
+  } catch (err) {
+    await this.logger.log("Plant planting failed", "ERROR", { error: (err as Error).message });
+    res.status(400).json({ message: (err as Error).message });
   }
+}
+
 
   async adjustStrength(req: Request, res: Response) {
     try {
@@ -95,21 +98,19 @@ export class ProductionController {
   }
 
   async plantAndScale(req: Request, res: Response) {
-    try {
-      const { sourceStrength, factor } = req.body;
-      if (!Number.isFinite(sourceStrength)) {
-        return res.status(400).json({ message: "Invalid sourceStrength" });
-      }
-
-      let f = Number.isFinite(Number(factor)) ? Number(factor) : 0.65;
-      if (f > 1) f = f / 100;
-
-      const p = await this.service.plantAndScale(sourceStrength, f);
-      res.status(201).json(p);
-    } catch (err) {
-      res.status(500).json({ message: (err as Error).message });
+  try {
+    const { sourceStrength } = req.body;
+    if (!Number.isFinite(sourceStrength)) {
+      return res.status(400).json({ message: "Invalid sourceStrength" });
     }
+
+    const p = await this.service.plantAndScale(sourceStrength);
+    res.status(201).json(p);
+  } catch (err) {
+    res.status(500).json({ message: (err as Error).message });
   }
+}
+
 
   async getLogs(req: Request, res: Response) {
     try {

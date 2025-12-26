@@ -110,13 +110,14 @@ export class ProductionService implements IProductionService {
   }
 
   // 6️⃣ Specijalna proizvodna operacija
-  async plantAndScale(
-    sourceStrength: number,
-    factor: number = 0.65
-  ): Promise<PlantDTO> {
-    const strength = Number((sourceStrength * factor).toFixed(2));
-    return this.plantNew({ aromaticOilStrength: strength });
-  }
+  async plantAndScale(sourceStrength: number): Promise<PlantDTO> {
+   const deviation = Number((sourceStrength - 4.0).toFixed(2));
+    const factor = deviation > 0 ? deviation : 1;
+    return this.plantNew({
+    aromaticOilStrength: Number((sourceStrength * factor).toFixed(2))
+  });
+}
+
 
   // 7️⃣ Dnevnik proizvodnje (placeholder za kasnije)
   async getProductionLogs(): Promise<{ time: string; message: string }[]> {

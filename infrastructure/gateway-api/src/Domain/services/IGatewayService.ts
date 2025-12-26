@@ -13,6 +13,7 @@ export interface IGatewayService {
   getUserById(id: number): Promise<UserDTO>;
 
   // Production
+  plantNew(seedData: any, internalHeaders: Record<string,string>): Promise<any>;
   getPlants(count: number, internalHeaders: Record<string,string>): Promise<any[]>;
   plantAndScale(sourceStrength: number, factorPercent: number, internalHeaders: Record<string,string>): Promise<any>;
 

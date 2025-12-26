@@ -1,4 +1,4 @@
-import { PlantStatus } from "../enums/PlantStatus";
+import { PlantStatus } from "./PlantStatus";
 
 export interface PlantFiltersTypes {
   status?: PlantStatus;
