@@ -18,7 +18,7 @@ export class ProductionController {
   private initializeRoutes() {
     this.router.post("/plant", this.plantNew.bind(this));
     this.router.put("/adjust/:id", this.adjustStrength.bind(this));
-    this.router.put("/harvest", this.harvestMany.bind(this));
+    this.router.post("/harvest", this.harvestMany.bind(this));
     this.router.get("/plants", this.getPlants.bind(this));
     this.router.post("/plants/used", this.markPlantsUsed.bind(this));
     this.router.post("/balance", this.plantAndScale.bind(this));
@@ -113,13 +113,10 @@ export class ProductionController {
 
 
   async getLogs(req: Request, res: Response) {
-    try {
-      const logs = await this.service.getProductionLogs();
-      res.json(logs);
-    } catch (err) {
-      res.status(500).json({ message: (err as Error).message });
-    }
-  }
+  console.log("LOGS:", this.service["logs"]);
+
+  res.json(await this.service.getProductionLogs());
+}
 
   public getRouter() {
     return this.router;

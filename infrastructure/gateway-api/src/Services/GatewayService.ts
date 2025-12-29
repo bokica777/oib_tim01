@@ -136,6 +136,8 @@ export class GatewayService implements IGatewayService {
     }
   }
 
+  
+
   // ================= AUTH =================
   async login(data: LoginUserDTO): Promise<AuthResponseType> {
     try {
@@ -217,6 +219,41 @@ export class GatewayService implements IGatewayService {
       handleAxiosError(err);
     }
   }
+
+  async harvestMany(
+  commonName: string,
+  count: number,
+  headers: Record<string, string>
+): Promise<any[]> {
+  if (!this.productionClient) {
+    throw new Error("PRODUCTION_URL not configured");
+  }
+
+  try {
+    const resp = await this.productionClient.post(
+      "/harvest",
+      { commonName, count },
+      { headers }
+    );
+    return resp.data;
+  } catch (err) {
+    handleAxiosError(err);
+  }
+}
+
+
+  // ================= PRODUCTION LOGS =================
+  async getProductionLogs(headers: Record<string, string>): Promise<any[]> {
+    if (!this.productionClient) throw new Error("PRODUCTION_URL not configured");
+
+    try {
+      const resp = await this.productionClient.get("/logs", { headers });
+      return resp.data;
+    } catch (err) {
+      handleAxiosError(err);
+    }
+  }
+
 
   // ================= PROCESSING =================
   async processPerfume(dto: any, headers: Record<string, string>): Promise<any[]> {

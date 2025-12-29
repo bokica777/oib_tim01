@@ -54,4 +54,35 @@ export class PlantAPI implements IPlantAPI {
     );
     return res.data;
   }
+
+  async harvest(
+    commonName: string,
+    count: number,
+    token: string
+  ): Promise<Plant[]> {
+    const res = await this.axiosInstance.post(
+      `/production/harvest`,
+      { commonName, count },
+      { headers: this.getAuthHeaders(token) }
+  );
+  return res.data;
+ }
+
+ async adjustStrength(
+  plantId: number,
+  percent: number,
+  token: string
+) {
+  const res = await this.axiosInstance.put(
+    `/production/adjust/${plantId}`,
+    {
+      value: percent,
+      mode: "inc", // ili "scale" ako želiš
+    },
+    { headers: this.getAuthHeaders(token) }
+  );
+
+  return res.data;
+}
+
 }

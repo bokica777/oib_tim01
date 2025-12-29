@@ -54,7 +54,7 @@ export class GatewayController {
     this.router.post(
       "/production/plant",
       authenticate,
-      authorize("sales_manager", "seller"),
+      authorize("admin", "sales_manager", "seller"),
       this.plantNew.bind(this)
     );
 
@@ -62,9 +62,33 @@ export class GatewayController {
     this.router.post(
       "/production/balance",
       authenticate,
-      authorize("admin", "sales_manager"),
+      authorize("admin", "sales_manager", "seller"),
       this.plantAndScale.bind(this)
     );
+
+    this.router.post(
+    "/production/harvest",
+    authenticate,
+    authorize("admin", "sales_manager", "seller"),
+    this.harvestMany.bind(this)
+  );
+
+
+    this.router.get(
+      "/production/logs",
+      authenticate,
+      authorize("admin", "sales_manager", "seller"),
+      this.getProductionLogs.bind(this)
+);
+
+    this.router.post(
+      "/production/harvest",
+      authenticate,
+      authorize("sales_manager", "seller"),
+      this.harvestPlants.bind(this)
+);
+
+
 
     // ================= PROCESSING =================
     this.router.post(
@@ -267,6 +291,58 @@ private async login(req: Request, res: Response): Promise<void> {
 
     res.status(201).json(result);
   }
+
+  private async harvestMany(req: Request, res: Response) {
+    try {
+      const headers = buildInternalHeaders(req);
+      const { commonName, count } = req.body;
+
+      const result = await this.gatewayService.harvestMany(
+        commonName,
+        count,
+        headers
+      );
+
+      res.json(result);
+    } catch (err: any) {
+      res.status(err.status ?? 500).json({
+        message: err.message ?? "Harvest failed",
+      });
+    }
+ }
+
+ private async harvestPlants(req: Request, res: Response) {
+  try {
+    const headers = buildInternalHeaders(req);
+    const { commonName, count } = req.body;
+
+    const result = await this.gatewayService.harvestMany(
+      commonName,
+      count,
+      headers
+    );
+
+    res.json(result);
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({
+      message: err.message ?? "Harvest failed",
+    });
+  }
+}
+
+  // ================= PRODUCTION LOGS =================
+  private async getProductionLogs(req: Request, res: Response) {
+    try {
+      const headers = buildInternalHeaders(req);
+      const logs = await this.gatewayService.getProductionLogs(headers);
+      res.json(logs);
+    } catch (err: any) {
+      res.status(err.status ?? 500).json({
+        message: err.message ?? "Failed to fetch production logs",
+      });
+    }
+  }
+
 
   // ================= PROCESSING =================
   private async processPerfume(req: Request, res: Response) {

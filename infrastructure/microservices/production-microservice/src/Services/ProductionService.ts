@@ -5,8 +5,23 @@ import { PlantStatus } from "../Domain/enums/PlantStatus";
 import { IProductionService } from "../Domain/services/IProductionService";
 import { PlantDTO } from "../Domain/DTOs/PlantDTO";
 
+type ProductionLogItem = {
+  time: string;
+  message: string;
+};
+
 export class ProductionService implements IProductionService {
   constructor(private readonly plantRepo: Repository<Plant>) {}
+
+  // 🔹 IN-MEMORY DNEVNIK (NAMJERNO JEDNOSTAVNO)
+  private logs: ProductionLogItem[] = [];
+
+  private addLog(message: string) {
+    this.logs.unshift({
+      time: new Date().toISOString(),
+      message,
+    });
+  }
 
   private toDTO(p: Plant): PlantDTO {
     return {
@@ -34,6 +49,12 @@ export class ProductionService implements IProductionService {
     });
 
     const saved = await this.plantRepo.save(plant);
+
+    // 📝 LOG
+    this.addLog(
+      `Zasađena biljka "${saved.commonName}" (jačina: ${saved.aromaticOilStrength})`
+    );
+
     return this.toDTO(saved);
   }
 
@@ -45,6 +66,8 @@ export class ProductionService implements IProductionService {
   ): Promise<PlantDTO> {
     const plant = await this.plantRepo.findOne({ where: { id: plantId } });
     if (!plant) throw new Error("Plant not found");
+
+    const before = plant.aromaticOilStrength;
 
     if (mode === "inc") {
       const multiplier = value / 100;
@@ -62,6 +85,12 @@ export class ProductionService implements IProductionService {
     }
 
     const saved = await this.plantRepo.save(plant);
+
+    // 📝 LOG
+    this.addLog(
+      `Promijenjena jačina biljke "${saved.commonName}" (${before} → ${saved.aromaticOilStrength})`
+    );
+
     return this.toDTO(saved);
   }
 
@@ -84,6 +113,11 @@ export class ProductionService implements IProductionService {
       await this.plantRepo.save(p);
     }
 
+    // 📝 LOG
+    this.addLog(
+      `Ubrano ${available.length} biljaka vrste "${commonName}"`
+    );
+
     return available.map(p => this.toDTO(p));
   }
 
@@ -97,6 +131,9 @@ export class ProductionService implements IProductionService {
       p.status = PlantStatus.PROCESSED;
       await this.plantRepo.save(p);
     }
+
+    // 📝 LOG
+    this.addLog(`Označeno ${plants.length} biljaka kao prerađene`);
   }
 
   // 5️⃣ Dohvatanje dostupnih biljaka
@@ -111,16 +148,23 @@ export class ProductionService implements IProductionService {
 
   // 6️⃣ Specijalna proizvodna operacija
   async plantAndScale(sourceStrength: number): Promise<PlantDTO> {
-   const deviation = Number((sourceStrength - 4.0).toFixed(2));
+    const deviation = Number((sourceStrength - 4.0).toFixed(2));
     const factor = deviation > 0 ? deviation : 1;
-    return this.plantNew({
-    aromaticOilStrength: Number((sourceStrength * factor).toFixed(2))
-  });
-}
 
+    const result = await this.plantNew({
+      aromaticOilStrength: Number((sourceStrength * factor).toFixed(2)),
+    });
 
-  // 7️⃣ Dnevnik proizvodnje (placeholder za kasnije)
+    // 📝 LOG
+    this.addLog(
+      `Izvršena specijalna operacija plantAndScale (source: ${sourceStrength})`
+    );
+
+    return result;
+  }
+
+  // 7️⃣ Dnevnik proizvodnje
   async getProductionLogs(): Promise<{ time: string; message: string }[]> {
-    return [];
+    return this.logs;
   }
 }

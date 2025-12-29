@@ -1,4 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { ProductionAPI } from "../../api/production/ProductionAPI";
+
+const productionAPI = new ProductionAPI();
+
 
 type LogItem = {
   time: string;
@@ -19,25 +23,39 @@ export const ProductionLog: React.FC = () => {
    *   setItems(data);
    */
   useEffect(() => {
-    const loadLogs = async () => {
-      try {
-        setLoading(true);
-        setError(null);
+  let interval: number;
 
-        // 🚧 backend još nije spojen
-        // const data = await productionAPI.getLogs();
-        // setItems(data);
+  const loadLogs = async () => {
+    try {
+      setError(null);
 
-        setItems([]); // prazno stanje je VALIDNO
-      } catch (e) {
-        setError("Dnevnik proizvodnje trenutno nije dostupan.");
-      } finally {
-        setLoading(false);
+      const token = localStorage.getItem("authToken") ?? "";
+      const data = await productionAPI.getLogs(token);
+
+      if (!Array.isArray(data)) {
+        console.warn("Logs nisu niz:", data);
+        return;
       }
-    };
 
-    loadLogs();
-  }, []);
+      const mapped: LogItem[] = data.map((l: any) => ({
+      time: new Date(l.time).toLocaleTimeString(),
+      type: "ok" as const,
+      text: l.message,
+    }));
+
+      setItems(mapped);
+    } catch (e) {
+      setError("Dnevnik proizvodnje trenutno nije dostupan.");
+    }
+  };
+
+  loadLogs(); // odmah
+  interval = window.setInterval(loadLogs, 1000); 
+
+  return () => clearInterval(interval); 
+}, []);
+
+
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();

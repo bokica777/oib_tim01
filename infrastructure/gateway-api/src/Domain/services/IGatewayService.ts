@@ -16,6 +16,14 @@ export interface IGatewayService {
   plantNew(seedData: any, internalHeaders: Record<string,string>): Promise<any>;
   getPlants(count: number, internalHeaders: Record<string,string>): Promise<any[]>;
   plantAndScale(sourceStrength: number, factorPercent: number, internalHeaders: Record<string,string>): Promise<any>;
+  getProductionLogs(internalHeaders: Record<string, string>): Promise<any[]>;
+  harvestMany(
+  commonName: string,
+  count: number,
+  headers: Record<string, string>
+): Promise<any[]>;
+
+ 
 
   // Processing
   processPerfume(dto: any, internalHeaders: Record<string,string>): Promise<any[]>;
