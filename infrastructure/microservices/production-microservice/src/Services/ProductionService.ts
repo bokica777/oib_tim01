@@ -59,40 +59,52 @@ export class ProductionService implements IProductionService {
   }
 
   // 2️⃣ Promjena jačine aromatičnog ulja
-  async adjustAromaticStrength(
-    plantId: number,
-    value: number,
-    mode: "inc" | "scale" = "inc"
-  ): Promise<PlantDTO> {
-    const plant = await this.plantRepo.findOne({ where: { id: plantId } });
-    if (!plant) throw new Error("Plant not found");
+async adjustAromaticStrength(
+  plantId: number,
+  value: number,
+  mode: "inc" | "scale" = "inc"
+): Promise<PlantDTO> {
+  const plant = await this.plantRepo.findOne({ where: { id: plantId } });
+  if (!plant) throw new Error("Plant not found");
 
-    const before = plant.aromaticOilStrength;
+  const before = plant.aromaticOilStrength;
 
-    if (mode === "inc") {
-      const multiplier = value / 100;
-      plant.aromaticOilStrength = Number(
-        (
-          plant.aromaticOilStrength +
-          plant.aromaticOilStrength * multiplier
-        ).toFixed(2)
-      );
-    } else {
-      const factor = value / 100;
-      plant.aromaticOilStrength = Number(
-        (plant.aromaticOilStrength * factor).toFixed(2)
-      );
-    }
-
-    const saved = await this.plantRepo.save(plant);
-
-    // 📝 LOG
-    this.addLog(
-      `Promijenjena jačina biljke "${saved.commonName}" (${before} → ${saved.aromaticOilStrength})`
+  if (mode === "inc") {
+    // value je PROCENAT (npr 10 ili -10)
+    const multiplier = value / 100;
+    plant.aromaticOilStrength = Number(
+      (
+        plant.aromaticOilStrength +
+        plant.aromaticOilStrength * multiplier
+      ).toFixed(2)
     );
-
-    return this.toDTO(saved);
+  } else {
+    // scale → value je PROCENAT (npr 65)
+    const factor = value / 100;
+    plant.aromaticOilStrength = Number(
+      (plant.aromaticOilStrength * factor).toFixed(2)
+    );
   }
+
+  // ✅ SNIMI PROMJENU U BAZU
+  const saved = await this.plantRepo.save(plant);
+
+  // 📝 LOG PROMJENE
+  this.addLog(
+    `Promijenjena jačina biljke "${saved.commonName}" (${before} → ${saved.aromaticOilStrength})`
+  );
+
+  // ⚠️ UPOZORENJE AKO PREĐE 4.00
+  if (saved.aromaticOilStrength > 4.0) {
+    this.addLog(
+      `⚠️ Upozorenje: jačina biljke "${saved.commonName}" prešla dozvoljenu granicu (4.00)`
+    );
+  }
+
+  // ✅ VRATI DTO (DA SE FRONTEND AŽURIRA)
+  return this.toDTO(saved);
+}
+
 
   // 3️⃣ Berba biljaka
   async harvestMany(

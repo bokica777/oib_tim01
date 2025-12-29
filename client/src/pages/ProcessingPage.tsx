@@ -54,7 +54,7 @@ export const ProcessingPage: React.FC = () => {
   };
 
   return (
-    <div className="overlay-blur-none" style={{ position: "fixed", inset: 0, padding: 12 }}>
+    <div className="overlay-blur-none" style={{ padding: 12 }}>
       <div className="window" style={{ height: "100%", display: "grid", gridTemplateColumns: "360px 1fr 360px", gap: 12 }}>
         {/* Left - Process form */}
         <div style={{ padding: 12 }}>

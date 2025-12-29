@@ -22,6 +22,12 @@ export interface IGatewayService {
   count: number,
   headers: Record<string, string>
 ): Promise<any[]>;
+adjustStrength(
+  plantId: number,
+  value: number,
+  headers: Record<string, string>
+): Promise<any>;
+
 
  
 

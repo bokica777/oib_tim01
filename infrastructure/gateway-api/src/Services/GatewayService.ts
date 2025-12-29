@@ -180,10 +180,6 @@ export class GatewayService implements IGatewayService {
     }
   }
 
-  /**
-   * ✅ Sadnja nove biljke (prava ruta u production microservisu je POST /plant)
-   * Gateway Controller treba da mapira /production/plant -> ovu metodu
-   */
   async plantNew(seedData: any, headers: Record<string, string>): Promise<any> {
     if (!this.productionClient) throw new Error("PRODUCTION_URL not configured");
     try {
@@ -194,10 +190,6 @@ export class GatewayService implements IGatewayService {
     }
   }
 
-  /**
-   * ✅ Balans arome: production očekuje factor kao decimal (0.65),
-   * ali gateway/frontend često šalju 65 (procenat).
-   */
   async plantAndScale(
     sourceStrength: number,
     factorPercent: number,
@@ -240,6 +232,31 @@ export class GatewayService implements IGatewayService {
     handleAxiosError(err);
   }
 }
+
+// ================= PRODUCTION =================
+async adjustStrength(
+  plantId: number,
+  value: number,
+  headers: Record<string, string>
+): Promise<any> {
+  if (!this.productionClient) {
+    throw new Error("PRODUCTION_URL not configured");
+  }
+
+  try {
+    const resp = await this.productionClient.put(
+      `/adjust/${plantId}`,
+      { value, mode: "inc" },
+      { headers }
+    );
+
+    return resp.data;
+  } catch (err) {
+    handleAxiosError(err);
+  }
+}
+
+
 
 
   // ================= PRODUCTION LOGS =================

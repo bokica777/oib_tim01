@@ -1,6 +1,45 @@
 import React, { useState } from "react";
 import { ProductionPlantTable } from "../components/production/ProductionPlantTable";
 import { ProductionLog } from "../components/production/ProductionLog";
+import ProcessingPage from "./ProcessingPage";
+
+function getUserRoleFromToken(): string | null {
+  const token = localStorage.getItem("authToken");
+  if (!token) return null;
+
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1]));
+
+    // pokušaj sve realne varijante
+    return (
+      payload.role ||
+      payload.userRole ||
+      payload.authorities?.[0] ||
+      null
+    );
+  } catch {
+    return null;
+  }
+}
+
+function formatRole(role: string | null): string {
+  if (!role) return "Nepoznata uloga";
+
+  const normalized = role.replace("ROLE_", "").toLowerCase();
+
+  switch (normalized) {
+    case "admin":
+      return "Administrator";
+    case "sales_manager":
+      return "Menadžer proizvodnje";
+    case "seller":
+      return "Prodavač";
+    default:
+      return "Nepoznata uloga";
+  }
+}
+
+
 
 export const ProductionPage: React.FC = () => {
   const [activeTopTab, setActiveTopTab] = useState<
@@ -10,6 +49,9 @@ export const ProductionPage: React.FC = () => {
   const [activeSubTab, setActiveSubTab] = useState<"servisProizvodnje" | "servisPrerade">(
     "servisProizvodnje"
   );
+
+  const role = formatRole(getUserRoleFromToken());
+
 
   return (
     <div
@@ -180,19 +222,25 @@ export const ProductionPage: React.FC = () => {
             </button>
           </div>
 
-          {/* GLAVNI LAYOUT: lijevo tabela + desno dnevnik */}
           <div className="window-content" style={{ padding: 10 }}>
-            <div className="prod-grid">
-              <ProductionPlantTable />
-              <ProductionLog />
-            </div>
+            {activeTopTab === "proizvodnja" && (
+              <div className="prod-grid">
+                <ProductionPlantTable />
+                <ProductionLog />
+              </div>
+            )}
+
+            {activeTopTab === "prerada" && (
+              <ProcessingPage />
+            )}
           </div>
+
         </div>
 
         {/* Donji status bar (kao na slici) */}
         <div className="prod-statusbar">
           <div className="prod-muted">
-            Korisnik: <strong>Menadžer proizvodnje</strong> &nbsp; | &nbsp; Status: <strong>Povezan</strong>
+            Korisnik: <strong>{role}</strong> &nbsp; | &nbsp; Status: <strong>Povezan</strong>
           </div>
           <div className="prod-muted">22.10.2025 15:12</div>
         </div>

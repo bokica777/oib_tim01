@@ -79,16 +79,21 @@ export class GatewayController {
       authenticate,
       authorize("admin", "sales_manager", "seller"),
       this.getProductionLogs.bind(this)
-);
+  );
 
     this.router.post(
       "/production/harvest",
       authenticate,
       authorize("sales_manager", "seller"),
       this.harvestPlants.bind(this)
+  );
+
+  this.router.put(
+  "/production/adjust/:id",
+  authenticate,
+  authorize("admin", "sales_manager", "seller"),
+  this.adjustStrength.bind(this)
 );
-
-
 
     // ================= PROCESSING =================
     this.router.post(
@@ -326,6 +331,31 @@ private async login(req: Request, res: Response): Promise<void> {
   } catch (err: any) {
     res.status(err.status ?? 500).json({
       message: err.message ?? "Harvest failed",
+    });
+  }
+}
+
+
+private async adjustStrength(req: Request, res: Response) {
+  try {
+    const headers = buildInternalHeaders(req);
+    const plantId = Number(req.params.id);
+    const { value } = req.body;
+
+    if (!Number.isFinite(value)) {
+      return res.status(400).json({ message: "Invalid value" });
+    }
+
+    const result = await this.gatewayService.adjustStrength(
+      plantId,
+      value,
+      headers
+    );
+
+    res.json(result);
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({
+      message: err.message ?? "Failed to adjust strength",
     });
   }
 }
