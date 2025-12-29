@@ -1,6 +1,8 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { IPerformanceAnalysisService } from "../../Domain/services/IPerformanceAnalysisService";
 import { RunSimulationDTO } from "../../Domain/DTOs/RunSimulationDTO";
+import { generatePerformanceReportPdf } from "../../Services/PerformanceReportPDF";
+
 
 export class PerformanceAnalysisController {
     private readonly router: Router;
@@ -43,6 +45,11 @@ export class PerformanceAnalysisController {
                 next: NextFunction
             ) => void
         );
+        this.router.get(
+            "/reports/:id/pdf",
+            this.getReportPdf.bind(this)
+        );
+
     }
 
     private handleRunSimulation = async (
@@ -106,4 +113,32 @@ export class PerformanceAnalysisController {
             next(error);
         }
     };
+    private getReportPdf = async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const reportId = Number(req.params.id);
+
+            if (Number.isNaN(reportId)) {
+                return res.status(400).json({ message: "Invalid report ID" });
+            }
+
+            const report = await this.performanceService.getReportById(reportId);
+
+            if (!report) {
+                return res.status(404).json({ message: "Report not found" });
+            }
+
+            const pdfBuffer = await generatePerformanceReportPdf(report);
+
+            res.setHeader("Content-Type", "application/pdf");
+            res.setHeader(
+                "Content-Disposition",
+                `attachment; filename="performance-report-${reportId}.pdf"`
+            );
+
+            return res.status(200).send(pdfBuffer);
+        } catch (error) {
+            next(error);
+        }
+    };
+
 }
