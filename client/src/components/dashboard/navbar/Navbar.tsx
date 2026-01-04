@@ -18,18 +18,21 @@ export const DashboardNavbar: React.FC<DashboardNavbarProps> = ({ userAPI }) => 
     const fetchUser = async () => {
       if (authUser?.id) {
         try {
-          const userData = await userAPI.getUserById(token ?? "", authUser.id, );
+          const userData = await userAPI.getUserById(token ?? "", authUser.id);
           setUser(userData);
         } catch (error) {
           console.error("Failed to fetch user:", error);
+          setUser(null); // fallback
         } finally {
           setIsLoading(false);
         }
+      } else {
+        setIsLoading(false);
       }
     };
 
     fetchUser();
-  }, [authUser, userAPI]);
+  }, [authUser, token, userAPI]);
 
   const handleLogout = () => {
     logout();
@@ -37,63 +40,106 @@ export const DashboardNavbar: React.FC<DashboardNavbarProps> = ({ userAPI }) => 
   };
 
   return (
-    <nav className="titlebar" style={{ height: "60px", borderRadius: 0 }}>
+    <nav
+      className="titlebar"
+      style={{
+        height: "60px",
+        borderRadius: 0,
+        display: "flex",
+        alignItems: "center",
+        padding: "0 16px",
+        background: "var(--win11-accent2)",
+        position: "fixed",
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 1000,
+      }}
+    >
       <div className="flex items-center gap-3" style={{ marginLeft: "auto" }}>
         {isLoading ? (
-          <div className="spinner" style={{ width: "20px", height: "20px", borderWidth: "2px" }}></div>
-        ) : user ? (
+          <div
+            className="spinner"
+            style={{ width: "20px", height: "20px", borderWidth: "2px" }}
+          ></div>
+        ) : (
           <>
-            {/* Profile Image */}
-            {user.profileImage ? (
-              <img
-                src={user.profileImage}
-                alt={user.username}
-                style={{
-                  width: "32px",
-                  height: "32px",
-                  borderRadius: "50%",
-                  objectFit: "cover",
-                  border: "2px solid var(--win11-divider)",
-                }}
-              />
+            {user ? (
+              <>
+                {/* Profile image */}
+                {user.profileImage ? (
+                  <img
+                    src={user.profileImage}
+                    alt={user.username}
+                    style={{
+                      width: "32px",
+                      height: "32px",
+                      borderRadius: "50%",
+                      objectFit: "cover",
+                      border: "2px solid var(--win11-divider)",
+                    }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      width: "32px",
+                      height: "32px",
+                      borderRadius: "50%",
+                      background: "var(--win11-accent)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontWeight: 600,
+                      fontSize: "14px",
+                      color: "#000",
+                    }}
+                  >
+                    {user.username.charAt(0).toUpperCase()}
+                  </div>
+                )}
+
+                {/* User Info */}
+                <div className="flex flex-col" style={{ gap: 0 }}>
+                  <span
+                    style={{
+                      fontSize: "13px",
+                      fontWeight: 600,
+                      color: "var(--win11-text-primary)",
+                    }}
+                  >
+                    {user.email}
+                  </span>
+                  <span
+                    style={{
+                      fontSize: "11px",
+                      color: "var(--win11-text-tertiary)",
+                    }}
+                  >
+                    {user.role}
+                  </span>
+                </div>
+              </>
             ) : (
-              <div
-                style={{
-                  width: "32px",
-                  height: "32px",
-                  borderRadius: "50%",
-                  background: "var(--win11-accent)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontWeight: 600,
-                  fontSize: "14px",
-                  color: "#000",
-                }}
+              <span
+                style={{ color: "var(--win11-text-primary)", fontWeight: 600 }}
               >
-                {user.username.charAt(0).toUpperCase()}
-              </div>
+                Nepoznat korisnik
+              </span>
             )}
 
-            {/* User Info */}
-            <div className="flex flex-col" style={{ gap: 0 }}>
-              <span style={{ fontSize: "13px", fontWeight: 600, color: "var(--win11-text-primary)" }}>
-                {user.email}
-              </span>
-              <span style={{ fontSize: "11px", color: "var(--win11-text-tertiary)" }}>
-                {user.role}
-              </span>
-            </div>
-
             {/* Logout Button */}
-            <button className="btn btn-ghost" onClick={handleLogout} style={{ padding: "8px 16px" }}>
+            <button
+              className="btn btn-ghost"
+              onClick={handleLogout}
+              style={{ padding: "8px 16px" }}
+            >
               <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                <path d="M6 2v2H3v8h3v2H2V2h4zm4 3l4 3-4 3V9H6V7h4V5z"/>
+                <path d="M6 2v2H3v8h3v2H2V2h4zm4 3l4 3-4 3V9H6V7h4V5z" />
               </svg>
               Logout
             </button>
           </>
-        ) : null}
+        )}
       </div>
     </nav>
   );

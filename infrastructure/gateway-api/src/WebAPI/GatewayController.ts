@@ -14,6 +14,7 @@ import { RunSimulationDTO } from "../Domain/DTOs/performance-analysis/RunSimulat
 import { CreateAuditLogDTO } from "../Domain/DTOs/event-log/CreateAuditLog";
 import { CreateReceiptDTO } from "../Domain/DTOs/analysis/CreateReceiptDTO";
 
+
 export class GatewayController {
   private readonly router: Router;
 
@@ -148,6 +149,13 @@ export class GatewayController {
       authorize("sales_manager", "seller", "admin"),
       this.listPackages.bind(this)
     );
+    this.router.get(
+  "/storage/warehouses",
+  authenticate,
+  authorize("sales_manager", "seller", "admin"),
+  this.listWarehouses.bind(this)
+  );
+
 
     // ================= PACKAGING =================
     this.router.post(
@@ -428,6 +436,21 @@ private async adjustStrength(req: Request, res: Response) {
     const list = await this.gatewayService.listPackages(headers);
     res.json(list);
   }
+ 
+  private async listWarehouses(req: Request, res: Response) {
+  try {
+    const headers = buildInternalHeaders(req);
+    const data = await this.gatewayService.listWarehouses(headers);
+    res.status(200).json(data);
+  } catch (err: any) {
+    console.error("Gateway listWarehouses error:", err);
+    res.status(err?.status ?? 500).json({
+      message: err?.message ?? "Failed to fetch warehouses",
+    });
+  }
+}
+
+
 
   // ================= PACKAGING =================
   private async requestPackaging(req: Request, res: Response) {

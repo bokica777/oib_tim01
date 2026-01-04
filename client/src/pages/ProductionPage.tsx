@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { ProductionPlantTable } from "../components/production/ProductionPlantTable";
 import { ProductionLog } from "../components/production/ProductionLog";
 import ProcessingPage from "./ProcessingPage";
+import StoragePage from "./StoragePage";
 
 function getUserRoleFromToken(): string | null {
   const token = localStorage.getItem("authToken");
@@ -10,7 +11,6 @@ function getUserRoleFromToken(): string | null {
   try {
     const payload = JSON.parse(atob(token.split(".")[1]));
 
-    // pokušaj sve realne varijante
     return (
       payload.role ||
       payload.userRole ||
@@ -233,6 +233,10 @@ export const ProductionPage: React.FC = () => {
             {activeTopTab === "prerada" && (
               <ProcessingPage />
             )}
+
+                  {activeTopTab === "skladistenje" && (
+          <StoragePage/>
+          )}
           </div>
 
         </div>

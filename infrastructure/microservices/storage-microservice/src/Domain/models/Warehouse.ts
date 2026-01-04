@@ -13,4 +13,7 @@ export class Warehouse {
 
   @Column({ type: "int", default: 1000 })
   capacity!: number;
+
+  @Column({ type: "int", default: 0 }) 
+  usedCapacity!: number;
 }
