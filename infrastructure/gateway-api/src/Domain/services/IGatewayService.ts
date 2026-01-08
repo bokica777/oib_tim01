@@ -38,9 +38,11 @@ export interface IGatewayService {
   requestPerfumes(name: string, count: number, internalHeaders: Record<string, string>): Promise<any[]>;
 
   // Storage
-  storePackage(dto: any, internalHeaders: Record<string, string>): Promise<any>;
-  sendPackages(role: string | undefined, count: number, internalHeaders: Record<string, string>): Promise<any[]>;
-  listPackages(internalHeaders: Record<string, string>): Promise<any[]>;
+  storePackage(dto: any, internalHeaders: Record<string,string>): Promise<any>;
+  sendPackages(role: string | undefined, count: number, internalHeaders: Record<string,string>): Promise<any[]>;
+  listPackages(internalHeaders: Record<string,string>): Promise<any[]>;
+  listWarehouses(headers: Record<string, string>): Promise<any[]>;
+
 
   // Packaging
   requestPackaging(count: number, internalHeaders: Record<string, string>): Promise<void>;

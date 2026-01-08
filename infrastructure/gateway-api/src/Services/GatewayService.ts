@@ -94,6 +94,7 @@ export class GatewayService implements IGatewayService {
         timeout: 10000,
       });
     }
+    
 
     if (PACKAGING_URL) {
       this.packagingClient = axios.create({
@@ -314,6 +315,30 @@ export class GatewayService implements IGatewayService {
   }
 
   // ================= STORAGE =================
+
+async listWarehouses(headers: Record<string, string>): Promise<any[]> {
+  if (!this.storageClient) throw new Error("STORAGE_URL not configured");
+  const candidates = ["/storage/warehouses", "/warehouses"];
+
+  for (const path of candidates) {
+    try {
+      const resp = await this.storageClient.get(path, { headers, timeout: 10000 });
+      return resp.data;
+    } catch (err: any) {
+      const status = err?.response?.status;
+      if (status === 404) {
+        continue;
+      }
+      handleAxiosError(err);
+    }
+  }
+
+  // ako nijedan kandidat nije radio
+  const e = new Error("Warehouses endpoint not found on storage service (tried /storage/warehouses and /warehouses)");
+  (e as any).status = 404;
+  throw e;
+}
+
   async storePackage(dto: any, headers: Record<string, string>): Promise<any> {
     if (!this.storageClient) throw new Error("STORAGE_URL not configured");
     try {
