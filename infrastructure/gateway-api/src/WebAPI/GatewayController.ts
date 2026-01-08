@@ -67,11 +67,11 @@ export class GatewayController {
     );
 
     this.router.post(
-    "/production/harvest",
-    authenticate,
-    authorize("admin", "sales_manager", "seller"),
-    this.harvestMany.bind(this)
-  );
+      "/production/harvest",
+      authenticate,
+      authorize("admin", "sales_manager", "seller"),
+      this.harvestMany.bind(this)
+    );
 
 
     this.router.get(
@@ -79,21 +79,21 @@ export class GatewayController {
       authenticate,
       authorize("admin", "sales_manager", "seller"),
       this.getProductionLogs.bind(this)
-  );
+    );
 
     this.router.post(
       "/production/harvest",
       authenticate,
       authorize("sales_manager", "seller"),
       this.harvestPlants.bind(this)
-  );
+    );
 
-  this.router.put(
-  "/production/adjust/:id",
-  authenticate,
-  authorize("admin", "sales_manager", "seller"),
-  this.adjustStrength.bind(this)
-);
+    this.router.put(
+      "/production/adjust/:id",
+      authenticate,
+      authorize("admin", "sales_manager", "seller"),
+      this.adjustStrength.bind(this)
+    );
 
     // ================= PROCESSING =================
     this.router.post(
@@ -181,13 +181,36 @@ export class GatewayController {
     );
 
     // ================= PERFORMANCE =================
+    // ================= PERFORMANCE =================
     this.router.post(
       "/performance/simulate",
       authenticate,
-      authorize("admin", "sales_manager"),
+      authorize("admin"),
       validateDTO(RunSimulationDTO),
       this.runSimulation.bind(this)
     );
+
+    this.router.get(
+      "/performance/reports",
+      authenticate,
+      authorize("admin"),
+      this.listPerformanceReports.bind(this)
+    );
+
+    this.router.get(
+      "/performance/reports/:id",
+      authenticate,
+      authorize("admin"),
+      this.getPerformanceReportById.bind(this)
+    );
+
+    this.router.get(
+      "/performance/reports/:id/pdf",
+      authenticate,
+      authorize("admin"),
+      this.getPerformanceReportPdf.bind(this)
+    );
+
 
     // ================= ANALYTICS =================
     this.router.get(
@@ -207,40 +230,40 @@ export class GatewayController {
   }
 
   // Auth handlers
-private async login(req: Request, res: Response): Promise<void> {
-  const data: LoginUserDTO = req.body;
-  try {
-    const result: any = await this.gatewayService.login(data);
+  private async login(req: Request, res: Response): Promise<void> {
+    const data: LoginUserDTO = req.body;
+    try {
+      const result: any = await this.gatewayService.login(data);
 
-   if (result && (result.token || result.accessToken)) {
-      const token = result.token ?? result.accessToken;
-      res.status(200).json({ success: true, token, message: result.message ?? "OK" });
-      return;
-    }
-    if (result && result.authenificated && result.userData) {
-      const claims = result.userData;
-      const secret = process.env.JWT_SECRET ?? "";
-      const expiresIn = process.env.JWT_EXPIRES_IN ?? "30m";
-      const token = require("jsonwebtoken").sign(
-        { id: claims.id, username: claims.username, role: claims.role },
-        secret,
-        { expiresIn }
-      );
-      res.status(200).json({ success: true, token, message: "OK", userData: claims });
-      return;
-    }
+      if (result && (result.token || result.accessToken)) {
+        const token = result.token ?? result.accessToken;
+        res.status(200).json({ success: true, token, message: result.message ?? "OK" });
+        return;
+      }
+      if (result && result.authenificated && result.userData) {
+        const claims = result.userData;
+        const secret = process.env.JWT_SECRET ?? "";
+        const expiresIn = process.env.JWT_EXPIRES_IN ?? "30m";
+        const token = require("jsonwebtoken").sign(
+          { id: claims.id, username: claims.username, role: claims.role },
+          secret,
+          { expiresIn }
+        );
+        res.status(200).json({ success: true, token, message: "OK", userData: claims });
+        return;
+      }
 
-    res.status(200).json({ success: false, message: result?.message ?? "Authentication failed" });
-    return;
-  } catch (err: any) {
-    if (err?.response?.data) {
-      res.status(err.response?.status ?? 500).json({ success: false, ...err.response.data });
+      res.status(200).json({ success: false, message: result?.message ?? "Authentication failed" });
+      return;
+    } catch (err: any) {
+      if (err?.response?.data) {
+        res.status(err.response?.status ?? 500).json({ success: false, ...err.response.data });
+        return;
+      }
+      res.status(500).json({ success: false, message: err.message ?? "Internal server error" });
       return;
     }
-    res.status(500).json({ success: false, message: err.message ?? "Internal server error" });
-    return;
   }
-}
 
   private async register(req: Request, res: Response) {
     const result = await this.gatewayService.register(req.body);
@@ -271,16 +294,16 @@ private async login(req: Request, res: Response): Promise<void> {
    * FRONTEND: POST /production/plant
    * Interno mapirano na plantAndScale
    */
- private async plantNew(req: Request, res: Response) {
-  const headers = buildInternalHeaders(req);
+  private async plantNew(req: Request, res: Response) {
+    const headers = buildInternalHeaders(req);
 
-  const result = await this.gatewayService.plantNew(
-    req.body,
-    headers
-  );
+    const result = await this.gatewayService.plantNew(
+      req.body,
+      headers
+    );
 
-  res.status(201).json(result);
-}
+    res.status(201).json(result);
+  }
 
   private async plantAndScale(req: Request, res: Response) {
     const headers = buildInternalHeaders(req);
@@ -314,51 +337,51 @@ private async login(req: Request, res: Response): Promise<void> {
         message: err.message ?? "Harvest failed",
       });
     }
- }
-
- private async harvestPlants(req: Request, res: Response) {
-  try {
-    const headers = buildInternalHeaders(req);
-    const { commonName, count } = req.body;
-
-    const result = await this.gatewayService.harvestMany(
-      commonName,
-      count,
-      headers
-    );
-
-    res.json(result);
-  } catch (err: any) {
-    res.status(err.status ?? 500).json({
-      message: err.message ?? "Harvest failed",
-    });
   }
-}
 
+  private async harvestPlants(req: Request, res: Response) {
+    try {
+      const headers = buildInternalHeaders(req);
+      const { commonName, count } = req.body;
 
-private async adjustStrength(req: Request, res: Response) {
-  try {
-    const headers = buildInternalHeaders(req);
-    const plantId = Number(req.params.id);
-    const { value } = req.body;
+      const result = await this.gatewayService.harvestMany(
+        commonName,
+        count,
+        headers
+      );
 
-    if (!Number.isFinite(value)) {
-      return res.status(400).json({ message: "Invalid value" });
+      res.json(result);
+    } catch (err: any) {
+      res.status(err.status ?? 500).json({
+        message: err.message ?? "Harvest failed",
+      });
     }
-
-    const result = await this.gatewayService.adjustStrength(
-      plantId,
-      value,
-      headers
-    );
-
-    res.json(result);
-  } catch (err: any) {
-    res.status(err.status ?? 500).json({
-      message: err.message ?? "Failed to adjust strength",
-    });
   }
-}
+
+
+  private async adjustStrength(req: Request, res: Response) {
+    try {
+      const headers = buildInternalHeaders(req);
+      const plantId = Number(req.params.id);
+      const { value } = req.body;
+
+      if (!Number.isFinite(value)) {
+        return res.status(400).json({ message: "Invalid value" });
+      }
+
+      const result = await this.gatewayService.adjustStrength(
+        plantId,
+        value,
+        headers
+      );
+
+      res.json(result);
+    } catch (err: any) {
+      res.status(err.status ?? 500).json({
+        message: err.message ?? "Failed to adjust strength",
+      });
+    }
+  }
 
   // ================= PRODUCTION LOGS =================
   private async getProductionLogs(req: Request, res: Response) {
@@ -466,6 +489,32 @@ private async adjustStrength(req: Request, res: Response) {
       headers
     );
     res.status(201).json(result);
+  }
+  private async listPerformanceReports(req: Request, res: Response) {
+    const headers = buildInternalHeaders(req);
+    const result = await this.gatewayService.listPerformanceReports(headers);
+    res.json(result);
+  }
+
+  private async getPerformanceReportById(req: Request, res: Response) {
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id)) return res.status(400).json({ message: "Invalid report id" });
+
+    const headers = buildInternalHeaders(req);
+    const result = await this.gatewayService.getPerformanceReportById(id, headers);
+    res.json(result);
+  }
+
+  private async getPerformanceReportPdf(req: Request, res: Response) {
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id)) return res.status(400).json({ message: "Invalid report id" });
+
+    const headers = buildInternalHeaders(req);
+    const { buffer, contentType, filename } = await this.gatewayService.getPerformanceReportPdf(id, headers);
+
+    res.setHeader("Content-Type", contentType);
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.send(buffer);
   }
 
   // ================= ANALYTICS =================

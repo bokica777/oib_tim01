@@ -136,7 +136,7 @@ export class GatewayService implements IGatewayService {
     }
   }
 
-  
+
 
   // ================= AUTH =================
   async login(data: LoginUserDTO): Promise<AuthResponseType> {
@@ -213,48 +213,48 @@ export class GatewayService implements IGatewayService {
   }
 
   async harvestMany(
-  commonName: string,
-  count: number,
-  headers: Record<string, string>
-): Promise<any[]> {
-  if (!this.productionClient) {
-    throw new Error("PRODUCTION_URL not configured");
+    commonName: string,
+    count: number,
+    headers: Record<string, string>
+  ): Promise<any[]> {
+    if (!this.productionClient) {
+      throw new Error("PRODUCTION_URL not configured");
+    }
+
+    try {
+      const resp = await this.productionClient.post(
+        "/harvest",
+        { commonName, count },
+        { headers }
+      );
+      return resp.data;
+    } catch (err) {
+      handleAxiosError(err);
+    }
   }
 
-  try {
-    const resp = await this.productionClient.post(
-      "/harvest",
-      { commonName, count },
-      { headers }
-    );
-    return resp.data;
-  } catch (err) {
-    handleAxiosError(err);
-  }
-}
+  // ================= PRODUCTION =================
+  async adjustStrength(
+    plantId: number,
+    value: number,
+    headers: Record<string, string>
+  ): Promise<any> {
+    if (!this.productionClient) {
+      throw new Error("PRODUCTION_URL not configured");
+    }
 
-// ================= PRODUCTION =================
-async adjustStrength(
-  plantId: number,
-  value: number,
-  headers: Record<string, string>
-): Promise<any> {
-  if (!this.productionClient) {
-    throw new Error("PRODUCTION_URL not configured");
-  }
+    try {
+      const resp = await this.productionClient.put(
+        `/adjust/${plantId}`,
+        { value, mode: "inc" },
+        { headers }
+      );
 
-  try {
-    const resp = await this.productionClient.put(
-      `/adjust/${plantId}`,
-      { value, mode: "inc" },
-      { headers }
-    );
-
-    return resp.data;
-  } catch (err) {
-    handleAxiosError(err);
+      return resp.data;
+    } catch (err) {
+      handleAxiosError(err);
+    }
   }
-}
 
 
 
@@ -397,7 +397,7 @@ async adjustStrength(
     }
   }
 
-  async getAllPerformanceReports(headers: Record<string, string>): Promise<any[]> {
+  async listPerformanceReports(headers: Record<string, string>): Promise<any[]> {
     if (!this.performanceClient) throw new Error("PERFORMANCE_URL not configured");
     try {
       const resp = await this.performanceClient.get("/reports", { headers });
@@ -416,6 +416,29 @@ async adjustStrength(
       handleAxiosError(err);
     }
   }
+
+  async getPerformanceReportPdf(
+    id: number,
+    headers: Record<string, string>
+  ): Promise<{ buffer: Buffer; contentType: string; filename: string }> {
+    if (!this.performanceClient) throw new Error("PERFORMANCE_URL not configured");
+    try {
+      const resp = await this.performanceClient.get(`/reports/${id}/pdf`, {
+        headers,
+        responseType: "arraybuffer",
+      });
+
+      const contentType = (resp.headers["content-type"] as string) || "application/pdf";
+      const cd = (resp.headers["content-disposition"] as string) || "";
+      const match = /filename="?([^"]+)"?/i.exec(cd);
+      const filename = match?.[1] || `performance-report-${id}.pdf`;
+
+      return { buffer: Buffer.from(resp.data), contentType, filename };
+    } catch (err) {
+      handleAxiosError(err);
+    }
+  }
+
 
   // ================= AUDIT =================
   async createAuditLog(dto: any): Promise<any> {

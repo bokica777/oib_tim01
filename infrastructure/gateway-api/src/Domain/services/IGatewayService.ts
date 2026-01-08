@@ -1,6 +1,6 @@
-import { LoginUserDTO } from "../DTOs/user/LoginUserDTO"; 
+import { LoginUserDTO } from "../DTOs/user/LoginUserDTO";
 import { RegistrationUserDTO } from "../DTOs/user/RegistrationUserDTO";
-import { UserDTO } from "../DTOs/user/UserDTO"; 
+import { UserDTO } from "../DTOs/user/UserDTO";
 import { AuthResponseType } from "../types/AuthResponse";
 
 export interface IGatewayService {
@@ -13,58 +13,60 @@ export interface IGatewayService {
   getUserById(id: number): Promise<UserDTO>;
 
   // Production
-  plantNew(seedData: any, internalHeaders: Record<string,string>): Promise<any>;
-  getPlants(count: number, internalHeaders: Record<string,string>): Promise<any[]>;
-  plantAndScale(sourceStrength: number, factorPercent: number, internalHeaders: Record<string,string>): Promise<any>;
+  plantNew(seedData: any, internalHeaders: Record<string, string>): Promise<any>;
+  getPlants(count: number, internalHeaders: Record<string, string>): Promise<any[]>;
+  plantAndScale(sourceStrength: number, factorPercent: number, internalHeaders: Record<string, string>): Promise<any>;
   getProductionLogs(internalHeaders: Record<string, string>): Promise<any[]>;
   harvestMany(
-  commonName: string,
-  count: number,
-  headers: Record<string, string>
-): Promise<any[]>;
-adjustStrength(
-  plantId: number,
-  value: number,
-  headers: Record<string, string>
-): Promise<any>;
+    commonName: string,
+    count: number,
+    headers: Record<string, string>
+  ): Promise<any[]>;
+  adjustStrength(
+    plantId: number,
+    value: number,
+    headers: Record<string, string>
+  ): Promise<any>;
 
 
- 
+
 
   // Processing
-  processPerfume(dto: any, internalHeaders: Record<string,string>): Promise<any[]>;
-  listPerfumes(internalHeaders: Record<string,string>): Promise<any[]>;
-  getPerfumeById(id: number, internalHeaders: Record<string,string>): Promise<any>;
-  requestPerfumes(name: string, count: number, internalHeaders: Record<string,string>): Promise<any[]>;
+  processPerfume(dto: any, internalHeaders: Record<string, string>): Promise<any[]>;
+  listPerfumes(internalHeaders: Record<string, string>): Promise<any[]>;
+  getPerfumeById(id: number, internalHeaders: Record<string, string>): Promise<any>;
+  requestPerfumes(name: string, count: number, internalHeaders: Record<string, string>): Promise<any[]>;
 
   // Storage
-  storePackage(dto: any, internalHeaders: Record<string,string>): Promise<any>;
-  sendPackages(role: string | undefined, count: number, internalHeaders: Record<string,string>): Promise<any[]>;
-  listPackages(internalHeaders: Record<string,string>): Promise<any[]>;
+  storePackage(dto: any, internalHeaders: Record<string, string>): Promise<any>;
+  sendPackages(role: string | undefined, count: number, internalHeaders: Record<string, string>): Promise<any[]>;
+  listPackages(internalHeaders: Record<string, string>): Promise<any[]>;
 
   // Packaging
-  requestPackaging(count: number, internalHeaders: Record<string,string>): Promise<void>;
+  requestPackaging(count: number, internalHeaders: Record<string, string>): Promise<void>;
 
   // Sales
-  createOrder(dto: any, internalHeaders: Record<string,string>): Promise<any>;
-  getOrderById(id: number, internalHeaders: Record<string,string>): Promise<any>;
-  listOrders(internalHeaders: Record<string,string>): Promise<any[]>;
+  createOrder(dto: any, internalHeaders: Record<string, string>): Promise<any>;
+  getOrderById(id: number, internalHeaders: Record<string, string>): Promise<any>;
+  listOrders(internalHeaders: Record<string, string>): Promise<any[]>;
 
   // Performance analysis
-  runSimulation(algorithmName: string, internalHeaders: Record<string,string>): Promise<any>;
-  getAllPerformanceReports(internalHeaders: Record<string,string>): Promise<any[]>;
-  getPerformanceReportById(id: number, internalHeaders: Record<string,string>): Promise<any>;
+  runSimulation(algorithmName: string, internalHeaders: Record<string, string>): Promise<any>;
+  listPerformanceReports(internalHeaders: Record<string, string>): Promise<any[]>;
+  getPerformanceReportById(id: number, internalHeaders: Record<string, string>): Promise<any>;
+  getPerformanceReportPdf(id: number, internalHeaders: Record<string, string>): Promise<{ buffer: Buffer; contentType: string; filename: string }>;
+
 
   // Audit logs
   createAuditLog(dto: any): Promise<any>;
   getAuditLogs(): Promise<any[]>;
 
   // Analytics & Receipts
-  getTopPerfumes(query: Record<string,any>, internalHeaders: Record<string,string>): Promise<any>;
-  createReceipt(dto: any, internalHeaders: Record<string,string>): Promise<any>;
-  listReceipts(internalHeaders: Record<string,string>): Promise<any[]>;
-  getDailyRevenue(date: string, internalHeaders: Record<string,string>): Promise<any>;
-  getSalesByProduct(internalHeaders: Record<string,string>): Promise<any[]>;
+  getTopPerfumes(query: Record<string, any>, internalHeaders: Record<string, string>): Promise<any>;
+  createReceipt(dto: any, internalHeaders: Record<string, string>): Promise<any>;
+  listReceipts(internalHeaders: Record<string, string>): Promise<any[]>;
+  getDailyRevenue(date: string, internalHeaders: Record<string, string>): Promise<any>;
+  getSalesByProduct(internalHeaders: Record<string, string>): Promise<any[]>;
 
   // Audit helper (generic)
   logAudit(message: string, type?: string, source?: string, meta?: any): Promise<boolean>;
