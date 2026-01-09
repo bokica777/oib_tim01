@@ -14,6 +14,8 @@ import { AnalysisReport } from "./Domain/models/AnalysisReport";
 import { AnalysisService } from "./Services/AnalysisService";
 import { IAnalysisService } from "./Domain/services/IAnalysisService";
 import { AnalysisController } from "./WebAPI/controllers/AnalysisController";
+import { requireRole } from "./middlewares/requireRole";
+
 
 dotenv.config({ quiet: true });
 
@@ -49,7 +51,9 @@ const receiptService: IReceiptService = new ReceiptService(
   receiptRepository
 );
 const analysisService: IAnalysisService = new AnalysisService(
-  receiptItemRepository, reportRepository
+  receiptItemRepository,
+  reportRepository,
+  receiptRepository
 );
 
 
@@ -59,7 +63,7 @@ const receiptsController = new ReceiptsController(receiptService);
 const analysisController = new AnalysisController(analysisService);
 
 // Registering routes
-app.use("/api/v1/receipts", receiptsController.getRouter());
-app.use("/api/v1/analysis", analysisController.getRouter());
+app.use("/api/v1/receipts", receiptsController.getRouter(), requireRole(["ADMIN"]));
+app.use("/api/v1/analysis", analysisController.getRouter(), requireRole(["ADMIN"]));
 
 export default app;

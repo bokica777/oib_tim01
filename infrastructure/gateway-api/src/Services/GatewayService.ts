@@ -142,7 +142,10 @@ export class GatewayService implements IGatewayService {
   // ================= AUTH =================
   async login(data: LoginUserDTO): Promise<AuthResponseType> {
     try {
-      const response = await this.authClient.post<AuthResponseType>("/auth/login", data);
+      const response = await this.authClient.post<AuthResponseType>(
+        "/auth/login",
+        data
+      );
       return response.data;
     } catch {
       return { authenificated: false };
@@ -151,7 +154,10 @@ export class GatewayService implements IGatewayService {
 
   async register(data: RegistrationUserDTO): Promise<AuthResponseType> {
     try {
-      const response = await this.authClient.post<AuthResponseType>("/auth/register", data);
+      const response = await this.authClient.post<AuthResponseType>(
+        "/auth/register",
+        data
+      );
       return response.data;
     } catch {
       return { authenificated: false };
@@ -564,3 +570,4 @@ async listWarehouses(headers: Record<string, string>): Promise<any[]> {
     }
   }
 }
+
