@@ -1,134 +1,206 @@
-import { useEffect, useState } from "react";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  Tooltip,
-  CartesianGrid,
-  ResponsiveContainer,
-} from "recharts";
-import { PerformanceService } from "../../api/performance.service";
+import { useEffect, useMemo, useState } from "react";
+import { performanceAPI } from "../api/performance/PerformanceAPI";
+import type { PerformanceReportDTO } from "../models/performance/PerformanceReportDTO";
+import { mapPerformanceReport } from "../models/performance/mapPerformanceReport";
+
+import { KpiCard } from "../components/performance/KpiCard";
+import { MiniLineChart } from "../components/performance/MiniLineChart";
+import { ReportsTable } from "../components/performance/ReportsTable";
+
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 export default function PerformancePage() {
-  const [reports, setReports] = useState<any[]>([]);
-  const [selectedReport, setSelectedReport] = useState<any | null>(null);
+  const [reports, setReports] = useState<PerformanceReportDTO[]>([]);
+  const [selected, setSelected] = useState<PerformanceReportDTO | null>(null);
 
-  const loadReports = async () => {
-    const res = await PerformanceService.getReports();
-    setReports(res.data);
-    if (res.data.length > 0) {
-      setSelectedReport(res.data[0]);
+  const [loading, setLoading] = useState(true);
+  const [running, setRunning] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function loadReports() {
+    setLoading(true);
+    setError(null);
+    try {
+      const list = await performanceAPI.getReports(); // <-- vraća res.data
+      const mapped = list.map(mapPerformanceReport);
+      setReports(mapped);
+      setSelected(mapped[0] ?? null);
+    } catch (e: any) {
+      setError(e?.message ?? "Ne mogu da učitam izveštaje.");
+    } finally {
+      setLoading(false);
     }
-  };
+  }
 
-  const runSimulation = async (algorithm: string) => {
-    await PerformanceService.runSimulation(algorithm);
-    await loadReports();
-  };
+  async function runSimulation(algorithmName: string) {
+    setRunning(true);
+    setError(null);
+    try {
+      await performanceAPI.runSimulation({ algorithmName });
+      await loadReports();
+    } catch (e: any) {
+      setError(e?.message ?? "Simulacija nije uspela.");
+    } finally {
+      setRunning(false);
+    }
+  }
 
-  const downloadPdf = async (id: number) => {
-    const res = await PerformanceService.downloadPdf(id);
-    const url = window.URL.createObjectURL(new Blob([res.data]));
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `performance-report-${id}.pdf`;
-    a.click();
-  };
+  async function refreshSelected(id: number) {
+    setError(null);
+    try {
+      const raw = await performanceAPI.getReportById(id); // <-- već je res.data
+      const one = mapPerformanceReport(raw);              // <-- ISPRAVKA
+      setSelected(one);
+    } catch (e: any) {
+      setError(e?.message ?? "Ne mogu da učitam izveštaj.");
+    }
+  }
+
+  async function onPdf(id: number) {
+    setError(null);
+    try {
+      const blob = await performanceAPI.downloadPdf(id);
+      downloadBlob(blob, `performance-report-${id}.pdf`);
+    } catch (e: any) {
+      setError(e?.message ?? "Ne mogu da preuzmem PDF.");
+    }
+  }
 
   useEffect(() => {
     loadReports();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  return (
-    <div style={{ padding: 24 }}>
-      <h1>Analiza performansi logističkih algoritama</h1>
+  // Trend grafici iz poslednjih N izveštaja
+  const lastN = useMemo(() => reports.slice(0, 10).reverse(), [reports]);
+  const timeSeries = useMemo(() => lastN.map((r) => r.executionTime), [lastN]);
+  const successSeries = useMemo(() => lastN.map((r) => r.successRate), [lastN]);
+  const resourceSeries = useMemo(() => lastN.map((r) => r.resourceUsage), [lastN]);
 
-      {/* ACTIONS */}
-      <div style={{ display: "flex", gap: 12, marginBottom: 20 }}>
-        <button onClick={() => runSimulation("DISTRIBUTIVNI_CENTAR")}>
-          Pokreni – Distributivni centar
-        </button>
-        <button onClick={() => runSimulation("MAGACIN")}>
-          Pokreni – Magacin
-        </button>
+  const kpiExecution = selected?.executionTime ?? 0;
+  const kpiSuccess = selected?.successRate ?? 0;
+  const kpiResources = selected?.resourceUsage ?? 0;
+
+  return (
+    <div style={{ padding: 16 }}>
+      {/* Header */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "end",
+          justifyContent: "space-between",
+          gap: 12,
+          marginBottom: 10,
+        }}
+      >
+        <div>
+          <div style={{ fontSize: 20, fontWeight: 900 }}>Analiza performansi</div>
+          <div style={{ fontSize: 13, opacity: 0.7 }}>
+            Simulacije logističkih algoritama i pregled izveštaja.
+          </div>
+        </div>
+
+        <div style={{ display: "flex", gap: 10 }}>
+          <button
+            disabled={running || loading}
+            onClick={() => runSimulation("DISTRIBUTIVNI_CENTAR")}
+            style={{ padding: "10px 12px", borderRadius: 10 }}
+          >
+            {running ? "Pokrećem..." : "Pokreni: Distributivni"}
+          </button>
+          <button
+            disabled={running || loading}
+            onClick={() => runSimulation("MAGACIN")}
+            style={{ padding: "10px 12px", borderRadius: 10 }}
+          >
+            {running ? "Pokrećem..." : "Pokreni: Magacin"}
+          </button>
+        </div>
       </div>
 
-      {/* KPI CARDS */}
-      {selectedReport && (
-        <div style={{ display: "flex", gap: 20, marginBottom: 30 }}>
-          <Kpi title="Algoritam" value={selectedReport.algorithmName} />
-          <Kpi title="Kapacitet po slanju" value={selectedReport.capacity} />
-          <Kpi title="Vreme nabavke (s)" value={selectedReport.supplyTime} />
-          <Kpi title="Ukupno iteracija" value={selectedReport.iterations} />
+      {/* Errors */}
+      {error ? (
+        <div
+          style={{
+            border: "1px solid rgba(255,0,0,0.25)",
+            background: "rgba(255,0,0,0.08)",
+            padding: 10,
+            borderRadius: 10,
+            marginBottom: 12,
+          }}
+        >
+          <b>Greška:</b> {error}
         </div>
-      )}
+      ) : null}
 
-      {/* CHART */}
-      {selectedReport && (
-        <div style={{ height: 300, marginBottom: 40 }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={selectedReport.metrics}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="iteration" />
-              <YAxis />
-              <Tooltip />
-              <Line
-                type="monotone"
-                dataKey="throughput"
-                stroke="#1976d2"
-                strokeWidth={2}
-              />
-            </LineChart>
-          </ResponsiveContainer>
+      {/* KPI cards */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+          gap: 10,
+          marginBottom: 12,
+        }}
+      >
+        <KpiCard
+          title="Ukupno izveštaja"
+          value={loading ? "..." : reports.length}
+          hint="Izveštaji se čuvaju u bazi (DESC)"
+        />
+        <KpiCard title="Vreme izvršavanja" value={kpiExecution.toFixed(2)} suffix="s" hint="Niže je bolje" />
+        <KpiCard title="Stopa uspeha" value={kpiSuccess.toFixed(0)} suffix="%" hint="Više je bolje" />
+        <KpiCard title="Resursi" value={kpiResources.toFixed(0)} suffix="%" hint="Opterećenje sistema" />
+      </div>
+
+      {/* Charts */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
+        <MiniLineChart title="Trend vremena izvršavanja" values={timeSeries} valueSuffix="s" />
+        <MiniLineChart title="Trend uspešnosti" values={successSeries} valueSuffix="%" />
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
+        <MiniLineChart title="Trend korišćenja resursa" values={resourceSeries} valueSuffix="%" />
+
+        <div
+          style={{
+            border: "1px solid rgba(255,255,255,0.12)",
+            borderRadius: 12,
+            background: "rgba(255,255,255,0.04)",
+            padding: 12,
+          }}
+        >
+          <div style={{ fontWeight: 900, marginBottom: 8 }}>Sažetak izveštaja</div>
+          <div style={{ fontSize: 13, opacity: 0.85, whiteSpace: "pre-line", lineHeight: 1.5 }}>
+            {selected?.summary ?? (loading ? "Učitavam..." : "Izaberi izveštaj iz tabele.")}
+          </div>
+
+          {selected ? (
+            <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
+              <button disabled={loading} onClick={() => refreshSelected(selected.id)}>Osveži detalj</button>
+              <button disabled={loading} onClick={() => onPdf(selected.id)}>Preuzmi PDF</button>
+            </div>
+          ) : null}
         </div>
-      )}
+      </div>
 
-      {/* REPORTS TABLE */}
-      <table width="100%" border={1} cellPadding={8}>
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Algoritam</th>
-            <th>Datum</th>
-            <th>Akcije</th>
-          </tr>
-        </thead>
-        <tbody>
-          {reports.map((r) => (
-            <tr key={r.id}>
-              <td>{r.id}</td>
-              <td>{r.algorithmName}</td>
-              <td>{new Date(r.createdAt).toLocaleString()}</td>
-              <td>
-                <button onClick={() => setSelectedReport(r)}>
-                  Prikaži
-                </button>
-                <button onClick={() => downloadPdf(r.id)}>
-                  PDF
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-/* KPI COMPONENT */
-function Kpi({ title, value }: { title: string; value: any }) {
-  return (
-    <div
-      style={{
-        padding: 16,
-        minWidth: 180,
-        border: "1px solid #ccc",
-        borderRadius: 8,
-      }}
-    >
-      <h4>{title}</h4>
-      <strong style={{ fontSize: 18 }}>{value}</strong>
+      {/* Table */}
+      <ReportsTable
+        reports={reports}
+        selectedId={selected?.id ?? null}
+        onSelect={(r) => {
+          setSelected(r);
+          // profi: povuci detalj sa servera (ako lista ne sadrži sve)
+          refreshSelected(r.id);
+        }}
+        onPdf={onPdf}
+      />
     </div>
   );
 }
