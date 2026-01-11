@@ -1,0 +1,19 @@
+{
+  "scripts": {
+    "dev:gateway": "npm --prefix infrastructure/gateway-api run dev",
+    "dev:client": "npm --prefix client run dev",
+
+    "dev:analysis": "npm --prefix infrastructure/microservices/analysis-microservice run dev",
+    "dev:audit-log": "npm --prefix infrastructure/microservices/audit-log-microservice run dev",
+    "dev:auth": "npm --prefix infrastructure/microservices/auth-microservice run dev",
+    "dev:event-log": "npm --prefix infrastructure/microservices/event-log-microservice run dev",
+    "dev:performance": "npm --prefix infrastructure/microservices/performance-analysis-microservice run dev",
+    "dev:processing": "npm --prefix infrastructure/microservices/processing-microservice run dev",
+    "dev:production": "npm --prefix infrastructure/microservices/production-microservice run dev",
+    "dev:sales": "npm --prefix infrastructure/microservices/sales-microservice run dev",
+    "dev:storage": "npm --prefix infrastructure/microservices/storage-microservice run dev",
+    "dev:users": "npm --prefix infrastructure/microservices/users-microservice run dev",
+
+    "dev:all": "concurrently -n GATEWAY,AUTH,USERS,EVENTLOG,AUDITLOG,PRODUCTION,PROCESSING,STORAGE,SALES,ANALYSIS,PERFORMANCE,CLIENT -c cyan,red,redBright,yellow,yellowBright,blue,blueBright,magenta,magentaBright,green,greenBright,white \"npm run dev:gateway\" \"npm run dev:auth\" \"npm run dev:users\" \"npm run dev:event-log\" \"npm run dev:audit-log\" \"npm run dev:production\" \"npm run dev:processing\" \"npm run dev:storage\" \"npm run dev:sales\" \"npm run dev:analysis\" \"npm run dev:performance\" \"npm run dev:client\""
+  }
+}
