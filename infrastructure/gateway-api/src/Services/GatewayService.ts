@@ -4,6 +4,8 @@ import { LoginUserDTO } from "../Domain/DTOs/user/LoginUserDTO";
 import { RegistrationUserDTO } from "../Domain/DTOs/user/RegistrationUserDTO";
 import { AuthResponseType } from "../Domain/types/AuthResponse";
 import { UserDTO } from "../Domain/DTOs/user/UserDTO";
+import { StorePackageDTO } from "../Domain/DTOs/storage/StorePackageDTO";
+import { PerfumeDTO } from "../Domain/DTOs/processing/PerfumeDTO";
 
 function normalizeUrl(url?: string) {
   if (!url) return undefined;
@@ -410,6 +412,64 @@ async listWarehouses(headers: Record<string, string>): Promise<any[]> {
       handleAxiosError(err);
     }
   }
+async getSalePackages(headers: Record<string, string>): Promise<any[]> {
+  if (!this.storageClient) throw new Error("STORAGE_URL not configured");
+  if (!this.processingClient) throw new Error("PROCESSING_URL not configured");
+
+  try {
+    const resp = await this.storageClient.get("/packages", { headers, timeout: 10000 });
+    const packages: any[] = resp.data || [];
+    const salePackages = packages.filter(p => ["PACKED", "for_sale"].includes(p.status));
+
+    const stockMap: Record<number, number> = {};
+    for (const pkg of salePackages) {
+      const pid = Number(pkg.perfumeId);
+      if (!Number.isFinite(pid)) continue;
+      stockMap[pid] = (stockMap[pid] || 0) + 1;
+    }
+    const perfumeIds = Array.from(new Set(Object.keys(stockMap).map(k => Number(k))));
+    const perfumePromises = perfumeIds.map(async (id) => {
+      try {
+        const r = await this.processingClient!.get(`/perfumes/${id}`, { headers });
+        const p: PerfumeDTO = r.data;
+
+        const pricePerMl = 50; 
+        const price = (p.netVolumeMl ?? 0) * pricePerMl;
+
+        return {
+          id: p.id ?? id,
+          name: p.name,
+          type: p.type ?? "",
+          netVolumeMl: p.netVolumeMl ?? 0,
+          serialNumber: p.serialNumber,
+          sourcePlantIds: p.sourcePlantIds,
+          expirationDate: p.expirationDate,
+          status: p.status,
+          stock: stockMap[id] ?? 0,
+          price
+        };
+      } catch (err) {
+        console.warn(`Failed to fetch perfume ${id}`, err);
+        return {
+          id,
+          name: `Perfume ${id}`,
+          type: "",
+          netVolumeMl: 0,
+          stock: stockMap[id] ?? 0,
+          price: 0
+        };
+      }
+    });
+
+    const perfumes = (await Promise.all(perfumePromises)).filter(Boolean);
+
+    return perfumes;
+  } catch (err) {
+    handleAxiosError(err);
+  }
+}
+
+
 
   // ================= PERFORMANCE =================
   async runSimulation(algorithmName: string, headers: Record<string, string>): Promise<any> {

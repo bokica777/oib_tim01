@@ -21,8 +21,9 @@ export class SalesController {
     this.router.post("/order", validateDTO(CreateOrderDTO), this.createOrder.bind(this));
     this.router.get("/order/:id", this.getOrder.bind(this));
     this.router.get("/orders", this.getAll.bind(this));
-  }
 
+  }
+  
   private async createOrder(req: Request, res: Response) {
     try {
       const { customerName, deliveryAddress, count } = req.body;

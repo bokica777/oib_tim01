@@ -1,3 +1,4 @@
+import { StorePackageDTO } from "../DTOs/storage/StorePackageDTO";
 import { LoginUserDTO } from "../DTOs/user/LoginUserDTO";
 import { RegistrationUserDTO } from "../DTOs/user/RegistrationUserDTO";
 import { UserDTO } from "../DTOs/user/UserDTO";
@@ -51,6 +52,7 @@ export interface IGatewayService {
   createOrder(dto: any, internalHeaders: Record<string, string>): Promise<any>;
   getOrderById(id: number, internalHeaders: Record<string, string>): Promise<any>;
   listOrders(internalHeaders: Record<string, string>): Promise<any[]>;
+  getSalePackages(headers: Record<string, string>): Promise<StorePackageDTO[]>;
 
   // Performance analysis
   runSimulation(algorithmName: string, internalHeaders: Record<string, string>): Promise<any>;

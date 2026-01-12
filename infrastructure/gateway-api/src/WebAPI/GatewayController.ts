@@ -187,6 +187,13 @@ export class GatewayController {
       authorize("admin", "sales_manager"),
       this.listOrders.bind(this)
     );
+    
+    this.router.get(
+  "/sales/products",
+  authenticate,
+  authorize("seller", "sales_manager", "admin"),
+  this.listSalePackages.bind(this)
+);
 
     // ================= PERFORMANCE =================
     // ================= PERFORMANCE =================
@@ -503,6 +510,19 @@ export class GatewayController {
     const list = await this.gatewayService.listOrders(headers);
     res.json(list);
   }
+private async listSalePackages(req: Request, res: Response) {
+  try {
+    const headers = buildInternalHeaders(req);
+    const packages = await this.gatewayService.getSalePackages(headers);
+    res.json(packages);
+  } catch (err: any) {
+    console.error("Error fetching sale packages:", err);
+    res.status(err?.status ?? 500).json({
+      message: err?.message ?? "Failed to fetch sale packages",
+    });
+  }
+}
+
 
   // ================= PERFORMANCE =================
   private async runSimulation(req: Request, res: Response) {
