@@ -1,4 +1,3 @@
-// src/services/sales/ISalesService.ts
 import { PerfumeDTO } from "../../models/sales/PerfumeDTO";
 import { CreateOrderDTO } from "../../models/sales/CreateOrderDTO";
 

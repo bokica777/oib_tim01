@@ -1,5 +1,6 @@
+// src/pages/SalesPage.tsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { salesAPI } from "../api/sales/SalesAPI";
+import { salesAPI, SimpleCreateOrderDTO } from "../api/sales/SalesAPI";
 import { PerfumeDTO } from "../models/sales/PerfumeDTO";
 import { OrderItemDTO } from "../models/sales/OrderItemDTO";
 import ProductCard from "../components/sales/ProductCard";
@@ -20,7 +21,6 @@ const SalesPage: React.FC = () => {
       try {
         setLoading(true);
         const list = await salesAPI.listProducts();
-        console.log("Loaded products:", list);
         setProducts(list || []);
       } catch (e: any) {
         setError(e?.message ?? "Greška pri učitavanju proizvoda");
@@ -32,6 +32,7 @@ const SalesPage: React.FC = () => {
     loadProducts();
   }, []);
 
+  // --- Dodaj u korpu ---
   const addToCart = (p: PerfumeDTO, qty: number) => {
     setCart(prev => {
       const found = prev.find(i => i.productId === p.id);
@@ -42,7 +43,16 @@ const SalesPage: React.FC = () => {
             : i
         );
       }
-      return [...prev, { productId: p.id!, name: p.name, price: (p as any).price ?? 0, quantity: qty, stock: (p as any).stock }];
+      return [
+        ...prev,
+        {
+          productId: p.id!,
+          name: p.name,
+          price: (p as any).price ?? 0,
+          quantity: qty,
+          stock: (p as any).stock
+        }
+      ];
     });
   };
 
@@ -58,25 +68,39 @@ const SalesPage: React.FC = () => {
     setCart(prev => prev.filter(i => i.productId !== productId));
   };
 
-  const total = useMemo(() => cart.reduce((sum, i) => sum + (i.price || 0) * i.quantity, 0), [cart]);
+  const total = useMemo(
+    () => cart.reduce((sum, i) => sum + (i.price || 0) * i.quantity, 0),
+    [cart]
+  );
+
   const handleCheckout = async () => {
     if (cart.length === 0) { alert("Korpa je prazna"); return; }
     if (!customerName.trim()) { alert("Unesite ime kupca"); return; }
     if (!deliveryAddress.trim()) { alert("Unesite adresu isporuke"); return; }
 
     const count = cart.reduce((s, i) => s + i.quantity, 0);
-
-    const dto = {
+    const dto: SimpleCreateOrderDTO = {
       customerName: customerName.trim(),
       deliveryAddress: deliveryAddress.trim(),
-      count, // <-- backend expects this
+      count,
     };
 
     try {
       setLoading(true);
-      const response: any = await salesAPI.createOrder(dto); // tip izvanično možeš prilagoditi
+      const response: any = await salesAPI.createOrder(dto);
       const serial = response?.serial ?? response?.id ?? null;
       alert(`Porudžbina uspješno kreirana! Broj porudžbine: ${serial ?? "n/a"}`);
+
+      setProducts(prev =>
+        prev.map(p => {
+          const cartItem = cart.find(c => c.productId === p.id);
+          if (!cartItem) return p;
+          return {
+            ...p,
+            stock: Math.max(0, (p.stock ?? 0) - cartItem.quantity),
+          };
+        })
+      );
 
       setCart([]);
       setCustomerName("");
@@ -88,7 +112,6 @@ const SalesPage: React.FC = () => {
       setLoading(false);
     }
   };
-
 
   return (
     <div style={{ padding: 12, height: "100vh", boxSizing: "border-box", display: "flex", flexDirection: "column" }}>
@@ -160,7 +183,7 @@ const SalesPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Sticky footer with actions */}
+          {/* Sticky footer */}
           <div
             style={{
               position: "sticky",
@@ -176,7 +199,6 @@ const SalesPage: React.FC = () => {
               borderRadius: "0 0 8px 8px",
             }}
           >
-       
             <button
               onClick={() => setCart([])}
               disabled={cart.length === 0 || loading}

@@ -1,13 +1,11 @@
-// src/api/sales/SalesAPI.ts
 import axios, { AxiosInstance } from "axios";
 import { PerfumeDTO } from "../../models/sales/PerfumeDTO";
 import { OrderResponseDTO } from "../../models/sales/OrderResponseDTO";
 
-// Novo: DTO za kreiranje porudžbine po backend očekivanju
 export interface SimpleCreateOrderDTO {
   customerName: string;
   deliveryAddress: string;
-  count: number; // ukupno paketa
+  count: number; 
 }
 
 export class SalesAPI {
@@ -20,9 +18,8 @@ export class SalesAPI {
       timeout: 12000,
     });
 
-    // Automatski dodaj Authorization header ako postoji token
     this.client.interceptors.request.use((cfg) => {
-      const token = localStorage.getItem("authToken"); // koristi authToken
+      const token = localStorage.getItem("authToken");
       if (token) {
         cfg.headers = cfg.headers ?? {};
         (cfg.headers as any).Authorization = `Bearer ${token}`;
@@ -31,7 +28,6 @@ export class SalesAPI {
     });
   }
 
-  // 🌸 Dohvati sve proizvode (perfume)
   async listProducts(): Promise<PerfumeDTO[]> {
     try {
       const res = await this.client.get<PerfumeDTO[]>("/products");
@@ -41,7 +37,6 @@ export class SalesAPI {
     }
   }
 
-  // 🛒 Kreiraj novu porudžbinu (samo count)
   async createOrder(dto: SimpleCreateOrderDTO): Promise<OrderResponseDTO> {
     try {
       const res = await this.client.post<OrderResponseDTO>("/order", dto);
@@ -51,7 +46,6 @@ export class SalesAPI {
     }
   }
 
-  // 📝 Dohvati jednu porudžbinu po ID-u
   async getOrderById(id: number): Promise<OrderResponseDTO> {
     try {
       const res = await this.client.get<OrderResponseDTO>(`/order/${id}`);
@@ -61,7 +55,6 @@ export class SalesAPI {
     }
   }
 
-  // 📦 Dohvati sve porudžbine
   async listOrders(): Promise<OrderResponseDTO[]> {
     try {
       const res = await this.client.get<OrderResponseDTO[]>("/orders");
