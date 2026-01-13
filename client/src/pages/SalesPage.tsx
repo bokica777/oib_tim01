@@ -114,57 +114,58 @@ const SalesPage: React.FC = () => {
   };
 
   return (
-    <div style={{ padding: 12, height: "100vh", boxSizing: "border-box", display: "flex", flexDirection: "column" }}>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 400px", gap: 12, flex: 1, minHeight: 0 }}>
-        {/* Catalog */}
+    <div style={{ padding: 28, height: "calc(100vh - 20px)", boxSizing: "border-box", display: "flex", justifyContent: "center" }}>
+      <div style={{ width: "100%", maxWidth: 2000, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, height: "calc(100vh - 76px)" }}>
         <div style={{ display: "flex", flexDirection: "column", minHeight: 0 }}>
-          <div style={{ background: "#16a34a", color: "white", padding: 12, fontWeight: 700, borderRadius: 8, display: "flex", justifyContent: "space-between" }}>
-            <div>Каталог парфема</div>
-            <div>{products.length} proizvoda</div>
+          <div style={{ background: "linear-gradient(135deg, #4ade80, #22c55e)", color: "white", padding: 10, fontWeight: 700, borderRadius: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ fontSize: 18 }}>Katalog parfema</div>
+            <div style={{ fontSize: 14 }}>{products.length} proizvoda</div>
           </div>
 
-          <div style={{ padding: 12, overflow: "auto", flex: 1 }}>
-            {error && <div style={{ background: "#fee2e2", color: "#991b1b", padding: 8, borderRadius: 6 }}>{error}</div>}
+          <div style={{ padding: 18, overflow: "auto", flex: 1, minHeight: 0 }}>
+            {error && <div style={{ background: "#fee2e2", color: "#991b1b", padding: 10, borderRadius: 6 }}>{error}</div>}
             {loading && <div>Učitavanje...</div>}
             {!loading && products.length === 0 && !error && <div>Nema proizvoda</div>}
+
+            {/* keep same simple list, but give each item more space */}
             {products.map(p => (
-              <div key={p.id} style={{ marginBottom: 12 }}>
+              <div key={p.id} style={{ marginBottom: 16, minWidth: 280 }}>
                 <ProductCard product={p} onAdd={qty => addToCart(p, qty)} />
               </div>
             ))}
           </div>
         </div>
 
-        {/* Cart */}
+        {/* Cart (right) */}
         <div style={{ display: "flex", flexDirection: "column", border: "1px solid rgba(0,0,0,0.06)", borderRadius: 8, minHeight: 0 }}>
-          <div style={{ padding: 12, fontWeight: 700, display: "flex", justifyContent: "space-between", background: "#3b82f6", color: "white", borderRadius: "8px 8px 0 0" }}>
-            <div>Korpa ({cart.reduce((s,c) => s+c.quantity,0)})</div>
-            <div>Total: {total.toLocaleString()} РСД</div>
+          <div style={{ padding: 12, fontWeight: 700, display: "flex", justifyContent: "space-between", background: "linear-gradient(135deg, #93c5fd, #60a5fa)", color: "white", borderRadius: "8px 8px 0 0", alignItems: "center" }}>
+            <div style={{ fontSize: 16 }}>Korpa ({cart.reduce((s,c) => s+c.quantity,0)})</div>
+            <div style={{ fontSize: 15 }}>Total: {total.toLocaleString()} РСД</div>
           </div>
 
           <div style={{ overflowY: "auto", flex: 1, minHeight: 0 }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: 12 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: 16 }}>
               <div>
-                <label style={{ display: "block", marginBottom: 6 }}>Ime kupca</label>
+                <label style={{ display: "block", marginBottom: 8 }}>Ime kupca</label>
                 <input
                   ref={nameRef}
                   value={customerName}
                   onChange={e => setCustomerName(e.target.value)}
                   type="text"
-                  style={{ width: "100%", padding: 8, borderRadius: 6, border: "1px solid rgba(0,0,0,0.12)" }}
+                  style={{ width: "100%", padding: 12, borderRadius: 8, border: "1px solid rgba(0,0,0,0.12)", fontSize: 14 }}
                 />
               </div>
               <div>
-                <label style={{ display: "block", marginBottom: 6 }}>Adresa isporuke</label>
+                <label style={{ display: "block", marginBottom: 8 }}>Adresa isporuke</label>
                 <input
                   value={deliveryAddress}
                   onChange={e => setDeliveryAddress(e.target.value)}
                   type="text"
-                  style={{ width: "100%", padding: 8, borderRadius: 6, border: "1px solid rgba(0,0,0,0.12)" }}
+                  style={{ width: "100%", padding: 12, borderRadius: 8, border: "1px solid rgba(0,0,0,0.12)", fontSize: 14 }}
                 />
               </div>
               <div>
-                <label style={{ display: "block", marginBottom: 6 }}>Stavke u korpi</label>
+                <label style={{ display: "block", marginBottom: 8 }}>Stavke u korpi</label>
                 <CartSidebar
                   items={cart}
                   onInc={(id) => {
@@ -191,48 +192,82 @@ const SalesPage: React.FC = () => {
               left: 0,
               right: 0,
               display: "flex",
-              gap: 8,
-              padding: 12,
+              gap: 12,
+              padding: 16,
               borderTop: "1px solid rgba(0,0,0,0.06)",
               zIndex: 20,
               alignItems: "center",
               borderRadius: "0 0 8px 8px",
             }}
           >
-            <button
-              onClick={() => setCart([])}
-              disabled={cart.length === 0 || loading}
-              style={{
-                padding: "8px 12px",
-                borderRadius: 6,
-                border: "1px solid rgba(0,0,0,0.08)",
-                background: "#fef2f2",
-                color: "#991b1b",
-                cursor: cart.length === 0 ? "not-allowed" : "pointer",
-              }}
-              aria-label="Isprazni korpu"
-              title="Isprazni"
-            >
-              Isprazni
-            </button>
+ <button
+  onClick={() => setCart([])}
+  disabled={cart.length === 0 || loading}
+  style={{
+    padding: "12px 16px",
+    borderRadius: 8,
+    border: "1px solid rgba(255,255,255,0.3)",
+    background: "rgba(255,255,255,0.05)",
+    color: "#fff",
+    cursor: cart.length === 0 ? "not-allowed" : "pointer",
+    fontSize: 14,
+    backdropFilter: "blur(8px)",
+    boxShadow: "0 4px 12px rgba(0,0,0,0.06)",
+    transition: "transform 0.2s, box-shadow 0.2s, background 0.2s",
+  }}
+  onMouseEnter={e => {
+    if (!(cart.length === 0 || loading)) {
+      (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-2px)";
+      (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 8px 16px rgba(0,0,0,0.1)";
+      (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.1)";
+    }
+  }}
+  onMouseLeave={e => {
+    (e.currentTarget as HTMLButtonElement).style.transform = "translateY(0)";
+    (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 4px 12px rgba(0,0,0,0.06)";
+    (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.05)";
+  }}
+  aria-label="Isprazni korpu"
+  title="Isprazni"
+>
+  Isprazni
+</button>
 
-            <button
-              style={{
-                flex: 1,
-                background: "#3b82f6",
-                color: "white",
-                border: "none",
-                borderRadius: 6,
-                padding: "10px 14px",
-                cursor: cart.length === 0 || loading ? "not-allowed" : "pointer",
-              }}
-              onClick={handleCheckout}
-              disabled={cart.length === 0 || loading}
-              aria-label="Zavrsi kupovinu"
-              title="Završi kupovinu"
-            >
-              {loading ? "Slanje..." : "Završi kupovinu"}
-            </button>
+
+         <button
+  style={{
+    flex: 1,
+    borderRadius: 6,
+    border: "1px solid rgba(59,130,246,0.3)", 
+    background: "rgba(59,130,246,0.1)", 
+    color: "#fff",
+    padding: "14px 16px",
+    fontSize: 15,
+    cursor: cart.length === 0 || loading ? "not-allowed" : "pointer",
+    backdropFilter: "blur(6px)",
+    boxShadow: "0 4px 12px rgba(0,0,0,0.06)",
+    transition: "transform 0.2s, box-shadow 0.2s, background 0.2s",
+  }}
+  onClick={handleCheckout}
+  disabled={cart.length === 0 || loading}
+  onMouseEnter={e => {
+    if (!(cart.length === 0 || loading)) {
+      (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-2px)";
+      (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 8px 16px rgba(0,0,0,0.1)";
+      (e.currentTarget as HTMLButtonElement).style.background = "rgba(59,130,246,0.15)";
+    }
+  }}
+  onMouseLeave={e => {
+    (e.currentTarget as HTMLButtonElement).style.transform = "translateY(0)";
+    (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 4px 12px rgba(0,0,0,0.06)";
+    (e.currentTarget as HTMLButtonElement).style.background = "rgba(59,130,246,0.1)";
+  }}
+  aria-label="Zavrsi kupovinu"
+  title="Završi kupovinu"
+>
+  {loading ? "Slanje..." : "Završi kupovinu"}
+</button>
+
           </div>
         </div>
       </div>

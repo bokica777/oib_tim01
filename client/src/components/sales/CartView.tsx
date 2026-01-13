@@ -23,10 +23,14 @@ const btnBase: React.CSSProperties = {
 
 const btnDanger: React.CSSProperties = {
   ...btnBase,
-  background: "#fee2e2",
-  color: "#991b1b",
-  border: "1px solid rgba(153,27,27,0.15)",
+  background: "rgba(254,226,226,0.15)", // providna, svjetlija ružičasta
+  color: "#991b1b", // tamnocrvena za tekst
+  border: "1px solid rgba(153,27,27,0.25)", // blaži obrub u skladu s providnom pozadinom
+  backdropFilter: "blur(6px)", // da se uklopi s ostalim providnim dugmadima
+  boxShadow: "0 4px 12px rgba(0,0,0,0.06)",
+  transition: "transform 0.2s, box-shadow 0.2s, background 0.2s",
 };
+
 
 const disabledStyle: React.CSSProperties = {
   opacity: 0.5,
