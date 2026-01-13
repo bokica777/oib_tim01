@@ -12,7 +12,7 @@ export class ProcessingAPI implements IProcessingAPI{
 
   constructor() {
     const gateway = (import.meta.env.VITE_GATEWAY_URL ?? "http://localhost:4000").replace(/\/+$/, "");
-    const base = `${gateway}/api/v1/processing`;
+    const base = `${gateway}/processing`;
 
     this.client = axios.create({
       baseURL: base,
