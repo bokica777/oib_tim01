@@ -7,6 +7,7 @@ import { IUserAPI } from "./api/users/IUserAPI";
 import { ProductionPage } from "./pages/ProductionPage";
 import { StoragePage } from "./pages/StoragePage";
 import { DashboardNavbar } from "./components/dashboard/navbar/Navbar";
+import SalesPage from "./pages/SalesPage";
 
 const auth_api: IAuthAPI = new AuthAPI();
 const user_api: IUserAPI = new UserAPI();
@@ -24,6 +25,7 @@ function App() {
           <Route path="/dashboard" element={<ProductionPage />} />
           <Route path="/production" element={<ProductionPage />} />
           <Route path="/storage" element={<StoragePage />} />
+          <Route path="/sales" element={<SalesPage/>} />
           <Route path="*" element={<AuthPage authAPI={auth_api} />} />
         </Routes>
       </div>

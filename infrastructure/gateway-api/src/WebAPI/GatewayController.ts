@@ -69,6 +69,34 @@ export class GatewayController {
     this.router.post("/sales/order", authenticate, validateDTO(CreateOrderDTO), this.createOrder.bind(this));
     this.router.get("/sales/order/:id", authenticate, this.getOrderById.bind(this));
     this.router.get("/sales/orders", authenticate, this.listOrders.bind(this));
+    this.router.post(
+      "/sales/order",
+      authenticate,
+      authorize("seller", "sales_manager"),
+      validateDTO(CreateOrderDTO),
+      this.createOrder.bind(this)
+    );
+
+    this.router.get(
+      "/sales/order/:id",
+      authenticate,
+      authorize("admin", "sales_manager", "seller"),
+      this.getOrderById.bind(this)
+    );
+
+    this.router.get(
+      "/sales/orders",
+      authenticate,
+      authorize("admin", "sales_manager"),
+      this.listOrders.bind(this)
+    );
+    
+    this.router.get(
+  "/sales/products",
+  authenticate,
+  authorize("seller", "sales_manager", "admin"),
+  this.listSalePackages.bind(this)
+);
 
     // ================= PERFORMANCE =================
     this.router.post("/performance/simulate", authenticate, validateDTO(RunSimulationDTO), this.runSimulation.bind(this));
@@ -415,6 +443,19 @@ private async getCurrentUser(req: Request, res: Response) {
     const list = await this.gatewayService.listOrders(headers);
     res.json(list);
   }
+private async listSalePackages(req: Request, res: Response) {
+  try {
+    const headers = buildInternalHeaders(req);
+    const packages = await this.gatewayService.getSalePackages(headers);
+    res.json(packages);
+  } catch (err: any) {
+    console.error("Error fetching sale packages:", err);
+    res.status(err?.status ?? 500).json({
+      message: err?.message ?? "Failed to fetch sale packages",
+    });
+  }
+}
+
 
   // ================= PERFORMANCE =================
   private async runSimulation(req: Request, res: Response) {

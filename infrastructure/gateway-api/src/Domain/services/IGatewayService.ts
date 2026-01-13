@@ -1,4 +1,5 @@
 // src/Domain/services/IGatewayService.ts
+import { StorePackageDTO } from "../DTOs/storage/StorePackageDTO";
 import { LoginUserDTO } from "../DTOs/user/LoginUserDTO";
 import { RegistrationUserDTO } from "../DTOs/user/RegistrationUserDTO";
 import { UserDTO } from "../DTOs/user/UserDTO";
@@ -62,6 +63,11 @@ export interface IGatewayService {
     id: number,
     headers: Record<string, string>
   ): Promise<{ buffer: Buffer; contentType: string; filename: string }>;
+  // Sales
+  createOrder(dto: any, internalHeaders: Record<string, string>): Promise<any>;
+  getOrderById(id: number, internalHeaders: Record<string, string>): Promise<any>;
+  listOrders(internalHeaders: Record<string, string>): Promise<any[]>;
+  getSalePackages(headers: Record<string, string>): Promise<StorePackageDTO[]>;
 
   // ================= AUDIT =================
  getAudits(source?: string, forwardedHeaders?: string | Record<string,string>): Promise<any[]>;

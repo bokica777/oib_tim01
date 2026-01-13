@@ -4,6 +4,7 @@ import { ProductionLog } from "../components/production/ProductionLog";
 import ProcessingPage from "./ProcessingPage";
 import StoragePage from "./StoragePage";
 import PackagingPage from "./PackagingPage";
+import SalesPage from "./SalesPage";
 
 function getUserRoleFromToken(): string | null {
   const token = localStorage.getItem("accessToken");
@@ -240,6 +241,9 @@ export const ProductionPage: React.FC = () => {
             {activeTopTab === "skladistenje" && (
           <StoragePage/>
           )}
+                  {activeTopTab=="prodaja" && (
+                    <SalesPage/>
+                  )}
           </div>
 
         </div>
