@@ -1,22 +1,27 @@
+// src/Domain/services/IGatewayService.ts
 import { LoginUserDTO } from "../DTOs/user/LoginUserDTO";
 import { RegistrationUserDTO } from "../DTOs/user/RegistrationUserDTO";
 import { UserDTO } from "../DTOs/user/UserDTO";
 import { AuthResponseType } from "../types/AuthResponse";
 
 export interface IGatewayService {
-  // Auth
+  // ================= AUTH =================
   login(data: LoginUserDTO): Promise<AuthResponseType>;
   register(data: RegistrationUserDTO): Promise<AuthResponseType>;
 
-  // Users
+  // ================= USERS =================
   getAllUsers(): Promise<UserDTO[]>;
-  getUserById(id: number): Promise<UserDTO>;
+  getUserById(id: number, headers?: Record<string, string>): Promise<UserDTO>
 
-  // Production
-  plantNew(seedData: any, internalHeaders: Record<string, string>): Promise<any>;
-  getPlants(count: number, internalHeaders: Record<string, string>): Promise<any[]>;
-  plantAndScale(sourceStrength: number, factorPercent: number, internalHeaders: Record<string, string>): Promise<any>;
-  getProductionLogs(internalHeaders: Record<string, string>): Promise<any[]>;
+
+  // ================= PRODUCTION =================
+  plantNew(seedData: any, headers: Record<string, string>): Promise<any>;
+  getPlants(count: number, headers: Record<string, string>): Promise<any[]>;
+  plantAndScale(
+    sourceStrength: number,
+    factorPercent: number,
+    headers: Record<string, string>
+  ): Promise<any>;
   harvestMany(
     commonName: string,
     count: number,
@@ -27,49 +32,48 @@ export interface IGatewayService {
     value: number,
     headers: Record<string, string>
   ): Promise<any>;
+  getProductionLogs(headers: Record<string, string>): Promise<any[]>;
 
+  // ================= PROCESSING =================
+  processPerfume(dto: any, headers: Record<string, string>): Promise<any[]>;
+  listPerfumes(headers: Record<string, string>): Promise<any[]>;
+  getPerfumeById(id: number, headers: Record<string, string>): Promise<any>;
+  requestPerfumes(name: string, count: number, headers: Record<string, string>): Promise<any[]>;
 
-
-
-  // Processing
-  processPerfume(dto: any, internalHeaders: Record<string, string>): Promise<any[]>;
-  listPerfumes(internalHeaders: Record<string, string>): Promise<any[]>;
-  getPerfumeById(id: number, internalHeaders: Record<string, string>): Promise<any>;
-  requestPerfumes(name: string, count: number, internalHeaders: Record<string, string>): Promise<any[]>;
-
-  // Storage
-  storePackage(dto: any, internalHeaders: Record<string,string>): Promise<any>;
-  sendPackages(role: string | undefined, count: number, internalHeaders: Record<string,string>): Promise<any[]>;
-  listPackages(internalHeaders: Record<string,string>): Promise<any[]>;
+  // ================= STORAGE =================
+  storePackage(dto: any, headers: Record<string, string>): Promise<any>;
+  sendPackages(role: string | undefined, count: number, headers: Record<string, string>): Promise<any[]>;
+  listPackages(headers: Record<string, string>): Promise<any[]>;
   listWarehouses(headers: Record<string, string>): Promise<any[]>;
 
+  // ================= PACKAGING =================
+  requestPackaging(count: number, headers: Record<string, string>): Promise<void>;
 
-  // Packaging
-  requestPackaging(count: number, internalHeaders: Record<string, string>): Promise<void>;
+  // ================= SALES =================
+  createOrder(dto: any, headers: Record<string, string>): Promise<any>;
+  getOrderById(id: number, headers: Record<string, string>): Promise<any>;
+  listOrders(headers: Record<string, string>): Promise<any[]>;
 
-  // Sales
-  createOrder(dto: any, internalHeaders: Record<string, string>): Promise<any>;
-  getOrderById(id: number, internalHeaders: Record<string, string>): Promise<any>;
-  listOrders(internalHeaders: Record<string, string>): Promise<any[]>;
+  // ================= PERFORMANCE =================
+  runSimulation(algorithmName: string, headers: Record<string, string>): Promise<any>;
+  listPerformanceReports(headers: Record<string, string>): Promise<any[]>;
+  getPerformanceReportById(id: number, headers: Record<string, string>): Promise<any>;
+  getPerformanceReportPdf(
+    id: number,
+    headers: Record<string, string>
+  ): Promise<{ buffer: Buffer; contentType: string; filename: string }>;
 
-  // Performance analysis
-  runSimulation(algorithmName: string, internalHeaders: Record<string, string>): Promise<any>;
-  listPerformanceReports(internalHeaders: Record<string, string>): Promise<any[]>;
-  getPerformanceReportById(id: number, internalHeaders: Record<string, string>): Promise<any>;
-  getPerformanceReportPdf(id: number, internalHeaders: Record<string, string>): Promise<{ buffer: Buffer; contentType: string; filename: string }>;
+  // ================= AUDIT =================
+ getAudits(source?: string, forwardedHeaders?: string | Record<string,string>): Promise<any[]>;
+createAudit(data: any, forwardedHeaders?: string | Record<string,string>): Promise<any>;
 
+  // ================= ANALYTICS =================
+  getTopPerfumes(query: Record<string, any>, headers: Record<string, string>): Promise<any>;
+  createReceipt(dto: any, headers: Record<string, string>): Promise<any>;
+  listReceipts(headers: Record<string, string>): Promise<any[]>;
+  getDailyRevenue(date: string, headers: Record<string, string>): Promise<any>;
+  getSalesByProduct(headers: Record<string, string>): Promise<any[]>;
 
-  // Audit logs
-  createAuditLog(dto: any): Promise<any>;
-  getAuditLogs(): Promise<any[]>;
-
-  // Analytics & Receipts
-  getTopPerfumes(query: Record<string, any>, internalHeaders: Record<string, string>): Promise<any>;
-  createReceipt(dto: any, internalHeaders: Record<string, string>): Promise<any>;
-  listReceipts(internalHeaders: Record<string, string>): Promise<any[]>;
-  getDailyRevenue(date: string, internalHeaders: Record<string, string>): Promise<any>;
-  getSalesByProduct(internalHeaders: Record<string, string>): Promise<any[]>;
-
-  // Audit helper (generic)
+  // ================= GENERIC AUDIT =================
   logAudit(message: string, type?: string, source?: string, meta?: any): Promise<boolean>;
 }

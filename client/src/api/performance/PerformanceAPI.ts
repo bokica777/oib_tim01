@@ -14,7 +14,7 @@ export class PerformanceAPI implements IPerformanceAPI {
     });
 
     this.client.interceptors.request.use((config) => {
-      const token = localStorage.getItem("token"); // <-- ako ti je "authToken", promeni ovde
+      const token = localStorage.getItem("accessToken");
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }

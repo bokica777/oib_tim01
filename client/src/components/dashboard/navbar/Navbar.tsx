@@ -18,7 +18,7 @@ export const DashboardNavbar: React.FC<DashboardNavbarProps> = ({ userAPI }) => 
     const fetchUser = async () => {
       if (authUser?.id) {
         try {
-          const userData = await userAPI.getUserById(token ?? "", authUser.id);
+          const userData = await userAPI.getCurrentUser();
           setUser(userData);
         } catch (error) {
           console.error("Failed to fetch user:", error);

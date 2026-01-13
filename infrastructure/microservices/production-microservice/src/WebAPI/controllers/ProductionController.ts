@@ -7,13 +7,12 @@ export class ProductionController {
   private router: Router;
 
   constructor(
-  private service: ProductionService,
-  private logger: ILogerService
-) {
-  this.router = Router();
-  this.initializeRoutes();
-}
-
+    private service: ProductionService,
+    private logger: ILogerService
+  ) {
+    this.router = Router();
+    this.initializeRoutes();
+  }
 
   private initializeRoutes() {
     this.router.post("/plant", this.plantNew.bind(this));
@@ -22,20 +21,22 @@ export class ProductionController {
     this.router.get("/plants", this.getPlants.bind(this));
     this.router.post("/plants/used", this.markPlantsUsed.bind(this));
     this.router.post("/balance", this.plantAndScale.bind(this));
-    this.router.get("/logs", this.getLogs.bind(this)); // ⬅️ NOVO
+    // NOTE: this is optional - frontend should use gateway/audit endpoints directly,
+    // but we keep it to allow production service to return its own logs via gateway-call.
+    this.router.get("/logs", this.getLogs.bind(this));
   }
 
   async plantNew(req: Request, res: Response) {
-  try {
-    const p = await this.service.plantNew(req.body);
-    await this.logger.log("Plant planted", "INFO", { plantId: p.id });
-    res.status(201).json(p);
-  } catch (err) {
-    await this.logger.log("Plant planting failed", "ERROR", { error: (err as Error).message });
-    res.status(400).json({ message: (err as Error).message });
+    try {
+      const p = await this.service.plantNew(req.body);
+      await this.logger.log("Plant planted", "INFO", { plantId: p.id }, "production");
+      res.status(201).json(p);
+    } catch (err) {
+      const errMsg = (err as Error).message ?? String(err);
+      await this.logger.log("Plant planting failed", "ERROR", { error: errMsg }, "production");
+      res.status(400).json({ message: errMsg });
+    }
   }
-}
-
 
   async adjustStrength(req: Request, res: Response) {
     try {
@@ -49,9 +50,12 @@ export class ProductionController {
         mode === "scale" ? "scale" : "inc"
       );
 
+      await this.logger.log("Adjusted aromatic strength", "INFO", { plantId: id, value, mode }, "production");
       res.json(updated);
     } catch (err) {
-      res.status(400).json({ message: (err as Error).message });
+      const errMsg = (err as Error).message ?? String(err);
+      await this.logger.log(errMsg, "ERROR", { error: errMsg, params: req.params }, "production");
+      res.status(400).json({ message: errMsg });
     }
   }
 
@@ -62,10 +66,13 @@ export class ProductionController {
         return res.status(400).json({ message: "Invalid payload" });
       }
 
+      await this.logger.log(`harvest ${count} of ${commonName}`, "INFO", { commonName, count }, "production");
       const result = await this.service.harvestMany(commonName, count);
       res.json(result);
     } catch (err) {
-      res.status(400).json({ message: (err as Error).message });
+      const errMsg = (err as Error).message ?? String(err);
+      await this.logger.log(errMsg, "ERROR", { error: errMsg }, "production");
+      res.status(400).json({ message: errMsg });
     }
   }
 
@@ -79,7 +86,9 @@ export class ProductionController {
       const data = await this.service.getAvailablePlants(count);
       res.json(data);
     } catch (err) {
-      res.status(500).json({ message: (err as Error).message });
+      const errMsg = (err as Error).message ?? String(err);
+      await this.logger.log(errMsg, "ERROR", { error: errMsg }, "production");
+      res.status(500).json({ message: errMsg });
     }
   }
 
@@ -91,32 +100,44 @@ export class ProductionController {
       }
 
       await this.service.markPlantsUsed(ids);
+      await this.logger.log("Marked plants used", "INFO", { ids }, "production");
       res.status(204).send();
     } catch (err) {
-      res.status(400).json({ message: (err as Error).message });
+      const errMsg = (err as Error).message ?? String(err);
+      await this.logger.log(errMsg, "ERROR", { error: errMsg }, "production");
+      res.status(400).json({ message: errMsg });
     }
   }
 
   async plantAndScale(req: Request, res: Response) {
-  try {
-    const { sourceStrength } = req.body;
-    if (!Number.isFinite(sourceStrength)) {
-      return res.status(400).json({ message: "Invalid sourceStrength" });
+    try {
+      const { sourceStrength } = req.body;
+      if (!Number.isFinite(sourceStrength)) {
+        return res.status(400).json({ message: "Invalid sourceStrength" });
+      }
+
+      const p = await this.service.plantAndScale(sourceStrength);
+      await this.logger.log("Planted scaled plant", "INFO", { sourceStrength, plantId: p.id }, "production");
+      res.status(201).json(p);
+    } catch (err) {
+      const errMsg = (err as Error).message ?? String(err);
+      await this.logger.log(errMsg, "ERROR", { error: errMsg }, "production");
+      res.status(500).json({ message: errMsg });
     }
-
-    const p = await this.service.plantAndScale(sourceStrength);
-    res.status(201).json(p);
-  } catch (err) {
-    res.status(500).json({ message: (err as Error).message });
   }
-}
-
 
   async getLogs(req: Request, res: Response) {
-  console.log("LOGS:", this.service["logs"]);
-
-  res.json(await this.service.getProductionLogs());
-}
+    try {
+      // opcioni token koji gateway može proslediti audit servisu
+      const forwardedToken = req.headers.authorization as string | undefined;
+      const logs = await this.logger.getLogs("production", forwardedToken);
+      res.json(logs);
+    } catch (err) {
+      const errMsg = (err as Error).message ?? String(err);
+      await this.logger.log(errMsg, "ERROR", { error: errMsg }, "production");
+      res.status(500).json({ message: errMsg });
+    }
+  }
 
   public getRouter() {
     return this.router;

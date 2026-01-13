@@ -20,8 +20,6 @@ const base = (import.meta.env.VITE_GATEWAY_URL ?? "") + "/storage";
 
     this.client.interceptors.request.use((cfg) => {
       const token =
-        localStorage.getItem("authToken") ??
-        localStorage.getItem("token") ??
         localStorage.getItem("accessToken");
 
       if (token && cfg.headers) {
@@ -53,15 +51,19 @@ const base = (import.meta.env.VITE_GATEWAY_URL ?? "") + "/storage";
     return res.data;
   }
   private mapPackage(p: any): PackagingDTO {
-    return {
-      id: String(p.id ?? p.serialNumber ?? ""),
-      code: p.serialNumber ?? p.code ?? `pkg-${p.id ?? ""}`,
-      count: Number(p.count ?? p.quantity ?? 1),
-      warehouseId: String(p.warehouseId ?? p.warehouse?.id ?? ""),
-      status: (p.status ?? "STORED") as "STORED" | "SENT" | "PACKED",
-      createdAt: p.createdAt ? String(p.createdAt) : undefined,
-    };
-  }
+  return {
+    id: String(p.id ?? p.serialNumber ?? ""),
+    code: p.serialNumber ?? p.code ?? `pkg-${p.id ?? ""}`,
+    perfumeId: String(p.perfumeId ?? p.perfume?.id ?? ""), // ⬅️ sada popunjeno
+    perfumeName: p.perfumeName ?? p.perfume?.name ?? undefined, // opcionalno
+    volumeMl: p.volumeMl ?? undefined, // opcionalno
+    count: Number(p.count ?? p.quantity ?? 1),
+    warehouseId: String(p.warehouseId ?? p.warehouse?.id ?? ""),
+    status: (p.status ?? "STORED") as "STORED" | "SENT" | "PACKED",
+    createdAt: p.createdAt ? String(p.createdAt) : undefined,
+  };
+}
+
 
   private mapWarehouse(w: any): WarehouseDTO {
     return {

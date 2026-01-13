@@ -23,7 +23,7 @@ export const ProductionPlantTable: React.FC = () => {
   const [harvestCount, setHarvestCount] = useState(1);
   const [strengthPercent, setStrengthPercent] = useState(0);
 
-  const token = localStorage.getItem("authToken") ?? "";
+  const token = localStorage.getItem("accessToken") ?? "";
 
   // =========================
   // LOAD PLANTS

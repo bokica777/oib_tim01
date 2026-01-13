@@ -1,9 +1,14 @@
+// src/Services/GatewayService.ts
 import axios, { AxiosError, AxiosInstance } from "axios";
 import { IGatewayService } from "../Domain/services/IGatewayService";
 import { LoginUserDTO } from "../Domain/DTOs/user/LoginUserDTO";
 import { RegistrationUserDTO } from "../Domain/DTOs/user/RegistrationUserDTO";
 import { AuthResponseType } from "../Domain/types/AuthResponse";
 import { UserDTO } from "../Domain/DTOs/user/UserDTO";
+import { Request, Response } from "express";
+
+import dotenv from "dotenv";
+dotenv.config();
 
 function normalizeUrl(url?: string) {
   if (!url) return undefined;
@@ -55,7 +60,7 @@ export class GatewayService implements IGatewayService {
     const STORAGE_URL = normalizeUrl(process.env.STORAGE_URL);
     const PACKAGING_URL = normalizeUrl(process.env.PACKAGING_URL);
     const SALES_URL = normalizeUrl(process.env.SALES_URL);
-    const AUDIT_URL = normalizeUrl(process.env.AUDIT_URL);
+    const AUDIT_SERVICE_API = normalizeUrl(process.env.AUDIT_URL);
     const PERFORMANCE_URL = normalizeUrl(process.env.PERFORMANCE_URL);
     const ANALYTICS_URL = normalizeUrl(process.env.ANALYTICS_URL);
 
@@ -94,7 +99,6 @@ export class GatewayService implements IGatewayService {
         timeout: 10000,
       });
     }
-    
 
     if (PACKAGING_URL) {
       this.packagingClient = axios.create({
@@ -112,13 +116,13 @@ export class GatewayService implements IGatewayService {
       });
     }
 
-    if (AUDIT_URL) {
-      this.auditClient = axios.create({
-        baseURL: AUDIT_URL,
-        headers: { "Content-Type": "application/json" },
-        timeout: 5000,
-      });
-    }
+  if (AUDIT_SERVICE_API) {
+    this.auditClient = axios.create({
+      baseURL: AUDIT_SERVICE_API,
+      headers: { "Content-Type": "application/json" },
+      timeout: 8000,
+    });
+  }
 
     if (PERFORMANCE_URL) {
       this.performanceClient = axios.create({
@@ -136,8 +140,6 @@ export class GatewayService implements IGatewayService {
       });
     }
   }
-
-
 
   // ================= AUTH =================
   async login(data: LoginUserDTO): Promise<AuthResponseType> {
@@ -164,10 +166,11 @@ export class GatewayService implements IGatewayService {
     return response.data;
   }
 
-  async getUserById(id: number): Promise<UserDTO> {
-    const response = await this.userClient.get<UserDTO>(`/users/${id}`);
-    return response.data;
-  }
+ async getUserById(id: number, headers?: Record<string, string>): Promise<UserDTO> {
+  const response = await this.userClient.get<UserDTO>(`/users/${id}`, { headers });
+  return response.data;
+}
+
 
   // ================= PRODUCTION =================
 
@@ -257,21 +260,13 @@ export class GatewayService implements IGatewayService {
     }
   }
 
-
-
-
   // ================= PRODUCTION LOGS =================
-  async getProductionLogs(headers: Record<string, string>): Promise<any[]> {
-    if (!this.productionClient) throw new Error("PRODUCTION_URL not configured");
-
-    try {
-      const resp = await this.productionClient.get("/logs", { headers });
-      return resp.data;
-    } catch (err) {
-      handleAxiosError(err);
-    }
-  }
-
+ // ================= PRODUCTION LOGS =================
+async getProductionLogs(headers: Record<string, string>): Promise<any[]> {
+  if (!this.auditClient) throw new Error("AUDIT_URL not configured");
+  const resp = await this.auditClient.get("/", { headers, params: { source: "production" } });
+  return resp.data;
+}
 
   // ================= PROCESSING =================
   async processPerfume(dto: any, headers: Record<string, string>): Promise<any[]> {
@@ -316,28 +311,28 @@ export class GatewayService implements IGatewayService {
 
   // ================= STORAGE =================
 
-async listWarehouses(headers: Record<string, string>): Promise<any[]> {
-  if (!this.storageClient) throw new Error("STORAGE_URL not configured");
-  const candidates = ["/storage/warehouses", "/warehouses"];
+  async listWarehouses(headers: Record<string, string>): Promise<any[]> {
+    if (!this.storageClient) throw new Error("STORAGE_URL not configured");
+    const candidates = ["/storage/warehouses", "/warehouses"];
 
-  for (const path of candidates) {
-    try {
-      const resp = await this.storageClient.get(path, { headers, timeout: 10000 });
-      return resp.data;
-    } catch (err: any) {
-      const status = err?.response?.status;
-      if (status === 404) {
-        continue;
+    for (const path of candidates) {
+      try {
+        const resp = await this.storageClient.get(path, { headers, timeout: 10000 });
+        return resp.data;
+      } catch (err: any) {
+        const status = err?.response?.status;
+        if (status === 404) {
+          continue;
+        }
+        handleAxiosError(err);
       }
-      handleAxiosError(err);
     }
-  }
 
-  // ako nijedan kandidat nije radio
-  const e = new Error("Warehouses endpoint not found on storage service (tried /storage/warehouses and /warehouses)");
-  (e as any).status = 404;
-  throw e;
-}
+    // ako nijedan kandidat nije radio
+    const e = new Error("Warehouses endpoint not found on storage service (tried /storage/warehouses and /warehouses)");
+    (e as any).status = 404;
+    throw e;
+  }
 
   async storePackage(dto: any, headers: Record<string, string>): Promise<any> {
     if (!this.storageClient) throw new Error("STORAGE_URL not configured");
@@ -464,32 +459,52 @@ async listWarehouses(headers: Record<string, string>): Promise<any[]> {
     }
   }
 
-
   // ================= AUDIT =================
-  async createAuditLog(dto: any): Promise<any> {
-    if (!this.auditClient) throw new Error("AUDIT_URL not configured");
-    try {
-      try {
-        const resp = await this.auditClient.post("/log", dto);
-        return resp.data;
-      } catch {
-        const resp = await this.auditClient.post("/", dto);
-        return resp.data;
-      }
-    } catch (err) {
-      handleAxiosError(err);
-    }
-  }
 
-  async getAuditLogs(): Promise<any[]> {
-    if (!this.auditClient) throw new Error("AUDIT_URL not configured");
-    try {
-      const resp = await this.auditClient.get("/");
-      return resp.data;
-    } catch (err) {
-      handleAxiosError(err);
+// ================= AUDIT =================
+
+// accept either a forwarded token string OR a headers object
+async createAudit(data: any, forwardedHeaders?: string | Record<string, string>): Promise<any> {
+  if (!this.auditClient) throw new Error("AUDIT_SERVICE_API not configured");
+  try {
+    const headers: Record<string, string> = {};
+
+    // if caller passed a raw token string (e.g. "Bearer ...")
+    if (typeof forwardedHeaders === "string" && forwardedHeaders.trim()) {
+      headers.Authorization = forwardedHeaders;
     }
+
+    // if caller passed a headers object, copy it (prefer its Authorization if present)
+    if (typeof forwardedHeaders === "object" && forwardedHeaders !== null) {
+      Object.assign(headers, forwardedHeaders);
+    }
+
+    // Gateway forwards to audit microservice's /audit endpoint
+    const resp = await this.auditClient.post(`/audit`, data, { headers });
+    return resp.data;
+  } catch (err) {
+    handleAxiosError(err);
   }
+}
+
+async getAudits(source?: string, forwardedHeaders?: string | Record<string, string>): Promise<any[]> {
+  if (!this.auditClient) throw new Error("AUDIT_SERVICE_API not configured");
+  try {
+    const url = source ? `/audit?source=${encodeURIComponent(source)}` : `/audit`;
+
+    const headers: Record<string, string> = {};
+    if (typeof forwardedHeaders === "string" && forwardedHeaders.trim()) {
+      headers.Authorization = forwardedHeaders;
+    } else if (typeof forwardedHeaders === "object" && forwardedHeaders !== null) {
+      Object.assign(headers, forwardedHeaders);
+    }
+
+    const resp = await this.auditClient.get(url, { headers });
+    return resp.data;
+  } catch (err) {
+    handleAxiosError(err);
+  }
+}
 
   // ================= ANALYTICS & RECEIPTS =================
   async getTopPerfumes(query: Record<string, any>, headers: Record<string, string>): Promise<any> {
@@ -564,3 +579,5 @@ async listWarehouses(headers: Record<string, string>): Promise<any[]> {
     }
   }
 }
+
+export default GatewayService;

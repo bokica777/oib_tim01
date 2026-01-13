@@ -9,7 +9,7 @@ import { PackagingDTO } from "../models/storage/PackagingDTO";
 const sleep = (ms: number) => new Promise((res) => setTimeout(res, ms));
 
 function getUserRoleFromToken(): string | null {
-  const token = localStorage.getItem("authToken");
+  const token = localStorage.getItem("accessToken");
   if (!token) return null;
   try {
     const payload = JSON.parse(atob(token.split(".")[1]));
@@ -52,7 +52,7 @@ export const StoragePage: React.FC = () => {
 
   const [selectedPackage, setSelectedPackage] = useState<PackagingDTO | null>(null);
 
-  const token = localStorage.getItem("authToken") ?? "";
+  const token = localStorage.getItem("accessToken") ?? "";
   const roleRaw = getUserRoleFromToken();
   const role = roleRaw ? roleRaw.replace("ROLE_", "").toLowerCase() : null;
 

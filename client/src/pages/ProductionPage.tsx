@@ -3,9 +3,10 @@ import { ProductionPlantTable } from "../components/production/ProductionPlantTa
 import { ProductionLog } from "../components/production/ProductionLog";
 import ProcessingPage from "./ProcessingPage";
 import StoragePage from "./StoragePage";
+import PackagingPage from "./PackagingPage";
 
 function getUserRoleFromToken(): string | null {
-  const token = localStorage.getItem("authToken");
+  const token = localStorage.getItem("accessToken");
   if (!token) return null;
 
   try {
@@ -233,8 +234,10 @@ export const ProductionPage: React.FC = () => {
             {activeTopTab === "prerada" && (
               <ProcessingPage />
             )}
-
-                  {activeTopTab === "skladistenje" && (
+            {activeTopTab === "pakovanje" && (
+          <PackagingPage/>
+          )}
+            {activeTopTab === "skladistenje" && (
           <StoragePage/>
           )}
           </div>

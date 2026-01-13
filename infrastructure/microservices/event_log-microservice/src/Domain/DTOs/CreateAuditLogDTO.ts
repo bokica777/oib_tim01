@@ -1,6 +1,8 @@
 import { AuditLogType } from "../enums/AuditLogType";
 
-export interface CreateAuditLogDTO {
-  type: AuditLogType;
-  message: string;
+export class CreateAuditLogDTO {
+  type!: AuditLogType; // obavezno
+  message!: string;
+  source?: string;
+  meta?: any;
 }

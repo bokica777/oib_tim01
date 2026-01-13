@@ -1,8 +1,8 @@
-import { PerfumeType } from "../../enums/processing/PerfumeType"; 
+import { PerfumeType } from "../../enums/processing/PerfumeType";
 
-export interface ProcessRequestDTO {
+export type ProcessRequestDTO = {
   perfumeName: string;
   type: PerfumeType;
   bottles: number;
-  volumePerBottle: number; // 150 or 250
-}
+  volumePerBottle: 150|250;
+};

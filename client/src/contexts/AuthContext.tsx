@@ -15,11 +15,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // Load token from localStorage on mount
   useEffect(() => {
-    const savedToken = readValueByKey("authToken");
+    const savedToken = readValueByKey("accessToken");
 
     if (savedToken) {
       if (isTokenExpired(savedToken)) {
-        removeValueByKey("authToken");
+        removeValueByKey("accessToken");
         setIsLoading(false);
         return;
       }
@@ -29,7 +29,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setToken(savedToken);
         setUser(claims);
       } else {
-        removeValueByKey("authToken");
+        removeValueByKey("accessToken");
       }
     }
 
@@ -42,7 +42,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (claims && !isTokenExpired(newToken)) {
       setToken(newToken);
       setUser(claims);
-      saveValueByKey("authToken", newToken);
+      saveValueByKey("accessToken", newToken);
     } else {
       console.error("Invalid or expired token");
     }
@@ -51,7 +51,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const logout = () => {
     setToken(null);
     setUser(null);
-    removeValueByKey("authToken");
+    removeValueByKey("accessToken");
   };
 
   const isAuthenticated = !!user && !!token;
