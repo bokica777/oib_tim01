@@ -118,21 +118,22 @@ export class GatewayService implements IGatewayService {
       });
     }
 
-  if (AUDIT_SERVICE_API) {
-    this.auditClient = axios.create({
-      baseURL: AUDIT_SERVICE_API,
-      headers: { "Content-Type": "application/json" },
-      timeout: 8000,
-    });
-  }
+    if (AUDIT_SERVICE_API) {
+      this.auditClient = axios.create({
+        baseURL: AUDIT_SERVICE_API,
+        headers: { "Content-Type": "application/json" },
+        timeout: 8000,
+      });
+    }
 
     if (PERFORMANCE_URL) {
       this.performanceClient = axios.create({
-        baseURL: PERFORMANCE_URL,
+        baseURL: `${PERFORMANCE_URL}/performance`,
         headers: { "Content-Type": "application/json" },
         timeout: 10000,
       });
     }
+
 
     if (ANALYTICS_URL) {
       this.analyticsClient = axios.create({
@@ -168,10 +169,10 @@ export class GatewayService implements IGatewayService {
     return response.data;
   }
 
- async getUserById(id: number, headers?: Record<string, string>): Promise<UserDTO> {
-  const response = await this.userClient.get<UserDTO>(`/users/${id}`, { headers });
-  return response.data;
-}
+  async getUserById(id: number, headers?: Record<string, string>): Promise<UserDTO> {
+    const response = await this.userClient.get<UserDTO>(`/users/${id}`, { headers });
+    return response.data;
+  }
 
 
   // ================= PRODUCTION =================
@@ -262,13 +263,13 @@ export class GatewayService implements IGatewayService {
     }
   }
 
-// zameni postojeću metodu
-async getProductionLogs(headers: Record<string, string>): Promise<any[]> {
-  if (!this.auditClient) throw new Error("AUDIT_URL not configured");
-  // ispravan poziv na audit servis (auditClient baseURL = http://.../api/v1)
-  const resp = await this.auditClient.get(`/audit`, { headers, params: { source: "production" } });
-  return resp.data;
-}
+  // zameni postojeću metodu
+  async getProductionLogs(headers: Record<string, string>): Promise<any[]> {
+    if (!this.auditClient) throw new Error("AUDIT_URL not configured");
+    // ispravan poziv na audit servis (auditClient baseURL = http://.../api/v1)
+    const resp = await this.auditClient.get(`/audit`, { headers, params: { source: "production" } });
+    return resp.data;
+  }
 
   // ================= PROCESSING =================
   async processPerfume(dto: any, headers: Record<string, string>): Promise<any[]> {
@@ -407,62 +408,62 @@ async getProductionLogs(headers: Record<string, string>): Promise<any[]> {
       handleAxiosError(err);
     }
   }
-async getSalePackages(headers: Record<string, string>): Promise<any[]> {
-  if (!this.storageClient) throw new Error("STORAGE_URL not configured");
-  if (!this.processingClient) throw new Error("PROCESSING_URL not configured");
+  async getSalePackages(headers: Record<string, string>): Promise<any[]> {
+    if (!this.storageClient) throw new Error("STORAGE_URL not configured");
+    if (!this.processingClient) throw new Error("PROCESSING_URL not configured");
 
-  try {
-    const resp = await this.storageClient.get("/packages", { headers, timeout: 10000 });
-  const packages: any[] = resp.data || [];
-console.log("Statusi paketa:", packages.map(p => p.status));
-    const salePackages = packages.filter(p => [ "SENT"].includes(p.status));
-    const stockMap: Record<number, number> = {};
-    for (const pkg of salePackages) {
-      const pid = Number(pkg.perfumeId);
-      if (!Number.isFinite(pid)) continue;
-      stockMap[pid] = (stockMap[pid] || 0) + 1;
-    }
-    const perfumeIds = Array.from(new Set(Object.keys(stockMap).map(k => Number(k))));
-    const perfumePromises = perfumeIds.map(async (id) => {
-      try {
-        const r = await this.processingClient!.get(`/perfumes/${id}`, { headers });
-        const p: PerfumeDTO = r.data;
-
-        const pricePerMl = 50; 
-        const price = (p.netVolumeMl ?? 0) * pricePerMl;
-
-        return {
-          id: p.id ?? id,
-          name: p.name,
-          type: p.type ?? "",
-          netVolumeMl: p.netVolumeMl ?? 0,
-          serialNumber: p.serialNumber,
-          sourcePlantIds: p.sourcePlantIds,
-          expirationDate: p.expirationDate,
-          status: p.status,
-          stock: stockMap[id] ?? 0,
-          price
-        };
-      } catch (err) {
-        console.warn(`Failed to fetch perfume ${id}`, err);
-        return {
-          id,
-          name: `Perfume ${id}`,
-          type: "",
-          netVolumeMl: 0,
-          stock: stockMap[id] ?? 0,
-          price: 0
-        };
+    try {
+      const resp = await this.storageClient.get("/packages", { headers, timeout: 10000 });
+      const packages: any[] = resp.data || [];
+      console.log("Statusi paketa:", packages.map(p => p.status));
+      const salePackages = packages.filter(p => ["SENT"].includes(p.status));
+      const stockMap: Record<number, number> = {};
+      for (const pkg of salePackages) {
+        const pid = Number(pkg.perfumeId);
+        if (!Number.isFinite(pid)) continue;
+        stockMap[pid] = (stockMap[pid] || 0) + 1;
       }
-    });
+      const perfumeIds = Array.from(new Set(Object.keys(stockMap).map(k => Number(k))));
+      const perfumePromises = perfumeIds.map(async (id) => {
+        try {
+          const r = await this.processingClient!.get(`/perfumes/${id}`, { headers });
+          const p: PerfumeDTO = r.data;
 
-    const perfumes = (await Promise.all(perfumePromises)).filter(Boolean);
+          const pricePerMl = 50;
+          const price = (p.netVolumeMl ?? 0) * pricePerMl;
 
-    return perfumes;
-  } catch (err) {
-    handleAxiosError(err);
+          return {
+            id: p.id ?? id,
+            name: p.name,
+            type: p.type ?? "",
+            netVolumeMl: p.netVolumeMl ?? 0,
+            serialNumber: p.serialNumber,
+            sourcePlantIds: p.sourcePlantIds,
+            expirationDate: p.expirationDate,
+            status: p.status,
+            stock: stockMap[id] ?? 0,
+            price
+          };
+        } catch (err) {
+          console.warn(`Failed to fetch perfume ${id}`, err);
+          return {
+            id,
+            name: `Perfume ${id}`,
+            type: "",
+            netVolumeMl: 0,
+            stock: stockMap[id] ?? 0,
+            price: 0
+          };
+        }
+      });
+
+      const perfumes = (await Promise.all(perfumePromises)).filter(Boolean);
+
+      return perfumes;
+    } catch (err) {
+      handleAxiosError(err);
+    }
   }
-}
 
 
 
@@ -521,50 +522,50 @@ console.log("Statusi paketa:", packages.map(p => p.status));
 
   // ================= AUDIT =================
 
-// ================= AUDIT =================
+  // ================= AUDIT =================
 
-// accept either a forwarded token string OR a headers object
-async createAudit(data: any, forwardedHeaders?: string | Record<string, string>): Promise<any> {
-  if (!this.auditClient) throw new Error("AUDIT_SERVICE_API not configured");
-  try {
-    const headers: Record<string, string> = {};
+  // accept either a forwarded token string OR a headers object
+  async createAudit(data: any, forwardedHeaders?: string | Record<string, string>): Promise<any> {
+    if (!this.auditClient) throw new Error("AUDIT_SERVICE_API not configured");
+    try {
+      const headers: Record<string, string> = {};
 
-    // if caller passed a raw token string (e.g. "Bearer ...")
-    if (typeof forwardedHeaders === "string" && forwardedHeaders.trim()) {
-      headers.Authorization = forwardedHeaders;
+      // if caller passed a raw token string (e.g. "Bearer ...")
+      if (typeof forwardedHeaders === "string" && forwardedHeaders.trim()) {
+        headers.Authorization = forwardedHeaders;
+      }
+
+      // if caller passed a headers object, copy it (prefer its Authorization if present)
+      if (typeof forwardedHeaders === "object" && forwardedHeaders !== null) {
+        Object.assign(headers, forwardedHeaders);
+      }
+
+      // Gateway forwards to audit microservice's /audit endpoint
+      const resp = await this.auditClient.post(`/audit`, data, { headers });
+      return resp.data;
+    } catch (err) {
+      handleAxiosError(err);
     }
-
-    // if caller passed a headers object, copy it (prefer its Authorization if present)
-    if (typeof forwardedHeaders === "object" && forwardedHeaders !== null) {
-      Object.assign(headers, forwardedHeaders);
-    }
-
-    // Gateway forwards to audit microservice's /audit endpoint
-    const resp = await this.auditClient.post(`/audit`, data, { headers });
-    return resp.data;
-  } catch (err) {
-    handleAxiosError(err);
   }
-}
 
-async getAudits(source?: string, forwardedHeaders?: string | Record<string, string>): Promise<any[]> {
-  if (!this.auditClient) throw new Error("AUDIT_SERVICE_API not configured");
-  try {
-    const url = source ? `/audit?source=${encodeURIComponent(source)}` : `/audit`;
+  async getAudits(source?: string, forwardedHeaders?: string | Record<string, string>): Promise<any[]> {
+    if (!this.auditClient) throw new Error("AUDIT_SERVICE_API not configured");
+    try {
+      const url = source ? `/audit?source=${encodeURIComponent(source)}` : `/audit`;
 
-    const headers: Record<string, string> = {};
-    if (typeof forwardedHeaders === "string" && forwardedHeaders.trim()) {
-      headers.Authorization = forwardedHeaders;
-    } else if (typeof forwardedHeaders === "object" && forwardedHeaders !== null) {
-      Object.assign(headers, forwardedHeaders);
+      const headers: Record<string, string> = {};
+      if (typeof forwardedHeaders === "string" && forwardedHeaders.trim()) {
+        headers.Authorization = forwardedHeaders;
+      } else if (typeof forwardedHeaders === "object" && forwardedHeaders !== null) {
+        Object.assign(headers, forwardedHeaders);
+      }
+
+      const resp = await this.auditClient.get(url, { headers });
+      return resp.data;
+    } catch (err) {
+      handleAxiosError(err);
     }
-
-    const resp = await this.auditClient.get(url, { headers });
-    return resp.data;
-  } catch (err) {
-    handleAxiosError(err);
   }
-}
 
   // ================= ANALYTICS & RECEIPTS =================
   async getTopPerfumes(query: Record<string, any>, headers: Record<string, string>): Promise<any> {

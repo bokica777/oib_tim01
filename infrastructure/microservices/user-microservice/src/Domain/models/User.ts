@@ -9,7 +9,7 @@ export class User {
   @Column({ type: "varchar", unique: true, length: 100 })
   username!: string;
 
-  @Column({type: "enum", enum: UserRole, default: UserRole.SELLER })
+  @Column({ type: "enum", enum: UserRole, default: UserRole.SELLER })
   role!: UserRole;
 
   @Column({ type: "varchar", length: 255 })
