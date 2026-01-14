@@ -628,6 +628,21 @@ export class GatewayService implements IGatewayService {
     }
   }
 
+  async getTop10Revenue(query: Record<string, any>, headers: Record<string, string>): Promise<any> {
+  if (!this.analyticsClient) throw new Error("ANALYTICS_URL not configured");
+  try {
+    const q = new URLSearchParams();
+    Object.entries(query ?? {}).forEach(([k, v]) => {
+      if (v !== undefined && v !== null) q.append(k, String(v));
+    });
+    const resp = await this.analyticsClient.get(`/analysis/top10-revenue?${q.toString()}`, { headers });
+    return resp.data;
+  } catch (err) {
+    handleAxiosError(err);
+  }
+  }
+
+
   // ================= GENERIC AUDIT HELPER =================
   async logAudit(message: string, type = "INFO", source = "gateway", meta?: any): Promise<boolean> {
     if (!this.auditClient) return false;

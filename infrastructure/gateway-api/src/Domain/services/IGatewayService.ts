@@ -79,6 +79,7 @@ createAudit(data: any, forwardedHeaders?: string | Record<string,string>): Promi
   listReceipts(headers: Record<string, string>): Promise<any[]>;
   getDailyRevenue(date: string, headers: Record<string, string>): Promise<any>;
   getSalesByProduct(headers: Record<string, string>): Promise<any[]>;
+  getTop10Revenue(query: Record<string, any>, internalHeaders: Record<string, string>): Promise<any>;
 
   // ================= GENERIC AUDIT =================
   logAudit(message: string, type?: string, source?: string, meta?: any): Promise<boolean>;

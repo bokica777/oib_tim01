@@ -570,6 +570,12 @@ private async listSalePackages(req: Request, res: Response) {
     const result = await this.gatewayService.createReceipt(req.body, headers);
     res.status(201).json(result);
   }
+    private async getTop10Revenue(req: Request, res: Response) {
+  const headers = buildInternalHeaders(req);
+  const result = await this.gatewayService.getTop10Revenue(req.query, headers);
+  res.json(result);
+  }
+
   public getRouter(): Router {
     return this.router;
   }

@@ -37,7 +37,6 @@ app.use(
 
 app.use(express.json());
 
-
 // ❌ Više ne zovemo initialize_database() ovde
 // DB se inicijalizuje u index.ts preko Db.initialize()
 
@@ -63,7 +62,15 @@ const receiptsController = new ReceiptsController(receiptService);
 const analysisController = new AnalysisController(analysisService);
 
 // Registering routes
-app.use("/api/v1/receipts", receiptsController.getRouter(), requireRole(["ADMIN"]));
-app.use("/api/v1/analysis", analysisController.getRouter(), requireRole(["ADMIN"]));
+app.use("/api/v1/receipts", requireRole(["ADMIN"]), receiptsController.getRouter());
+app.use("/api/v1/analysis",
+  (req, _res, next) => {
+    console.log("[ANALYSIS CHAIN HIT]", req.method, req.originalUrl);
+    next();
+  },
+  requireRole(["ADMIN"]),
+  analysisController.getRouter()
+);
+
 
 export default app;
