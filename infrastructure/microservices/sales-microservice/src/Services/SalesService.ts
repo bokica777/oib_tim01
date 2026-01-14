@@ -7,7 +7,7 @@ export class SalesService {
   private storage = new StorageClient();
 
   constructor(private readonly orderRepo: Repository<SaleOrder>) {}
-
+ 
   async createOrder(customer: string, address: string, count: number, role?: string) {
     const packageIds = await this.storage.requestPackages(count, role);
 

@@ -29,4 +29,15 @@ export class UserAPI implements IUserAPI {
       })
     ).data;
   }
+  async getCurrentUser() {
+  const token = localStorage.getItem("accessToken");
+  if (!token) throw new Error("No access token");
+  const res = await this.axiosInstance.get("/users/me", {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return res.data;
+}
+
+
+
 }

@@ -1,13 +1,18 @@
-// src/api/production/ProductionAPI.ts
-import axios from "axios";
+import { AuditRecord } from "../audit/AuditApi";
+import auditAPI from "../audit/AuditApi";
 
 export class ProductionAPI {
-  async getLogs(token: string) {
-    const resp = await axios.get("http://localhost:4000/api/v1/production/logs", {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-    return resp.data;
+  constructor() {}
+
+  async getLogs(): Promise<AuditRecord[]> {
+    try {
+      return await auditAPI.getLogs("production");
+    } catch (err) {
+      console.warn("[ProductionAPI] getLogs failed:", (err as Error).message);
+      return [];
+    }
   }
 }
+
+const productionAPI = new ProductionAPI();
+export default productionAPI;

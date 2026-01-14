@@ -1,50 +1,104 @@
-// src/api/processing/ProcessingAPIClient.ts
-import axios, { AxiosInstance } from "axios";
-import { IProcessingAPI } from "./IProcessingAPI";
-import { PerfumeDTO } from "../../models/processing/PerfumeDTO"; 
+// src/api/processing/ProcessingAPI.ts
+import axios, { AxiosInstance, AxiosError } from "axios";
+import { PerfumeDTO } from "../../models/processing/PerfumeDTO";
 import { ProcessRequestDTO } from "../../models/processing/ProcessRequestDTO";
+import { PerfumeStatus } from "../../enums/processing/PerfumeStatus";
+import auditAPI from "../audit/AuditApi";
+import { AuditRecord } from "../audit/AuditApi";
+import { IProcessingAPI } from "./IProcessingAPI";
 
-export class ProcessingAPI implements IProcessingAPI {
-    private client: AxiosInstance;
+export class ProcessingAPI implements IProcessingAPI{
+  private client: AxiosInstance;
 
   constructor() {
+    const gateway = (import.meta.env.VITE_GATEWAY_URL ?? "http://localhost:4000").replace(/\/+$/, "");
+    const base = `${gateway}/processing`;
+
     this.client = axios.create({
-      baseURL: (import.meta.env.VITE_GATEWAY_URL ?? "") + "/processing",
+      baseURL: base,
       headers: { "Content-Type": "application/json" },
-      timeout: 12000,
+      timeout: 15000,
     });
 
-    // Add Authorization automatically if token present
     this.client.interceptors.request.use((cfg) => {
-      const token = localStorage.getItem("authToken");
-      if (token) {
-        cfg.headers = cfg.headers ?? {};
-        (cfg.headers as any).Authorization = `Bearer ${token}`;
-      }
+      const token = localStorage.getItem("accessToken");
+      const headers = cfg.headers as any;
+      if (token) headers.Authorization = `Bearer ${token}`;
       return cfg;
     });
+
+    this.client.interceptors.response.use(
+      (res) => res,
+      (error: AxiosError) => {
+        console.error("[ProcessingAPI] Axios error:", error.message, error.response?.data);
+        return Promise.reject(error);
+      }
+    );
   }
 
-  async listAvailable(): Promise<PerfumeDTO[]> {
-    const res = await this.client.get<PerfumeDTO[]>("/perfumes");
-    return res.data;
+  private mapPerfume(p: any): PerfumeDTO {
+    return {
+      id: String(p.id ?? `${p.name}-${p.netVolumeMl}`),
+      name: p.name,
+      volume: Number(p.netVolumeMl ?? p.volume ?? p.netVolume ?? 0),
+      count: 1,
+      status: (p.status ?? PerfumeStatus.AVAILABLE) as PerfumeStatus,
+      createdAt: p.createdAt,
+    };
   }
 
-  async getById(id: number): Promise<PerfumeDTO> {
-    const res = await this.client.get<PerfumeDTO>(`/perfumes/${id}`);
-    return res.data;
+  async listPerfumes(): Promise<PerfumeDTO[]> {
+    const res = await this.client.get<any[]>("/perfumes");
+    const map = new Map<string, PerfumeDTO>();
+
+    for (const p of res.data ?? []) {
+      const key = `${p.name}-${p.netVolumeMl ?? p.volume ?? ""}`;
+      const item = this.mapPerfume(p);
+      if (map.has(key)) {
+        map.get(key)!.count += 1;
+      } else {
+        map.set(key, item);
+      }
+    }
+    return Array.from(map.values());
   }
 
-  async process(dto: ProcessRequestDTO): Promise<PerfumeDTO[]> {
-    const res = await this.client.post<PerfumeDTO[]>("/process", dto);
-    return res.data;
+  async processPerfume(dto: ProcessRequestDTO): Promise<PerfumeDTO[]> {
+    try {
+      const res = await this.client.post<any[]>("/process", dto);
+      const out = (res.data ?? []).map((p) => this.mapPerfume(p));
+
+      // audit: success
+      try {
+        await auditAPI.createLog({
+          type: "INFO",
+          message: `Prerada uspešna: ${dto.bottles} x ${dto.perfumeName} ${dto.volumePerBottle}ml`,
+          source: "processing",
+          meta: { dto, producedCount: out.length },
+        });
+      } catch { /* ignore auditing failure */ }
+
+      return out;
+    } catch (err: any) {
+      // audit: error
+      try {
+        await auditAPI.createLog({
+          type: "ERROR",
+          message: `Greška pri preradi: ${dto.perfumeName} — ${(err?.response?.data?.message ?? err.message)}`,
+          source: "processing",
+          meta: { dto, err: (err?.response?.data ?? err?.message) },
+        });
+      } catch { /* ignore auditing failure */ }
+
+      throw err;
+    }
   }
 
-  // Packaging / sales calls this to reserve perfumes
-  async requestForPackaging(name: string, count: number): Promise<PerfumeDTO[]> {
-    const res = await this.client.post<PerfumeDTO[]>("/perfumes/request", { name, count });
-    return res.data;
+  async getLogs(): Promise<AuditRecord[]> {
+    // returns audit records for processing via gateway->audit service
+    return await auditAPI.getLogs("processing");
   }
 }
 
 export const processingAPI = new ProcessingAPI();
+export default processingAPI;

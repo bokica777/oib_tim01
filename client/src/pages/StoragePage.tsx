@@ -2,14 +2,13 @@ import React, { useEffect, useMemo, useState } from "react";
 import { storageAPI } from "../api/storage/StorageAPIClient";
 import WarehouseCard from "../components/storage/WarehouseCard";
 import PackagingTable from "../components/storage/PackagingTable";
-import StorageLog from "../components/storage/StorageLog";
 import { WarehouseDTO } from "../models/storage/WarehouseDTO";
 import { PackagingDTO } from "../models/storage/PackagingDTO";
 
 const sleep = (ms: number) => new Promise((res) => setTimeout(res, ms));
 
 function getUserRoleFromToken(): string | null {
-  const token = localStorage.getItem("authToken");
+  const token = localStorage.getItem("accessToken");
   if (!token) return null;
   try {
     const payload = JSON.parse(atob(token.split(".")[1]));
@@ -18,23 +17,6 @@ function getUserRoleFromToken(): string | null {
     return null;
   }
 }
-
-class AuditAPI {
-  base = "/api/audit";
-  async record(event: { type: string; message: string; meta?: any }, token?: string) {
-    try {
-      await fetch(`${this.base}/events`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        body: JSON.stringify(event),
-      });
-    } catch (e) {
-      console.warn("Audit error", e);
-    }
-  }
-}
-
-const auditAPI = new AuditAPI();
 
 const DISTRIBUTION = { max: 3, msPerItem: 500, label: "Centralno skladište (Distribucioni centar)" };
 const WAREHOUSE = { max: 1, msPerItem: 2500, label: "Južno skladište (Magacinski centar)" };
@@ -47,12 +29,9 @@ export const StoragePage: React.FC = () => {
 
   const [selectedWarehouse, setSelectedWarehouse] = useState<string | null>(null);
   const [sendCount, setSendCount] = useState<number>(1);
-  const [logs, setLogs] = useState<string[]>([]);
   const [sending, setSending] = useState(false);
 
-  const [selectedPackage, setSelectedPackage] = useState<PackagingDTO | null>(null);
-
-  const token = localStorage.getItem("authToken") ?? "";
+  const token = localStorage.getItem("accessToken") ?? "";
   const roleRaw = getUserRoleFromToken();
   const role = roleRaw ? roleRaw.replace("ROLE_", "").toLowerCase() : null;
 
@@ -61,12 +40,6 @@ export const StoragePage: React.FC = () => {
   useEffect(() => {
     loadAll();
   }, []);
-
-  const pushLog = async (text: string, sendAudit = false, meta?: any) => {
-    const line = `${new Date().toLocaleString()} — ${text}`;
-    setLogs((s) => [line, ...s].slice(0, 200));
-    if (sendAudit) await auditAPI.record({ type: "storage", message: text, meta }, token);
-  };
 
   const loadAll = async () => {
     try {
@@ -130,7 +103,6 @@ export const StoragePage: React.FC = () => {
     } catch (e: any) {
       console.error(e);
       setError(e?.message || "Greška pri učitavanju.");
-      await pushLog(`ERROR: ${e?.message ?? "load failed"}`);
     } finally {
       setLoading(false);
     }
@@ -152,7 +124,6 @@ export const StoragePage: React.FC = () => {
 
     try {
       setSending(true);
-      await pushLog(`Započinjem slanje ${sendCount} ambalaža preko ${center.label}`, true, { count: sendCount });
 
       const totalMs = sendCount * center.msPerItem;
       const ticks = Math.max(1, Math.floor(totalMs / 200));
@@ -161,12 +132,11 @@ export const StoragePage: React.FC = () => {
       }
 
       const res = await storageAPI.requestSend({ count: sendCount });
-      await pushLog(`Uspešno poslato ${sendCount} ambalaža: ${res?.message ?? "ok"}`, true, { res });
+      console.log(`Uspešno poslato ${sendCount} ambalaža`, res);
       await loadAll();
     } catch (e: any) {
       console.error(e);
       setError(e?.message || "Slanje nije uspelo");
-      await pushLog(`FAIL slanje ${sendCount}: ${e?.message ?? "err"}`, true, { error: e?.message });
     } finally {
       setSending(false);
     }
@@ -202,8 +172,8 @@ export const StoragePage: React.FC = () => {
     >
       <style>{`
         /* Layout */
-        .stk-window { height: 100%; display: grid; grid-template-columns: 360px 1fr 360px; gap: 12; min-height: 0; }
-        .stk-left, .stk-center, .stk-right { display: flex; flex-direction: column; min-height: 0; }
+        .stk-window { height: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; min-height: 0; }
+        .stk-left, .stk-center { display: flex; flex-direction: column; min-height: 0; }
 
         /* Titlebars */
         .titlebar { height: 48px; display: flex; align-items: center; padding: 0 12px; border-radius: 8px; font-weight: 700; color: #fff; }
@@ -227,7 +197,6 @@ export const StoragePage: React.FC = () => {
       `}</style>
 
       <div className="window stk-window">
- 
         <div className="stk-left">
           <div className="titlebar">
             <span className="titlebar-title">Skladišta</span>
@@ -312,45 +281,9 @@ export const StoragePage: React.FC = () => {
             <PackagingTable
               items={filteredPackaging}
               warehouses={warehouses}
-              onDetails={(p) => setSelectedPackage(p)}
             />
 
             {error && <div style={{ marginTop: 12, color: "#ef4444" }}>{error}</div>}
-          </div>
-        </div>
-
-        <div className="stk-right">
-          <div className="titlebar">
-            <span className="titlebar-title">Detalji / Dnevnik</span>
-          </div>
-
-          <div className="window-content">
-            {selectedPackage ? (
-              <div
-                style={{
-                  marginBottom: 12,
-                  padding: 10,
-                  background: "rgba(255,255,255,0.02)",
-                  borderRadius: 6,
-                }}
-              >
-                <h4 style={{ marginBottom: 6 }}>Detalji paketa:</h4>
-                <div><strong>ID:</strong> {(selectedPackage as any).id}</div>
-                <div><strong>Naziv:</strong> {(selectedPackage as any).name ?? (selectedPackage as any).label}</div>
-                <div><strong>Količina:</strong> {(selectedPackage as any).count ?? (selectedPackage as any).quantity ?? 0}</div>
-                <div><strong>Skladište:</strong> {(selectedPackage as any).warehouseName ?? (selectedPackage as any).warehouse?.name}</div>
-                <div><strong>Status:</strong> {(selectedPackage as any).status}</div>
-                {(selectedPackage as any).expiryDate && (
-                  <div><strong>Rok trajanja:</strong> {(selectedPackage as any).expiryDate}</div>
-                )}
-              </div>
-            ) : (
-              <div style={{ color: "rgba(255,255,255,0.7)" }}>
-                Klikni na ambalažu levo da vidiš detalje.
-              </div>
-            )}
-
-            <StorageLog logs={logs} />
 
             <div style={{ marginTop: 12, fontSize: 12, opacity: 0.9 }}>
               <div>

@@ -1,55 +1,43 @@
-import { Router, Request, Response, NextFunction } from "express";
+// src/WebAPI/controllers/AuditLogController.ts
+import { Router, Request, Response } from "express";
 import { IAuditLogService } from "../../Domain/services/IAuditLogService";
 import { CreateAuditLogDTO } from "../../Domain/DTOs/CreateAuditLogDTO";
+import { validateDTO } from "../../Middlewares/validation/ValidationMiddleware";
 
 export class AuditLogController {
   private readonly router: Router;
 
-  constructor(private readonly auditService: IAuditLogService) {
+  constructor(private readonly service: IAuditLogService) {
     this.router = Router();
     this.initializeRoutes();
   }
 
-  getRouter(): Router {
+  private initializeRoutes(): void {
+    this.router.post("/", validateDTO(CreateAuditLogDTO), this.createLog.bind(this));
+    this.router.get("/", this.getLogs.bind(this));
+  }
+
+  private async createLog(req: Request, res: Response) {
+    try {
+      const dto: CreateAuditLogDTO = req.body;
+      const log = await this.service.createLog(dto);
+      res.status(201).json(log);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  }
+
+  private async getLogs(req: Request, res: Response) {
+    try {
+      const source = req.query.source?.toString();
+      const logs = await this.service.getLogsBySource(source);
+      res.json(logs);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  }
+
+  public getRouter(): Router {
     return this.router;
   }
-
-  private initializeRoutes(): void {
-    this.router.post("/", this.createLog);
-    this.router.get("/", this.getAllLogs);
-  }
-
-  private createLog = async (
-    req: Request<{}, any, CreateAuditLogDTO>,
-    res: Response,
-    next: NextFunction
-  ) => {
-    try {
-      const { type, message } = req.body;
-
-      if (!type || !message) {
-        return res.status(400).json({
-          message: "type and message are required",
-        });
-      }
-
-      const log = await this.auditService.createLog({ type, message });
-      return res.status(201).json(log);
-    } catch (error) {
-      next(error);
-    }
-  };
-
-  private getAllLogs = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ) => {
-    try {
-      const logs = await this.auditService.getAllLogs();
-      return res.status(200).json(logs);
-    } catch (error) {
-      next(error);
-    }
-  };
 }

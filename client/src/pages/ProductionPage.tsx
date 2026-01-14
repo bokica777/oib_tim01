@@ -3,9 +3,12 @@ import { ProductionPlantTable } from "../components/production/ProductionPlantTa
 import { ProductionLog } from "../components/production/ProductionLog";
 import ProcessingPage from "./ProcessingPage";
 import StoragePage from "./StoragePage";
+import PackagingPage from "./PackagingPage";
+import SalesPage from "./SalesPage";
+import PerformancePage from "./PerformancePage";
 
 function getUserRoleFromToken(): string | null {
-  const token = localStorage.getItem("authToken");
+  const token = localStorage.getItem("accessToken");
   if (!token) return null;
 
   try {
@@ -43,14 +46,17 @@ function formatRole(role: string | null): string {
 
 export const ProductionPage: React.FC = () => {
   const [activeTopTab, setActiveTopTab] = useState<
-    "proizvodnja" | "prerada" | "pakovanje" | "skladistenje" | "prodaja"
+    "proizvodnja" | "prerada" | "pakovanje" | "skladistenje" | "prodaja" | "analiza_performansi"
   >("proizvodnja");
+
 
   const [activeSubTab, setActiveSubTab] = useState<"servisProizvodnje" | "servisPrerade">(
     "servisProizvodnje"
   );
 
   const role = formatRole(getUserRoleFromToken());
+  const rawRole = (getUserRoleFromToken() ?? "").replace("ROLE_", "").toLowerCase();
+  const isAdmin = rawRole === "admin";
 
 
   return (
@@ -202,6 +208,16 @@ export const ProductionPage: React.FC = () => {
             >
               Prodaja
             </button>
+            {isAdmin && (
+              <button
+                className={activeTopTab === "analiza_performansi" ? "active" : ""}
+                onClick={() => setActiveTopTab("analiza_performansi")}
+              >
+                Analiza performansi
+              </button>
+            )}
+
+
           </div>
 
           {/* “Servis proizvodnje / servis prerade” (kao drugi red tabova) */}
@@ -233,10 +249,19 @@ export const ProductionPage: React.FC = () => {
             {activeTopTab === "prerada" && (
               <ProcessingPage />
             )}
+            {activeTopTab === "pakovanje" && (
+              <PackagingPage />
+            )}
+            {activeTopTab === "skladistenje" && (
+              <StoragePage />
+            )}
+            {activeTopTab == "prodaja" && (
+              <SalesPage />
+            )}
+            {activeTopTab === "analiza_performansi" && (
+              <PerformancePage />
+            )}
 
-                  {activeTopTab === "skladistenje" && (
-          <StoragePage/>
-          )}
           </div>
 
         </div>

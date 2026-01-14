@@ -1,3 +1,6 @@
+import { AuditType } from "../../clients/AuditClient";
+
 export interface ILogerService {
-  log(message: string, type?: "INFO" | "WARNING" | "ERROR", meta?: any): Promise<boolean>;
+  log(message: string, type?: AuditType, meta?: any, source?: string): Promise<boolean>;
+  getLogs(source?: string, forwardedToken?: string): Promise<any[]>;
 }

@@ -13,7 +13,7 @@ import { StorePackageDTO } from "../Domain/DTOs/storage/StorePackageDTO";
 import { RunSimulationDTO } from "../Domain/DTOs/performance-analysis/RunSimulationDTO";
 import { CreateAuditLogDTO } from "../Domain/DTOs/event-log/CreateAuditLog";
 import { CreateReceiptDTO } from "../Domain/DTOs/analysis/CreateReceiptDTO";
-
+import { authenticateOrGatewayKey } from "../Middlewares/authentification/authenticateOrGatewayKey";
 
 export class GatewayController {
   private readonly router: Router;
@@ -35,137 +35,39 @@ export class GatewayController {
       authorize("admin"),
       this.getAllUsers.bind(this)
     );
+// PRVO explicitna ruta /users/me
+this.router.get("/users/me", authenticate, this.getCurrentUser.bind(this));
 
-    this.router.get(
-      "/users/:id",
-      authenticate,
-      authorize("admin", "seller"),
-      this.getUserById.bind(this)
-    );
+// PA param rute
+this.router.get("/users/:id", authenticate, this.getUserById.bind(this));
 
     // ================= PRODUCTION =================
-    this.router.get(
-      "/production/plants",
-      authenticate,
-      authorize("admin", "sales_manager", "seller"),
-      this.getPlants.bind(this)
-    );
-
-    // frontend "zasadi biljku"
-    this.router.post(
-      "/production/plant",
-      authenticate,
-      authorize("admin", "sales_manager", "seller"),
-      this.plantNew.bind(this)
-    );
-
-    // balans aroma
-    this.router.post(
-      "/production/balance",
-      authenticate,
-      authorize("admin", "sales_manager", "seller"),
-      this.plantAndScale.bind(this)
-    );
-
-    this.router.post(
-      "/production/harvest",
-      authenticate,
-      authorize("admin", "sales_manager", "seller"),
-      this.harvestMany.bind(this)
-    );
-
-
-    this.router.get(
-      "/production/logs",
-      authenticate,
-      authorize("admin", "sales_manager", "seller"),
-      this.getProductionLogs.bind(this)
-    );
-
-    this.router.post(
-      "/production/harvest",
-      authenticate,
-      authorize("sales_manager", "seller"),
-      this.harvestPlants.bind(this)
-    );
-
-    this.router.put(
-      "/production/adjust/:id",
-      authenticate,
-      authorize("admin", "sales_manager", "seller"),
-      this.adjustStrength.bind(this)
-    );
+    this.router.get("/production/plants", authenticate, this.getPlants.bind(this));
+    this.router.post("/production/plant", authenticate, this.plantNew.bind(this));
+    this.router.post("/production/balance", authenticate, this.plantAndScale.bind(this));
+    this.router.post("/production/harvest", authenticate, this.harvestMany.bind(this));
+    this.router.put("/production/adjust/:id", authenticate, this.adjustStrength.bind(this));
+    this.router.get("/production/logs", authenticate, this.getProductionLogs.bind(this));
 
     // ================= PROCESSING =================
-    this.router.post(
-      "/processing/process",
-      authenticate,
-      authorize("sales_manager", "seller", "admin"),
-      validateDTO(ProcessRequestDTO),
-      this.processPerfume.bind(this)
-    );
-
-    this.router.get(
-      "/processing/perfumes",
-      authenticate,
-      authorize("sales_manager", "seller", "admin"),
-      this.listPerfumes.bind(this)
-    );
-
-    this.router.get(
-      "/processing/perfumes/:id",
-      authenticate,
-      authorize("sales_manager", "seller", "admin"),
-      this.getPerfumeById.bind(this)
-    );
-
-    this.router.post(
-      "/processing/perfumes/request",
-      authenticate,
-      authorize("sales_manager", "seller", "admin"),
-      this.requestPerfumes.bind(this)
-    );
+    this.router.post("/processing/process", authenticate, validateDTO(ProcessRequestDTO), this.processPerfume.bind(this));
+    this.router.get("/processing/perfumes", authenticate, this.listPerfumes.bind(this));
+    this.router.get("/processing/perfumes/:id", authenticate, this.getPerfumeById.bind(this));
+    this.router.post("/processing/perfumes/request", authenticate, this.requestPerfumes.bind(this));
 
     // ================= STORAGE =================
-    this.router.post(
-      "/storage/store",
-      authenticate,
-      authorize("seller", "sales_manager"),
-      validateDTO(StorePackageDTO),
-      this.storePackage.bind(this)
-    );
-
-    this.router.post(
-      "/storage/send",
-      authenticate,
-      authorize("sales_manager", "seller"),
-      validateDTO(SendRequestDTO),
-      this.sendPackages.bind(this)
-    );
-
-    this.router.get(
-      "/storage/packages",
-      authenticate,
-      authorize("sales_manager", "seller", "admin"),
-      this.listPackages.bind(this)
-    );
-    this.router.get(
-  "/storage/warehouses",
-  authenticate,
-  authorize("sales_manager", "seller", "admin"),
-  this.listWarehouses.bind(this)
-  );
-
+    this.router.post("/storage/store", authenticate, validateDTO(StorePackageDTO), this.storePackage.bind(this));
+    this.router.post("/storage/send", authenticate, validateDTO(SendRequestDTO), this.sendPackages.bind(this));
+    this.router.get("/storage/packages", authenticate, this.listPackages.bind(this));
+    this.router.get("/storage/warehouses", authenticate, this.listWarehouses.bind(this));
 
     // ================= PACKAGING =================
-    this.router.post(
-      "/packaging/pack",
-      authenticate,
-      authorize("sales_manager", "seller"),
-      this.requestPackaging.bind(this)
-    );
+    this.router.post("/packaging/pack", authenticate, this.requestPackaging.bind(this));
 
     // ================= SALES =================
+    this.router.post("/sales/order", authenticate, validateDTO(CreateOrderDTO), this.createOrder.bind(this));
+    this.router.get("/sales/order/:id", authenticate, this.getOrderById.bind(this));
+    this.router.get("/sales/orders", authenticate, this.listOrders.bind(this));
     this.router.post(
       "/sales/order",
       authenticate,
@@ -187,91 +89,94 @@ export class GatewayController {
       authorize("admin", "sales_manager"),
       this.listOrders.bind(this)
     );
+    
+    this.router.get(
+  "/sales/products",
+  authenticate,
+  authorize("seller", "sales_manager", "admin"),
+  this.listSalePackages.bind(this)
+);
 
     // ================= PERFORMANCE =================
-    // ================= PERFORMANCE =================
-    this.router.post(
-      "/performance/simulate",
-      authenticate,
-      authorize("admin"),
-      validateDTO(RunSimulationDTO),
-      this.runSimulation.bind(this)
-    );
-
-    this.router.get(
-      "/performance/reports",
-      authenticate,
-      authorize("admin"),
-      this.listPerformanceReports.bind(this)
-    );
-
-    this.router.get(
-      "/performance/reports/:id",
-      authenticate,
-      authorize("admin"),
-      this.getPerformanceReportById.bind(this)
-    );
-
-    this.router.get(
-      "/performance/reports/:id/pdf",
-      authenticate,
-      authorize("admin"),
-      this.getPerformanceReportPdf.bind(this)
-    );
-
+    this.router.post("/performance/simulate", authenticate, validateDTO(RunSimulationDTO), this.runSimulation.bind(this));
+    this.router.get("/performance/reports", authenticate, this.listPerformanceReports.bind(this));
+    this.router.get("/performance/reports/:id", authenticate, this.getPerformanceReportById.bind(this));
+    this.router.get("/performance/reports/:id/pdf", authenticate, this.getPerformanceReportPdf.bind(this));
 
     // ================= ANALYTICS =================
-    this.router.get(
-      "/analysis/top-perfumes",
-      authenticate,
-      authorize("admin", "sales_manager"),
-      this.getTopPerfumes.bind(this)
-    );
+    this.router.get("/analysis/top-perfumes", authenticate, this.getTopPerfumes.bind(this));
+    this.router.post("/receipts", authenticate, validateDTO(CreateReceiptDTO), this.createReceipt.bind(this));
 
-    this.router.post(
-      "/receipts",
-      authenticate,
-      authorize("seller", "sales_manager", "admin"),
-      validateDTO(CreateReceiptDTO),
-      this.createReceipt.bind(this)
-    );
+    // ================= AUDIT =================
+    this.router.post("/audit",authenticateOrGatewayKey, this.createAudit.bind(this));
+    this.router.get("/audit", this.getAuditLogs.bind(this));
   }
+ // Auth handlers
+  // =======================================
+// replace login handler in GatewayController.ts
+private async login(req: Request, res: Response): Promise<void> {
+  const data: LoginUserDTO = req.body;
+  try {
+    const result: any = await this.gatewayService.login(data);
 
-  // Auth handlers
-  private async login(req: Request, res: Response): Promise<void> {
-    const data: LoginUserDTO = req.body;
-    try {
-      const result: any = await this.gatewayService.login(data);
+    // Ako auth servis vrati token (npr. token/accessToken), dekodiramo ga i re-sign-ujemo
+    const returnedToken = result?.token ?? result?.accessToken;
+    if (returnedToken) {
+      try {
+        // decode without verification to extract claims (id, username, role)
+        const decoded: any = require("jsonwebtoken").decode(returnedToken) ?? {};
+        const claims = {
+          id: decoded.id ?? decoded.userId ?? decoded.sub ?? decoded.user?.id,
+          username: decoded.username ?? decoded.user?.username ?? decoded.userName ?? decoded.email,
+          role: decoded.role ?? decoded.roles ?? (decoded.authorities && decoded.authorities[0]) ?? "user",
+        };
 
-      if (result && (result.token || result.accessToken)) {
-        const token = result.token ?? result.accessToken;
-        res.status(200).json({ success: true, token, message: result.message ?? "OK" });
-        return;
-      }
-      if (result && result.authenificated && result.userData) {
-        const claims = result.userData;
+        // sign new token with gateway secret so gateway can verify it later
         const secret = process.env.JWT_SECRET ?? "";
         const expiresIn = process.env.JWT_EXPIRES_IN ?? "30m";
-        const token = require("jsonwebtoken").sign(
+        const jwt = require("jsonwebtoken");
+        const token = jwt.sign(
           { id: claims.id, username: claims.username, role: claims.role },
           secret,
           { expiresIn }
         );
-        res.status(200).json({ success: true, token, message: "OK", userData: claims });
-        return;
-      }
 
-      res.status(200).json({ success: false, message: result?.message ?? "Authentication failed" });
-      return;
-    } catch (err: any) {
-      if (err?.response?.data) {
-        res.status(err.response?.status ?? 500).json({ success: false, ...err.response.data });
+        // return gateway-signed token to client (so future calls to gateway pass authenticate)
+        res.status(200).json({ success: true, token, message: result.message ?? "OK", userData: { id: claims.id, username: claims.username, role: claims.role } });
+        return;
+      } catch (e) {
+        // ako nešto ne valja sa re-sign-om, fallback: vraćamo original result ako postoji
+        console.warn("[GatewayController] failed to re-sign token, falling back to original token", e);
+        res.status(200).json({ success: true, token: returnedToken, message: result.message ?? "OK" });
         return;
       }
-      res.status(500).json({ success: false, message: err.message ?? "Internal server error" });
+    }
+
+    // Ako auth servis vraća korisničke podatke (a ne token), gateway ih sam potpisuje
+    if (result && result.authenificated && result.userData) {
+      const claims = result.userData;
+      const secret = process.env.JWT_SECRET ?? "";
+      const expiresIn = process.env.JWT_EXPIRES_IN ?? "30m";
+      const token = require("jsonwebtoken").sign(
+        { id: claims.id, username: claims.username, role: claims.role },
+        secret,
+        { expiresIn }
+      );
+      res.status(200).json({ success: true, token, message: "OK", userData: claims });
       return;
     }
+
+    res.status(200).json({ success: false, message: result?.message ?? "Authentication failed" });
+    return;
+  } catch (err: any) {
+    if (err?.response?.data) {
+      res.status(err.response?.status ?? 500).json({ success: false, ...err.response.data });
+      return;
+    }
+    res.status(500).json({ success: false, message: err.message ?? "Internal server error" });
+    return;
   }
+}
 
   private async register(req: Request, res: Response) {
     const result = await this.gatewayService.register(req.body);
@@ -279,17 +184,101 @@ export class GatewayController {
   }
 
   // ================= USERS =================
+  
   private async getAllUsers(req: Request, res: Response) {
+  try {
     const users = await this.gatewayService.getAllUsers();
-    res.json(users);
+    res.status(200).json(users);
+  } catch (err: any) {
+    res.status(err?.status ?? 500).json({ message: err.message });
   }
+}
 
-  private async getUserById(req: Request, res: Response) {
-    const id = Number(req.params.id);
-    const user = await this.gatewayService.getUserById(id);
-    res.json(user);
+// getUserById (ensure both internal headers and Authorization forwarded)
+private async getUserById(req: Request, res: Response) {
+  try {
+    const idParam = req.params.id;
+    // safety: if someone still hits /users/me fallback to currentUser
+    if (idParam === "me") return this.getCurrentUser(req, res);
+
+    const id = Number(idParam);
+    if (!Number.isFinite(id)) return res.status(400).json({ message: "Invalid id" });
+
+    const tokenRole = (req.user?.role ?? "").toString().toLowerCase();
+    const tokenId = req.user?.id;
+
+    if (tokenRole !== "admin" && tokenId !== id) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
+    const headers = buildInternalHeaders(req);
+    const user = await this.gatewayService.getUserById(id, headers);
+    res.status(200).json(user);
+  } catch (err: any) {
+    res.status(err?.status ?? 500).json({ message: err.message });
   }
+}
 
+
+// getCurrentUser (forward both)
+private async getCurrentUser(req: Request, res: Response) {
+  // na početku metode getCurrentUser
+console.log("[Gateway] getCurrentUser - req.user:", req.user);
+console.log("[Gateway] getCurrentUser - incoming auth:", req.headers.authorization);
+console.log("[Gateway] getCurrentUser - buildInternalHeaders will produce:", buildInternalHeaders(req));
+
+  try {
+    const id = Number(req.user?.id);
+
+    if (!id) {
+      return res.status(400).json({ message: "No user in token" });
+    }
+
+    const headers = {
+      ...buildInternalHeaders(req),
+      ...(req.headers.authorization ? { Authorization: String(req.headers.authorization) } : {}),
+    };
+
+    const user = await this.gatewayService.getUserById(id, headers);
+
+    return res.status(200).json(user);
+  } catch (err: any) {
+    return res
+      .status(err?.response?.status ?? err?.status ?? 500)
+      .json({ message: err?.message ?? "Internal error" });
+  }
+}
+
+  // ================= AUDIT =================
+  private async getAuditLogs(req: Request, res: Response) {
+  try {
+    const source = req.query.source ? String(req.query.source) : undefined;
+    const headers = buildInternalHeaders(req); // 👈 KLJUČNO
+
+    const data = await this.gatewayService.getAudits(source, headers);
+    res.status(200).json(data);
+  } catch (err: any) {
+    res.status(500).json({ message: err.message });
+  }
+}
+
+
+// GatewayController.ts
+private async createAudit(req: Request, res: Response) {
+  try {
+    // forward raw authorization header (ako postoji) — gatewayService zna da primi string ili headers object
+    const forwarded = req.headers.authorization ?? undefined;
+    const data = await this.gatewayService.createAudit(req.body, forwarded);
+    res.status(201).json(data);
+  } catch (err: any) {
+    res.status(500).json({ message: err.message });
+  }
+}
+
+
+
+  // Ostatak metoda (production, processing, storage, etc.) ostaje nepromenjen
+  
   // ================= PRODUCTION =================
   private async getPlants(req: Request, res: Response) {
     const count = Number(req.query.count ?? 1);
@@ -392,17 +381,33 @@ export class GatewayController {
   }
 
   // ================= PRODUCTION LOGS =================
-  private async getProductionLogs(req: Request, res: Response) {
-    try {
-      const headers = buildInternalHeaders(req);
-      const logs = await this.gatewayService.getProductionLogs(headers);
-      res.json(logs);
-    } catch (err: any) {
-      res.status(err.status ?? 500).json({
-        message: err.message ?? "Failed to fetch production logs",
-      });
-    }
+private async getProductionLogs(req: Request, res: Response) {
+  try {
+    const headers = buildInternalHeaders(req);
+    const forwardedToken = req.headers.authorization as string | undefined;
+
+    // dohvat iz audit servisa (preko gatewayService)
+    const auditPromise = this.gatewayService.getAudits("production", headers);
+
+    // dohvat lokalnog service dnevnika (ako production service ima getProductionLogs)
+    // NOTE: Gateway nema direktnu referencu na production service internu listu,
+    // ali može tražiti preko production microservice GET /production/logs (ako to želiš).
+    // Pošto u tvojoj arhitekturi production servis ima endpoint /api/v1/logs (on server-side),
+    // možemo pozvati gatewayService.productionClient ili implementirati gatewayService.getProductionLogs.
+    // Najjednostavnije: koristimo gatewayService.getAudits i dopunimo sa lokalnim logovima ako ih želiš.
+    const auditLogs = await auditPromise;
+
+    // OPTIONAL: ako želiš i in-memory logs iz production servisa (ako production izlaže /logs),
+    // možeš ih dohvatiti ovako:
+    // const localLogs = await this.gatewayService.getProductionLogs(headers);
+
+    // Normalizuj i pošalji
+    res.status(200).json(auditLogs);
+  } catch (err: any) {
+    res.status(500).json({ message: err.message });
   }
+}
+
 
 
   // ================= PROCESSING =================
@@ -503,6 +508,19 @@ export class GatewayController {
     const list = await this.gatewayService.listOrders(headers);
     res.json(list);
   }
+private async listSalePackages(req: Request, res: Response) {
+  try {
+    const headers = buildInternalHeaders(req);
+    const packages = await this.gatewayService.getSalePackages(headers);
+    res.json(packages);
+  } catch (err: any) {
+    console.error("Error fetching sale packages:", err);
+    res.status(err?.status ?? 500).json({
+      message: err?.message ?? "Failed to fetch sale packages",
+    });
+  }
+}
+
 
   // ================= PERFORMANCE =================
   private async runSimulation(req: Request, res: Response) {
@@ -552,7 +570,6 @@ export class GatewayController {
     const result = await this.gatewayService.createReceipt(req.body, headers);
     res.status(201).json(result);
   }
-
   public getRouter(): Router {
     return this.router;
   }
