@@ -4,6 +4,7 @@ import { PackageStatus } from "../Domain/enums/PackageStatus";
 import { IStorageCenter } from "../Domain/services/IStorageService";
 import { Warehouse } from "../Domain/models/Warehouse";
 import { Db } from "../Database/DbConnectionPool";
+import { In } from "typeorm";
 
 export class StorageService {
   constructor(
@@ -55,7 +56,7 @@ export class StorageService {
 
   async listAvailable(): Promise<StoragePackage[]> {
     return this.pkgRepo.find({
-      where: { status: PackageStatus.PACKED },
+      where: { status: In([ PackageStatus.PACKED,PackageStatus.SENT]) },
       order: { createdAt: "ASC" },
     });
   }

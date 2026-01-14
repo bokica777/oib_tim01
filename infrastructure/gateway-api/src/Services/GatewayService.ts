@@ -415,7 +415,7 @@ async getSalePackages(headers: Record<string, string>): Promise<any[]> {
     const resp = await this.storageClient.get("/packages", { headers, timeout: 10000 });
   const packages: any[] = resp.data || [];
 console.log("Statusi paketa:", packages.map(p => p.status));
-    const salePackages = packages.filter(p => [ "PACKED"].includes(p.status));
+    const salePackages = packages.filter(p => [ "SENT"].includes(p.status));
     const stockMap: Record<number, number> = {};
     for (const pkg of salePackages) {
       const pid = Number(pkg.perfumeId);
