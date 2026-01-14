@@ -13,6 +13,7 @@ import { StorePackageDTO } from "../Domain/DTOs/storage/StorePackageDTO";
 import { RunSimulationDTO } from "../Domain/DTOs/performance-analysis/RunSimulationDTO";
 import { CreateAuditLogDTO } from "../Domain/DTOs/event-log/CreateAuditLog";
 import { CreateReceiptDTO } from "../Domain/DTOs/analysis/CreateReceiptDTO";
+import { authenticateOrGatewayKey } from "../Middlewares/authentification/authenticateOrGatewayKey";
 
 export class GatewayController {
   private readonly router: Router;
@@ -34,13 +35,11 @@ export class GatewayController {
       authorize("admin"),
       this.getAllUsers.bind(this)
     );
+// PRVO explicitna ruta /users/me
+this.router.get("/users/me", authenticate, this.getCurrentUser.bind(this));
 
-    this.router.get(
-      "/users/:id",
-      authenticate,
-      this.getUserById.bind(this)
-    );
-    this.router.get("/users/me", authenticate, this.getCurrentUser.bind(this));
+// PA param rute
+this.router.get("/users/:id", authenticate, this.getUserById.bind(this));
 
     // ================= PRODUCTION =================
     this.router.get("/production/plants", authenticate, this.getPlants.bind(this));
@@ -109,44 +108,75 @@ export class GatewayController {
     this.router.post("/receipts", authenticate, validateDTO(CreateReceiptDTO), this.createReceipt.bind(this));
 
     // ================= AUDIT =================
-    this.router.post("/audit",authenticate,  validateDTO(CreateAuditLogDTO), this.createAudit.bind(this));
-    this.router.get("/audit", authenticate, this.getAuditLogs.bind(this));
+    this.router.post("/audit",authenticateOrGatewayKey, this.createAudit.bind(this));
+    this.router.get("/audit", this.getAuditLogs.bind(this));
   }
  // Auth handlers
-  private async login(req: Request, res: Response): Promise<void> {
-    const data: LoginUserDTO = req.body;
-    try {
-      const result: any = await this.gatewayService.login(data);
+  // =======================================
+// replace login handler in GatewayController.ts
+private async login(req: Request, res: Response): Promise<void> {
+  const data: LoginUserDTO = req.body;
+  try {
+    const result: any = await this.gatewayService.login(data);
 
-      if (result && (result.token || result.accessToken)) {
-        const token = result.token ?? result.accessToken;
-        res.status(200).json({ success: true, token, message: result.message ?? "OK" });
-        return;
-      }
-      if (result && result.authenificated && result.userData) {
-        const claims = result.userData;
+    // Ako auth servis vrati token (npr. token/accessToken), dekodiramo ga i re-sign-ujemo
+    const returnedToken = result?.token ?? result?.accessToken;
+    if (returnedToken) {
+      try {
+        // decode without verification to extract claims (id, username, role)
+        const decoded: any = require("jsonwebtoken").decode(returnedToken) ?? {};
+        const claims = {
+          id: decoded.id ?? decoded.userId ?? decoded.sub ?? decoded.user?.id,
+          username: decoded.username ?? decoded.user?.username ?? decoded.userName ?? decoded.email,
+          role: decoded.role ?? decoded.roles ?? (decoded.authorities && decoded.authorities[0]) ?? "user",
+        };
+
+        // sign new token with gateway secret so gateway can verify it later
         const secret = process.env.JWT_SECRET ?? "";
         const expiresIn = process.env.JWT_EXPIRES_IN ?? "30m";
-        const token = require("jsonwebtoken").sign(
+        const jwt = require("jsonwebtoken");
+        const token = jwt.sign(
           { id: claims.id, username: claims.username, role: claims.role },
           secret,
           { expiresIn }
         );
-        res.status(200).json({ success: true, token, message: "OK", userData: claims });
-        return;
-      }
 
-      res.status(200).json({ success: false, message: result?.message ?? "Authentication failed" });
-      return;
-    } catch (err: any) {
-      if (err?.response?.data) {
-        res.status(err.response?.status ?? 500).json({ success: false, ...err.response.data });
+        // return gateway-signed token to client (so future calls to gateway pass authenticate)
+        res.status(200).json({ success: true, token, message: result.message ?? "OK", userData: { id: claims.id, username: claims.username, role: claims.role } });
+        return;
+      } catch (e) {
+        // ako nešto ne valja sa re-sign-om, fallback: vraćamo original result ako postoji
+        console.warn("[GatewayController] failed to re-sign token, falling back to original token", e);
+        res.status(200).json({ success: true, token: returnedToken, message: result.message ?? "OK" });
         return;
       }
-      res.status(500).json({ success: false, message: err.message ?? "Internal server error" });
+    }
+
+    // Ako auth servis vraća korisničke podatke (a ne token), gateway ih sam potpisuje
+    if (result && result.authenificated && result.userData) {
+      const claims = result.userData;
+      const secret = process.env.JWT_SECRET ?? "";
+      const expiresIn = process.env.JWT_EXPIRES_IN ?? "30m";
+      const token = require("jsonwebtoken").sign(
+        { id: claims.id, username: claims.username, role: claims.role },
+        secret,
+        { expiresIn }
+      );
+      res.status(200).json({ success: true, token, message: "OK", userData: claims });
       return;
     }
+
+    res.status(200).json({ success: false, message: result?.message ?? "Authentication failed" });
+    return;
+  } catch (err: any) {
+    if (err?.response?.data) {
+      res.status(err.response?.status ?? 500).json({ success: false, ...err.response.data });
+      return;
+    }
+    res.status(500).json({ success: false, message: err.message ?? "Internal server error" });
+    return;
   }
+}
 
   private async register(req: Request, res: Response) {
     const result = await this.gatewayService.register(req.body);
@@ -163,13 +193,20 @@ export class GatewayController {
     res.status(err?.status ?? 500).json({ message: err.message });
   }
 }
+
+// getUserById (ensure both internal headers and Authorization forwarded)
 private async getUserById(req: Request, res: Response) {
   try {
-    const id = Number(req.params.id);
-    const tokenRole = req.user?.role;
+    const idParam = req.params.id;
+    // safety: if someone still hits /users/me fallback to currentUser
+    if (idParam === "me") return this.getCurrentUser(req, res);
+
+    const id = Number(idParam);
+    if (!Number.isFinite(id)) return res.status(400).json({ message: "Invalid id" });
+
+    const tokenRole = (req.user?.role ?? "").toString().toLowerCase();
     const tokenId = req.user?.id;
 
-    // Admin vidi sve, ostali samo svoj ID
     if (tokenRole !== "admin" && tokenId !== id) {
       return res.status(403).json({ message: "Forbidden" });
     }
@@ -181,7 +218,15 @@ private async getUserById(req: Request, res: Response) {
     res.status(err?.status ?? 500).json({ message: err.message });
   }
 }
+
+
+// getCurrentUser (forward both)
 private async getCurrentUser(req: Request, res: Response) {
+  // na početku metode getCurrentUser
+console.log("[Gateway] getCurrentUser - req.user:", req.user);
+console.log("[Gateway] getCurrentUser - incoming auth:", req.headers.authorization);
+console.log("[Gateway] getCurrentUser - buildInternalHeaders will produce:", buildInternalHeaders(req));
+
   try {
     const id = Number(req.user?.id);
 
@@ -189,19 +234,20 @@ private async getCurrentUser(req: Request, res: Response) {
       return res.status(400).json({ message: "No user in token" });
     }
 
-    const headers = buildInternalHeaders(req);
+    const headers = {
+      ...buildInternalHeaders(req),
+      ...(req.headers.authorization ? { Authorization: String(req.headers.authorization) } : {}),
+    };
 
     const user = await this.gatewayService.getUserById(id, headers);
 
     return res.status(200).json(user);
   } catch (err: any) {
     return res
-      .status(err?.response?.status ?? 500)
-      .json({ message: err.message });
+      .status(err?.response?.status ?? err?.status ?? 500)
+      .json({ message: err?.message ?? "Internal error" });
   }
 }
-
-
 
   // ================= AUDIT =================
   private async getAuditLogs(req: Request, res: Response) {
@@ -217,15 +263,18 @@ private async getCurrentUser(req: Request, res: Response) {
 }
 
 
-  private async createAudit(req: Request, res: Response) {
+// GatewayController.ts
+private async createAudit(req: Request, res: Response) {
   try {
-    const headers = buildInternalHeaders(req); // 👈 NE prosleđuj user token
-    const data = await this.gatewayService.createAudit(req.body, headers);
+    // forward raw authorization header (ako postoji) — gatewayService zna da primi string ili headers object
+    const forwarded = req.headers.authorization ?? undefined;
+    const data = await this.gatewayService.createAudit(req.body, forwarded);
     res.status(201).json(data);
   } catch (err: any) {
     res.status(500).json({ message: err.message });
   }
 }
+
 
 
   // Ostatak metoda (production, processing, storage, etc.) ostaje nepromenjen
@@ -332,17 +381,33 @@ private async getCurrentUser(req: Request, res: Response) {
   }
 
   // ================= PRODUCTION LOGS =================
-  private async getProductionLogs(req: Request, res: Response) {
-    try {
-      const headers = buildInternalHeaders(req);
-      const logs = await this.gatewayService.getProductionLogs(headers);
-      res.json(logs);
-    } catch (err: any) {
-      res.status(err.status ?? 500).json({
-        message: err.message ?? "Failed to fetch production logs",
-      });
-    }
+private async getProductionLogs(req: Request, res: Response) {
+  try {
+    const headers = buildInternalHeaders(req);
+    const forwardedToken = req.headers.authorization as string | undefined;
+
+    // dohvat iz audit servisa (preko gatewayService)
+    const auditPromise = this.gatewayService.getAudits("production", headers);
+
+    // dohvat lokalnog service dnevnika (ako production service ima getProductionLogs)
+    // NOTE: Gateway nema direktnu referencu na production service internu listu,
+    // ali može tražiti preko production microservice GET /production/logs (ako to želiš).
+    // Pošto u tvojoj arhitekturi production servis ima endpoint /api/v1/logs (on server-side),
+    // možemo pozvati gatewayService.productionClient ili implementirati gatewayService.getProductionLogs.
+    // Najjednostavnije: koristimo gatewayService.getAudits i dopunimo sa lokalnim logovima ako ih želiš.
+    const auditLogs = await auditPromise;
+
+    // OPTIONAL: ako želiš i in-memory logs iz production servisa (ako production izlaže /logs),
+    // možeš ih dohvatiti ovako:
+    // const localLogs = await this.gatewayService.getProductionLogs(headers);
+
+    // Normalizuj i pošalji
+    res.status(200).json(auditLogs);
+  } catch (err: any) {
+    res.status(500).json({ message: err.message });
   }
+}
+
 
 
   // ================= PROCESSING =================

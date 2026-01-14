@@ -262,11 +262,11 @@ export class GatewayService implements IGatewayService {
     }
   }
 
-  // ================= PRODUCTION LOGS =================
- // ================= PRODUCTION LOGS =================
+// zameni postojeću metodu
 async getProductionLogs(headers: Record<string, string>): Promise<any[]> {
   if (!this.auditClient) throw new Error("AUDIT_URL not configured");
-  const resp = await this.auditClient.get("/", { headers, params: { source: "production" } });
+  // ispravan poziv na audit servis (auditClient baseURL = http://.../api/v1)
+  const resp = await this.auditClient.get(`/audit`, { headers, params: { source: "production" } });
   return resp.data;
 }
 
