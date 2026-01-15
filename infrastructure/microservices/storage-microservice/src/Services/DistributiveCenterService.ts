@@ -1,4 +1,3 @@
-// src/Services/centers/DistributiveCenter.ts
 import { Repository } from "typeorm";
 import { StoragePackage } from "../Domain/models/StoragePackage";
 import { PackageStatus } from "../Domain/enums/PackageStatus";
@@ -17,7 +16,7 @@ export class DistributiveCenter implements IStorageCenter {
     while (out.length < count) {
       const toTake = Math.min(3, count - out.length);
       const candidates = await this.repo.find({
-        where: { status: PackageStatus.PACKED },
+        where: { status: PackageStatus.PACKED  },
         take: toTake,
         order: { createdAt: "ASC" }
       });

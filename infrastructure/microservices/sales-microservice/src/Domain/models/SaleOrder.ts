@@ -1,5 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn } from "typeorm";
-import { OrderStatus } from "../enums/OrderStatus";
+import { OrderItem } from "./OrderItem";
 
 @Entity({ name: "orders" })
 export class SaleOrder {
@@ -12,21 +12,14 @@ export class SaleOrder {
   @Column()
   deliveryAddress!: string;
 
-  @Column({ type: "int" })
-  packagesRequested!: number;
+  @Column({ type: "simple-json" })
+  items!: OrderItem[];
 
-  @Column({ type: "simple-json", nullable: true })
-  packageIds?: number[];
+  @Column({ type: "int", default: 0 })
+  totalItems!: number;
 
   @Column({ type: "varchar", length: 64, nullable: true })
   serial!: string; 
-
-  @Column({
-    type: "enum",
-    enum: OrderStatus,
-    default: OrderStatus.CREATED
-  })
-  status!: OrderStatus;
 
   @CreateDateColumn()
   createdAt!: Date;

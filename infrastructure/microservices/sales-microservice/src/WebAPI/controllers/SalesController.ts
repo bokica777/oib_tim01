@@ -21,25 +21,25 @@ export class SalesController {
     this.router.post("/order", validateDTO(CreateOrderDTO), this.createOrder.bind(this));
     this.router.get("/order/:id", this.getOrder.bind(this));
     this.router.get("/orders", this.getAll.bind(this));
-
   }
-  
+
   private async createOrder(req: Request, res: Response) {
     try {
-      const { customerName, deliveryAddress, count } = req.body;
-      const role = req.user?.role;
+      const { customerName, deliveryAddress, items } = req.body;
+      const role = (req as any).user?.role;
 
-      const order = await this.service.createOrder(customerName, deliveryAddress, count, role);
+      const order = await this.service.createOrder(customerName, deliveryAddress, items, role);
 
       await this.logger.log(
         `Order created id=${order.id} for ${customerName}`, 
-        "INFO"
+        "INFO",
+        { items: order.items }
       );
 
       res.status(201).json(order);
     } catch (err: any) {
-      await this.logger.log(err.message, "ERROR");
-      res.status(400).json({ message: err.message });
+      await this.logger.log(err.message ?? String(err), "ERROR");
+      res.status(400).json({ message: err.message ?? "Error creating order" });
     }
   }
 

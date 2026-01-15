@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { salesAPI, SimpleCreateOrderDTO } from "../api/sales/SalesAPI";
+import { salesAPI} from "../api/sales/SalesAPI";
 import { PerfumeDTO } from "../models/sales/PerfumeDTO";
 import { OrderItemDTO } from "../models/sales/OrderItemDTO";
 import ProductCard from "../components/sales/ProductCard";
@@ -31,7 +31,6 @@ const SalesPage: React.FC = () => {
     loadProducts();
   }, []);
 
-  // --- Dodaj u korpu ---
   const addToCart = (p: PerfumeDTO, qty: number) => {
     setCart(prev => {
       const found = prev.find(i => i.productId === p.id);
@@ -72,45 +71,50 @@ const SalesPage: React.FC = () => {
     [cart]
   );
 
-  const handleCheckout = async () => {
-    if (cart.length === 0) { alert("Korpa je prazna"); return; }
-    if (!customerName.trim()) { alert("Unesite ime kupca"); return; }
-    if (!deliveryAddress.trim()) { alert("Unesite adresu isporuke"); return; }
+const handleCheckout = async () => {
+  if (cart.length === 0) { alert("Korpa je prazna"); return; }
+  if (!customerName.trim()) { alert("Unesite ime kupca"); return; }
+  if (!deliveryAddress.trim()) { alert("Unesite adresu isporuke"); return; }
 
-    const count = cart.reduce((s, i) => s + i.quantity, 0);
-    const dto: SimpleCreateOrderDTO = {
-      customerName: customerName.trim(),
-      deliveryAddress: deliveryAddress.trim(),
-      count,
-    };
+  const items = cart.map(i => ({
+    perfumeId: i.productId,
+    quantity: i.quantity
+  }));
 
-    try {
-      setLoading(true);
-      const response: any = await salesAPI.createOrder(dto);
-      const serial = response?.serial ?? response?.id ?? null;
-      alert(`Porudžbina uspješno kreirana! Broj porudžbine: ${serial ?? "n/a"}`);
-
-      setProducts(prev =>
-        prev.map(p => {
-          const cartItem = cart.find(c => c.productId === p.id);
-          if (!cartItem) return p;
-          return {
-            ...p,
-            stock: Math.max(0, (p.stock ?? 0) - cartItem.quantity),
-          };
-        })
-      );
-
-      setCart([]);
-      setCustomerName("");
-      setDeliveryAddress("");
-      nameRef.current?.focus();
-    } catch (e: any) {
-      alert(e?.message ?? "Greška pri kreiranju porudžbine");
-    } finally {
-      setLoading(false);
-    }
+  const dto = {
+    customerName: customerName.trim(),
+    deliveryAddress: deliveryAddress.trim(),
+    items
   };
+
+  try {
+    setLoading(true);
+    const response: any = await salesAPI.createOrder(dto);
+    const serial = response?.serial ?? response?.id ?? null;
+    alert(`Porudžbina uspješno kreirana! Broj porudžbine: ${serial ?? "n/a"}`);
+
+    setProducts(prev =>
+      prev.map(p => {
+        const cartItem = cart.find(c => c.productId === p.id);
+        if (!cartItem) return p;
+        return {
+          ...p,
+          stock: Math.max(0, (p.stock ?? 0) - cartItem.quantity),
+        };
+      })
+    );
+
+    setCart([]);
+    setCustomerName("");
+    setDeliveryAddress("");
+    nameRef.current?.focus();
+  } catch (e: any) {
+    alert(e?.message ?? "Greška pri kreiranju porudžbine");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <div style={{ padding: 28, height: "calc(100vh - 20px)", boxSizing: "border-box", display: "flex", justifyContent: "center" }}>
@@ -126,7 +130,6 @@ const SalesPage: React.FC = () => {
             {loading && <div>Učitavanje...</div>}
             {!loading && products.length === 0 && !error && <div>Nema proizvoda</div>}
 
-            {/* keep same simple list, but give each item more space */}
             {products.map(p => (
               <div key={p.id} style={{ marginBottom: 16, minWidth: 280 }}>
                 <ProductCard product={p} onAdd={qty => addToCart(p, qty)} />
@@ -135,7 +138,6 @@ const SalesPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Cart (right) */}
         <div style={{ display: "flex", flexDirection: "column", border: "1px solid rgba(0,0,0,0.06)", borderRadius: 8, minHeight: 0 }}>
           <div style={{ padding: 12, fontWeight: 700, display: "flex", justifyContent: "space-between", background: "linear-gradient(135deg, #93c5fd, #60a5fa)", color: "white", borderRadius: "8px 8px 0 0", alignItems: "center" }}>
             <div style={{ fontSize: 16 }}>Korpa ({cart.reduce((s,c) => s+c.quantity,0)})</div>
@@ -183,7 +185,6 @@ const SalesPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Sticky footer */}
           <div
             style={{
               position: "sticky",

@@ -1,12 +1,6 @@
 import axios, { AxiosInstance } from "axios";
-import { PerfumeDTO } from "../../models/sales/PerfumeDTO";
 import { OrderResponseDTO } from "../../models/sales/OrderResponseDTO";
-
-export interface SimpleCreateOrderDTO {
-  customerName: string;
-  deliveryAddress: string;
-  count: number; 
-}
+import { CreateOrderDTO } from "../../models/sales/CreateOrderDTO";
 
 export class SalesAPI {
   private client: AxiosInstance;
@@ -28,16 +22,16 @@ export class SalesAPI {
     });
   }
 
-  async listProducts(): Promise<PerfumeDTO[]> {
+  async listProducts(): Promise<any[]> {
     try {
-      const res = await this.client.get<PerfumeDTO[]>("/products");
+      const res = await this.client.get<any[]>("/products");
       return res.data;
     } catch (err: any) {
       throw new Error(err.response?.data?.message || "Greška pri dohvaćanju proizvoda");
     }
   }
 
-  async createOrder(dto: SimpleCreateOrderDTO): Promise<OrderResponseDTO> {
+  async createOrder(dto: CreateOrderDTO): Promise<OrderResponseDTO> {
     try {
       const res = await this.client.post<OrderResponseDTO>("/order", dto);
       return res.data;

@@ -1,30 +1,42 @@
 import { Repository } from "typeorm";
 import { SaleOrder } from "../Domain/models/SaleOrder";
-import { StorageClient } from "../clients/StorageClient";
-import { OrderStatus } from "../Domain/enums/OrderStatus";
+
+type OrderItem = { perfumeId: number; quantity: number; name?: string; price?: number };
 
 export class SalesService {
-  private storage = new StorageClient();
-
   constructor(private readonly orderRepo: Repository<SaleOrder>) {}
- 
-  async createOrder(customer: string, address: string, count: number, role?: string) {
-    const packageIds = await this.storage.requestPackages(count, role);
 
-    if (packageIds.length < count) {
-      throw new Error("Not enough packages available for sale");
+  async createOrder(
+    customer: string,
+    address: string,
+    items: OrderItem[],
+    role?: string
+  ) {
+    if (!Array.isArray(items) || items.length === 0) {
+      throw new Error("Order must contain at least one item");
     }
+    
+    const normalized = items.map(it => ({
+      perfumeId: Number(it.perfumeId),
+      quantity: Math.max(1, Number(it.quantity) || 1),
+      name: it.name,
+      price: it.price
+    }));
+
+    if (normalized.some(i => !Number.isFinite(i.perfumeId) || i.perfumeId <= 0)) {
+      throw new Error("Invalid perfumeId in items");
+    }
+
+    const totalItems = normalized.reduce((s, it) => s + it.quantity, 0);
 
     const order = this.orderRepo.create({
       customerName: customer,
       deliveryAddress: address,
-      packagesRequested: count,
-      packageIds,
-      status: OrderStatus.SHIPPED
+      items: normalized,
+      totalItems,
     });
 
     const saved = await this.orderRepo.save(order);
-
     saved.serial = `ORD-2025-${saved.id}`;
     return this.orderRepo.save(saved);
   }
