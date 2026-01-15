@@ -1,4 +1,3 @@
-// src/api/audit/AuditAPI.ts
 import axios, { AxiosInstance } from "axios";
 
 export type AuditRecord = {
@@ -19,7 +18,6 @@ export class AuditAPI {
     const raw = (import.meta.env.VITE_GATEWAY_URL as string) ?? "http://localhost:4000";
     this.base = raw.replace(/\/+$/, ""); // no trailing slash
 
-    // assume gateway exposes audit under /api/v1/audit
     const auditBase = this.base.endsWith("/api/v1") ? `${this.base}` : `${this.base}/api/v1`;
 
     this.client = axios.create({
@@ -30,7 +28,6 @@ export class AuditAPI {
   }
 
   private auditEndpoint(): string {
-    // final endpoint: {GATEWAY}/api/v1/audit
     return `/audit`;
   }
 

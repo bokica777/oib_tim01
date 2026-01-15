@@ -54,9 +54,9 @@ const base = (import.meta.env.VITE_GATEWAY_URL ?? "") + "/storage";
   return {
     id: String(p.id ?? p.serialNumber ?? ""),
     code: p.serialNumber ?? p.code ?? `pkg-${p.id ?? ""}`,
-    perfumeId: String(p.perfumeId ?? p.perfume?.id ?? ""), // ⬅️ sada popunjeno
-    perfumeName: p.perfumeName ?? p.perfume?.name ?? undefined, // opcionalno
-    volumeMl: p.volumeMl ?? undefined, // opcionalno
+    perfumeId: String(p.perfumeId ?? p.perfume?.id ?? ""), 
+    perfumeName: p.perfumeName ?? p.perfume?.name ?? undefined,
+    volumeMl: p.volumeMl ?? undefined, 
     count: Number(p.count ?? p.quantity ?? 1),
     warehouseId: String(p.warehouseId ?? p.warehouse?.id ?? ""),
     status: (p.status ?? "STORED") as "STORED" | "SENT" | "PACKED",

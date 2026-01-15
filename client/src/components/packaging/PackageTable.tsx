@@ -1,5 +1,5 @@
 import React from "react";
-import { StoragePackageDTO } from "../../models/storage/StoragePackageDTO"; 
+import { StoragePackageDTO } from "../../models/storage/StoragePackageDTO";
 import { WarehouseDTO } from "../../models/storage/WarehouseDTO";
 
 type Props = {
@@ -40,7 +40,7 @@ const PackagingTable: React.FC<Props> = ({ items, warehouses, selected, onToggle
 
           const perfumeLabel =
             perfumeNames?.[pkg.id] ??
-            (Array.isArray(pkg.perfumeIds) && pkg.perfumeIds.length ? String(pkg.perfumeIds[0]) : "-");
+            (pkg.perfumeId ? String(pkg.perfumeId) : (Array.isArray(pkg.perfumeIds) && pkg.perfumeIds.length ? String(pkg.perfumeIds[0]) : "-"));
 
           const code = pkg.serialNumber ?? pkg.id ?? pkg.name ?? "-";
           const status = pkg.status ?? "PACKED";

@@ -25,9 +25,6 @@ export const ProductionPlantTable: React.FC = () => {
 
   const token = localStorage.getItem("accessToken") ?? "";
 
-  // =========================
-  // LOAD PLANTS
-  // =========================
   const loadPlants = async () => {
     try {
       setLoading(true);
@@ -64,10 +61,7 @@ export const ProductionPlantTable: React.FC = () => {
     loadPlants();
   }, []);
 
-  // =========================
-  // ACTIONS
-  // =========================
-
+ 
   const plantNew = async () => {
     try {
       setActionLoading(true);
@@ -152,11 +146,6 @@ export const ProductionPlantTable: React.FC = () => {
   }
 };
 
-
-
-  // =========================
-  // FILTER
-  // =========================
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return rows;
@@ -187,8 +176,6 @@ export const ProductionPlantTable: React.FC = () => {
           <button className="btn btn-accent" onClick={plantNew} disabled={actionLoading}>
             + Zasadi biljku
           </button>
-
-          {/* UBERI */}
           <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
             <button className="btn" onClick={harvest} disabled={actionLoading || !selectedRow}>
               Uberi biljku
@@ -203,8 +190,6 @@ export const ProductionPlantTable: React.FC = () => {
               disabled={!selectedRow}
             />
           </div>
-
-          {/* PROMIJENI JAČINU */}
           <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
             <button className="btn" onClick={adjustStrength} disabled={actionLoading || !selectedRow}>
               Promijeni jačinu

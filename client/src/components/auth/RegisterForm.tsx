@@ -40,7 +40,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ authAPI }) => {
     setError("");
     setSuccess("");
 
-    // Validation
+    
     if (formData.password !== confirmPassword) {
       setError("Passwords do not match.");
       return;

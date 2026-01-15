@@ -1,11 +1,12 @@
-import { OrderItemDTO } from "./OrderItemDTO";
+export interface CreateOrderItemDTO {
+  perfumeId: number;
+  quantity: number;
+}
 
 export interface CreateOrderDTO {
   customerName: string;
   deliveryAddress?: string;
-  packagesRequested: number;
-  items: OrderItemDTO[];
+  items: CreateOrderItemDTO[];
   note?: string;
   contactPhone?: string;
-  role?: string;
 }

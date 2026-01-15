@@ -59,7 +59,7 @@ const PackagingForm: React.FC<Props> = ({ perfumes, warehouses, processing, onPa
         </select>
       </div>
 
-      {/* GRID: BOCE / ZAPREMINA / SKLADIŠTE */}
+      {}
       <div
         style={{
           display: "grid",
@@ -114,7 +114,7 @@ const PackagingForm: React.FC<Props> = ({ perfumes, warehouses, processing, onPa
         </div>
       </div>
 
-      {/* SUBMIT */}
+      {}
       <div style={{ marginTop: 8 }}>
         <button
           className="btn btn-accent"

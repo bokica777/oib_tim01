@@ -1,4 +1,3 @@
-// src/api/plant/PlantAPI.ts
 import axios, { AxiosInstance } from "axios";
 import { Plant } from "../../types/Plant";
 import { IPlantAPI } from "./IPlantAPI";
@@ -19,7 +18,6 @@ export class PlantAPI implements IPlantAPI {
     return { Authorization: `Bearer ${token}` };
   }
 
-  // 🌿 Dohvat biljaka
   async getPlants(token: string, count = 50): Promise<Plant[]> {
     const res = await this.axiosInstance.get(
       `/production/plants?count=${count}`,
@@ -28,7 +26,6 @@ export class PlantAPI implements IPlantAPI {
     return res.data;
   }
 
-  // 🌱 Sadnja nove biljke
   async plantNew(
     plant: Partial<Plant>,
     token: string
@@ -40,8 +37,6 @@ export class PlantAPI implements IPlantAPI {
     );
     return res.data;
   }
-
-  // ⚖️ Balans arome
   async plantAndScale(
     sourceStrength: number,
     factor: number,

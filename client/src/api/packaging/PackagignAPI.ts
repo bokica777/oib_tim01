@@ -1,15 +1,14 @@
 import axios, { AxiosInstance, AxiosError } from "axios";
-import { StoragePackageDTO } from "../../models/storage/StoragePackageDTO"; 
+import { StoragePackageDTO } from "../../models/storage/StoragePackageDTO";
 import { WarehouseDTO } from "../../models/storage/WarehouseDTO";
-import { IPackagingAPI } from "./IPackagingAPI"; 
-
+import { IPackagingAPI } from "./IPackagingAPI";
 
 export class PackagingAPI implements IPackagingAPI {
   private client: AxiosInstance;
 
   constructor() {
     const gateway = import.meta.env.VITE_GATEWAY_URL ?? "http://localhost:4000";
-    const base = gateway+"/api/v1";
+    const base = gateway.replace(/\/+$/, "") + "/api/v1";
 
     this.client = axios.create({
       baseURL: base,
@@ -18,12 +17,9 @@ export class PackagingAPI implements IPackagingAPI {
     });
 
     this.client.interceptors.request.use((cfg) => {
-      const token =localStorage.getItem("accessToken");
-
+      const token = localStorage.getItem("accessToken");
       const headers = cfg.headers as any;
-      if (token) {
-        headers.Authorization = `Bearer ${token}`;
-      }
+      if (token) headers.Authorization = `Bearer ${token}`;
       return cfg;
     });
 
@@ -52,26 +48,37 @@ export class PackagingAPI implements IPackagingAPI {
     return res.data;
   }
 
-    async requestPacking(payload: { name?: string; count: number; warehouseId?: number }): Promise<StoragePackageDTO[]> {
+  async requestPacking(payload: { name?: string; count: number; warehouseId?: number }): Promise<StoragePackageDTO[]> {
     const res = await this.client.post<any[]>("/packaging/pack", payload);
     const data = res.data ?? [];
     return data.map(this.mapPackage);
   }
 
-  private mapPackage(p: any): StoragePackageDTO {
+  private mapPackage = (p: any): StoragePackageDTO => {
+    let perfumeId: number | undefined = undefined;
+    if (p.perfumeId !== undefined && p.perfumeId !== null) {
+      perfumeId = Number(p.perfumeId);
+    } else if (Array.isArray(p.perfumeIds) && p.perfumeIds.length > 0) {
+      perfumeId = Number(p.perfumeIds[0]);
+    } else if (p.perfume && typeof p.perfume.id !== "undefined") {
+      perfumeId = Number(p.perfume.id);
+    }
+
     return {
       id: String(p.id ?? p.serialNumber ?? ""),
       name: p.name ?? `Package ${p.id ?? ""}`,
       senderAddress: p.senderAddress ?? p.sender ?? "",
       warehouseId: String(p.warehouseId ?? p.warehouse?.id ?? ""),
+      perfumeId,
       perfumeIds: Array.isArray(p.perfumeIds) ? p.perfumeIds.map((x: any) => Number(x)) : undefined,
       status: (p.status ?? "PACKED") as "PACKED" | "SENT" | "STORED",
       serialNumber: p.serialNumber ?? undefined,
       createdAt: p.createdAt ? String(p.createdAt) : undefined,
+      volume: p.volume ?? p.netVolumeMl ?? undefined,
     };
-  }
+  };
 
-  private mapWarehouse(w: any): WarehouseDTO {
+  private mapWarehouse = (w: any): WarehouseDTO => {
     return {
       id: String(w.id ?? ""),
       name: w.name ?? `Skladište ${w.id ?? ""}`,
@@ -79,7 +86,7 @@ export class PackagingAPI implements IPackagingAPI {
       capacity: Number(w.capacity ?? w.capacityTotal ?? 0),
       capacityUsed: Number(w.usedCapacity ?? w.capacityUsed ?? 0),
     };
-  }
+  };
 }
 
 export const packagingAPI = new PackagingAPI();
