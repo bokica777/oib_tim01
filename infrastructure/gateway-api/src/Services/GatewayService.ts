@@ -641,6 +641,62 @@ export class GatewayService implements IGatewayService {
     handleAxiosError(err);
   }
   }
+  
+  async getSalesSummary(query: Record<string, any>, headers: Record<string, string>): Promise<any> {
+  if (!this.analyticsClient) throw new Error("ANALYTICS_URL not configured");
+  try {
+    const q = new URLSearchParams();
+    Object.entries(query ?? {}).forEach(([k, v]) => {
+      if (v !== undefined && v !== null) q.append(k, String(v));
+    });
+    const resp = await this.analyticsClient.get(`/analysis/sales-summary?${q.toString()}`, { headers });
+    return resp.data;
+  } catch (err) {
+    handleAxiosError(err);
+  }
+}
+
+async getSalesTrend(query: Record<string, any>, headers: Record<string, string>): Promise<any> {
+  if (!this.analyticsClient) throw new Error("ANALYTICS_URL not configured");
+  try {
+    const q = new URLSearchParams();
+    Object.entries(query ?? {}).forEach(([k, v]) => {
+      if (v !== undefined && v !== null) q.append(k, String(v));
+    });
+    const resp = await this.analyticsClient.get(`/analysis/sales-trend?${q.toString()}`, { headers });
+    return resp.data;
+  } catch (err) {
+    handleAxiosError(err);
+  }
+}
+
+async getReports(query: Record<string, any>, headers: Record<string, string>): Promise<any> {
+  if (!this.analyticsClient) throw new Error("ANALYTICS_URL not configured");
+  try {
+    const q = new URLSearchParams();
+    Object.entries(query ?? {}).forEach(([k, v]) => {
+      if (v !== undefined && v !== null) q.append(k, String(v));
+    });
+    const resp = await this.analyticsClient.get(`/analysis/reports?${q.toString()}`, { headers });
+    return resp.data;
+  } catch (err) {
+    handleAxiosError(err);
+  }
+}
+
+async downloadReportPdf(id: number, headers: Record<string, string>): Promise<Buffer> {
+  if (!this.analyticsClient) throw new Error("ANALYTICS_URL not configured");
+  try {
+    // BITNO: responseType arraybuffer da bi dobio PDF bytes
+    const resp = await this.analyticsClient.get(`/analysis/reports/${id}/pdf`, {
+      headers,
+      responseType: "arraybuffer",
+    });
+    return resp.data;
+  } catch (err) {
+    handleAxiosError(err);
+  }
+}
 
 
   // ================= GENERIC AUDIT HELPER =================

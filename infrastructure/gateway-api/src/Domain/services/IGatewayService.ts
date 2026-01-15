@@ -74,12 +74,16 @@ export interface IGatewayService {
 createAudit(data: any, forwardedHeaders?: string | Record<string,string>): Promise<any>;
 
   // ================= ANALYTICS =================
-  getTopPerfumes(query: Record<string, any>, headers: Record<string, string>): Promise<any>;
-  createReceipt(dto: any, headers: Record<string, string>): Promise<any>;
-  listReceipts(headers: Record<string, string>): Promise<any[]>;
-  getDailyRevenue(date: string, headers: Record<string, string>): Promise<any>;
-  getSalesByProduct(headers: Record<string, string>): Promise<any[]>;
+  getTopPerfumes(query: Record<string, any>, internalHeaders: Record<string, string>): Promise<any>;
+  createReceipt(dto: any, internalHeaders: Record<string, string>): Promise<any>;
+  listReceipts(internalHeaders: Record<string, string>): Promise<any[]>;
+  getDailyRevenue(date: string, internalHeaders: Record<string, string>): Promise<any>;
+  getSalesByProduct(internalHeaders: Record<string, string>): Promise<any[]>;
   getTop10Revenue(query: Record<string, any>, internalHeaders: Record<string, string>): Promise<any>;
+  getSalesSummary(query: Record<string, any>, internalHeaders: Record<string, string>): Promise<any>;
+  getSalesTrend(query: Record<string, any>, internalHeaders: Record<string, string>): Promise<any>;
+  getReports(query: Record<string, any>, internalHeaders: Record<string, string>): Promise<any>;
+  downloadReportPdf(id: number, internalHeaders: Record<string, string>): Promise<Buffer>;
 
   // ================= GENERIC AUDIT =================
   logAudit(message: string, type?: string, source?: string, meta?: any): Promise<boolean>;

@@ -106,7 +106,12 @@ this.router.get("/users/:id", authenticate, this.getUserById.bind(this));
     // ================= ANALYTICS =================
     this.router.get("/analysis/top-perfumes", authenticate, this.getTopPerfumes.bind(this));
     this.router.post("/receipts", authenticate, validateDTO(CreateReceiptDTO), this.createReceipt.bind(this));
+    this.router.get("/analysis/sales-summary", authenticate, this.getSalesSummary.bind(this));
+    this.router.get("/analysis/sales-trend", authenticate, this.getSalesTrend.bind(this));
+    this.router.get("/analysis/top10-revenue", authenticate, this.getTop10Revenue.bind(this));
 
+    this.router.get("/analysis/reports", authenticate, this.getReports.bind(this));
+    this.router.get("/analysis/reports/:id/pdf", authenticate, this.downloadReportPdf.bind(this));
     // ================= AUDIT =================
     this.router.post("/audit",authenticateOrGatewayKey, this.createAudit.bind(this));
     this.router.get("/audit", this.getAuditLogs.bind(this));
@@ -575,6 +580,34 @@ private async listSalePackages(req: Request, res: Response) {
   const result = await this.gatewayService.getTop10Revenue(req.query, headers);
   res.json(result);
   }
+  private async getSalesSummary(req: Request, res: Response) {
+  const headers = buildInternalHeaders(req);
+  const result = await this.gatewayService.getSalesSummary(req.query, headers);
+  res.json(result);
+}
+
+private async getSalesTrend(req: Request, res: Response) {
+  const headers = buildInternalHeaders(req);
+  const result = await this.gatewayService.getSalesTrend(req.query, headers);
+  res.json(result);
+}
+
+private async getReports(req: Request, res: Response) {
+  const headers = buildInternalHeaders(req);
+  const result = await this.gatewayService.getReports(req.query, headers);
+  res.json(result);
+}
+
+private async downloadReportPdf(req: Request, res: Response) {
+  const headers = buildInternalHeaders(req);
+  const id = Number(req.params.id);
+
+  const fileBuffer = await this.gatewayService.downloadReportPdf(id, headers);
+
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader("Content-Disposition", `attachment; filename="izvestaj-${id}.pdf"`);
+  res.send(fileBuffer);
+}
 
   public getRouter(): Router {
     return this.router;
