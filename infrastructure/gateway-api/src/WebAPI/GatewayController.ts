@@ -488,11 +488,29 @@ private async getProductionLogs(req: Request, res: Response) {
   }
 
   // ================= SALES =================
-  private async createOrder(req: Request, res: Response) {
+private async createOrder(req: Request, res: Response) {
+  try {
     const headers = buildInternalHeaders(req);
-    const order = await this.gatewayService.createOrder(req.body, headers);
+    const body = req.body || {};
+    const sanitized = {
+      customerName: String(body.customerName || ""),
+      deliveryAddress: String(body.deliveryAddress || ""),
+      items: Array.isArray(body.items)
+        ? body.items.map((it: any) => ({
+            perfumeId: Number(it.perfumeId),
+            quantity: Number(it.quantity ?? 1),
+          }))
+        : [],
+    };
+
+    const order = await this.gatewayService.createOrder(sanitized, headers);
     res.status(201).json(order);
+  } catch (err: any) {
+    console.error("Gateway createOrder error:", err);
+    res.status(err?.status ?? 500).json({ message: err?.message ?? "Failed to create order" });
   }
+}
+
 
   private async getOrderById(req: Request, res: Response) {
     const headers = buildInternalHeaders(req);

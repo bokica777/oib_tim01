@@ -1,4 +1,3 @@
-// src/Services/centers/WarehouseCenter.ts
 import { Repository } from "typeorm";
 import { StoragePackage } from "../Domain/models/StoragePackage";
 import { PackageStatus } from "../Domain/enums/PackageStatus";
@@ -16,7 +15,7 @@ export class WarehouseCenter implements IStorageCenter {
     const out: StoragePackage[] = [];
     for (let i = 0; i < count; i++) {
       const candidates = await this.repo.find({
-        where: { status: In([PackageStatus.PACKED, PackageStatus.SENT]) },
+        where: { status: PackageStatus.PACKED },
         take: 1,
         order: { createdAt: "ASC" }
       });
