@@ -55,8 +55,8 @@ export default function PerformancePage() {
   async function refreshSelected(id: number) {
     setError(null);
     try {
-      const raw = await performanceAPI.getReportById(id); // <-- već je res.data
-      const one = mapPerformanceReport(raw);              // <-- ISPRAVKA
+      const raw = await performanceAPI.getReportById(id); 
+      const one = mapPerformanceReport(raw);              
       setSelected(one);
     } catch (e: any) {
       setError(e?.message ?? "Ne mogu da učitam izveštaj.");
@@ -75,10 +75,9 @@ export default function PerformancePage() {
 
   useEffect(() => {
     loadReports();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Trend grafici iz poslednjih N izveštaja
+  
   const lastN = useMemo(() => reports.slice(0, 10).reverse(), [reports]);
   const timeSeries = useMemo(() => lastN.map((r) => r.executionTime), [lastN]);
   const successSeries = useMemo(() => lastN.map((r) => r.successRate), [lastN]);
@@ -196,7 +195,6 @@ export default function PerformancePage() {
         selectedId={selected?.id ?? null}
         onSelect={(r) => {
           setSelected(r);
-          // profi: povuci detalj sa servera (ako lista ne sadrži sve)
           refreshSelected(r.id);
         }}
         onPdf={onPdf}

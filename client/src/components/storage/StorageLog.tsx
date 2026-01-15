@@ -1,4 +1,3 @@
-// src/components/storage/StorageLog.tsx
 import React from "react";
 
 type StorageLogProps = {

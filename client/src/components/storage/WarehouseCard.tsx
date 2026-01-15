@@ -1,4 +1,3 @@
-// src/components/storage/WarehouseCard.tsx
 import React from "react";
 import { WarehouseDTO } from "../../models/storage/WarehouseDTO";
 

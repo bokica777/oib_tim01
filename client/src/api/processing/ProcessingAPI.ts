@@ -1,4 +1,3 @@
-// src/api/processing/ProcessingAPI.ts
 import axios, { AxiosInstance, AxiosError } from "axios";
 import { PerfumeDTO } from "../../models/processing/PerfumeDTO";
 import { ProcessRequestDTO } from "../../models/processing/ProcessRequestDTO";
@@ -67,8 +66,6 @@ export class ProcessingAPI implements IProcessingAPI{
     try {
       const res = await this.client.post<any[]>("/process", dto);
       const out = (res.data ?? []).map((p) => this.mapPerfume(p));
-
-      // audit: success
       try {
         await auditAPI.createLog({
           type: "INFO",
@@ -76,11 +73,10 @@ export class ProcessingAPI implements IProcessingAPI{
           source: "processing",
           meta: { dto, producedCount: out.length },
         });
-      } catch { /* ignore auditing failure */ }
+      } catch { }
 
       return out;
     } catch (err: any) {
-      // audit: error
       try {
         await auditAPI.createLog({
           type: "ERROR",
@@ -88,14 +84,13 @@ export class ProcessingAPI implements IProcessingAPI{
           source: "processing",
           meta: { dto, err: (err?.response?.data ?? err?.message) },
         });
-      } catch { /* ignore auditing failure */ }
+      } catch { }
 
       throw err;
     }
   }
 
   async getLogs(): Promise<AuditRecord[]> {
-    // returns audit records for processing via gateway->audit service
     return await auditAPI.getLogs("processing");
   }
 }

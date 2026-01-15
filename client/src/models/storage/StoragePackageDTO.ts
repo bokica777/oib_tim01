@@ -3,6 +3,7 @@ export type StoragePackageDTO = {
   name: string;
   senderAddress: string;
   warehouseId: string;
+  perfumeId?: number;
   perfumeIds?: number[];
   status?: "PACKED" | "SENT" | "STORED";
   serialNumber?: string;

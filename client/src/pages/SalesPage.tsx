@@ -1,4 +1,3 @@
-// src/pages/SalesPage.tsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { salesAPI, SimpleCreateOrderDTO } from "../api/sales/SalesAPI";
 import { PerfumeDTO } from "../models/sales/PerfumeDTO";

@@ -25,7 +25,6 @@ export async function getSalesSummary(
   return res.json();
 }
 
-// TODO: kad pošalješ JSON za sales-trend, ovde finalizujemo tipove
 export async function getSalesTrend(from: string, to: string, granularity: "day" | "month", token?: string) {
   const res = await fetch(
     `${baseUrl}/analysis/sales-trend?granularity=${granularity}&from=${from}&to=${to}`,
@@ -35,7 +34,6 @@ export async function getSalesTrend(from: string, to: string, granularity: "day"
   return res.json();
 }
 
-// TODO: kad pošalješ JSON za top-perfumes, tipujemo
 export async function getTopPerfumes(limit = 10, type: "revenue" | "quantity" = "revenue", token?: string) {
   const res = await fetch(
     `${baseUrl}/analysis/top-perfumes?limit=${limit}&type=${type}`,
@@ -45,7 +43,6 @@ export async function getTopPerfumes(limit = 10, type: "revenue" | "quantity" = 
   return res.json();
 }
 
-// TODO: kad pošalješ JSON, tipujemo
 export async function getTop10Revenue(from: string, to: string, token?: string) {
   const res = await fetch(
     `${baseUrl}/analysis/top10-revenue?from=${from}&to=${to}`,

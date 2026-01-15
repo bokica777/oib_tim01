@@ -3,7 +3,7 @@ import { Repository } from "typeorm";
 import { StoragePackage } from "../Domain/models/StoragePackage";
 import { PackageStatus } from "../Domain/enums/PackageStatus";
 import { IStorageCenter } from "../Domain/services/IStorageService";
-import { In } from "typeorm";
+
 
 export class DistributiveCenter implements IStorageCenter {
   constructor(private readonly repo: Repository<StoragePackage>) {}
@@ -17,7 +17,7 @@ export class DistributiveCenter implements IStorageCenter {
     while (out.length < count) {
       const toTake = Math.min(3, count - out.length);
       const candidates = await this.repo.find({
-        where: { status: In([PackageStatus.PACKED, PackageStatus.SENT]) },
+        where: { status: PackageStatus.PACKED },
         take: toTake,
         order: { createdAt: "ASC" }
       });

@@ -1,11 +1,10 @@
-// src/components/processing/ProcessForm.tsx
 import React, { useEffect, useState } from "react";
 import { PerfumeDTO } from "../../models/processing/PerfumeDTO";
 import { ProcessRequestDTO } from "../../models/processing/ProcessRequestDTO";
 import { PerfumeType } from "../../enums/processing/PerfumeType";
 
 type Props = {
-  perfumes: PerfumeDTO[]; // može biti samo "dostupni" — komponenta će pokušati da povuče kompletan katalog sama
+  perfumes: PerfumeDTO[]; 
   onProcess: (dto: ProcessRequestDTO) => Promise<void>;
   processing?: boolean;
 };
@@ -19,18 +18,11 @@ const authHeaders = (): HeadersInit => {
   return headers;
 };
 
-/**
- * Pokušava da dohvati sva moguća imena parfema iz niza mogućih endpoint-a.
- * Podržava odgovore:
- *  - niz stringova ["A","B"]
- *  - niz objekata [{ name: 'A' }, { perfumeName: 'B' }]
- *  - objekat sa items poljem { items: [...] }
- */
 const tryFetchNames = async (): Promise<string[] | null> => {
   const candidatePaths = [
-    "/processing/perfumes",        // često vraća entitete (može biti samo dostupni)
-    "/processing/perfumes/all",    // mogući endpoint koji vraća kompletan katalog
-    "/processing/catalog",         // alternativni naziv
+    "/processing/perfumes",        
+    "/processing/perfumes/all",    
+    "/processing/catalog",         
     "/catalog/perfumes",
     "/perfumes",
     "/perfumes/all"
@@ -61,7 +53,6 @@ const tryFetchNames = async (): Promise<string[] | null> => {
         return Array.from(new Set(names)).sort((a, b) => a.localeCompare(b));
       }
     } catch (err) {
-      // ignorisati i pokušati sledeći endpoint
       continue;
     }
   }
@@ -70,7 +61,6 @@ const tryFetchNames = async (): Promise<string[] | null> => {
 };
 
 const ProcessForm: React.FC<Props> = ({ perfumes, onProcess, processing }) => {
-  // start list: iz props (može sadržati samo 'dostupne'), kasnije pokušamo fetch kompletne liste
   const propNames = Array.from(new Set((perfumes ?? []).map(p => String(p.name ?? p.name ?? "")).filter(Boolean)));
   const [names, setNames] = useState<string[]>(propNames);
   const [loadingNames, setLoadingNames] = useState<boolean>(false);
@@ -80,19 +70,15 @@ const ProcessForm: React.FC<Props> = ({ perfumes, onProcess, processing }) => {
   const [bottles, setBottles] = useState<number>(1);
   const [volumePerBottle, setVolumePerBottle] = useState<150 | 250>(150);
 
-  // Ako se prop perfumes promeni, osveži fallback listu (ali ne overriduj fetch-ovanu listu)
   useEffect(() => {
     if (!names || names.length === 0) {
       setNames(propNames);
     } else {
-      // merge current names with propNames to keep any new names from props
       const merged = Array.from(new Set([...names, ...propNames])).sort((a, b) => a.localeCompare(b));
       setNames(merged);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [perfumes]);
 
-  // Pokušaj da dohvatimo kompletan katalog iz backenda jednom, pri mount-u.
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -101,11 +87,9 @@ const ProcessForm: React.FC<Props> = ({ perfumes, onProcess, processing }) => {
         const fetched = await tryFetchNames();
         if (!mounted) return;
         if (Array.isArray(fetched) && fetched.length > 0) {
-          // kombinuj fetched sa prop-ima radi potpune liste + deduplikuj
           const combined = Array.from(new Set([...fetched, ...propNames])).sort((a, b) => a.localeCompare(b));
           setNames(combined);
         } else {
-          // fallback: koristi propNames (vec smo ih setovali u inicijalnom state-u)
           setNames(prev => {
             const fromProp = propNames;
             if (fromProp.length > 0 && JSON.stringify(prev) !== JSON.stringify(fromProp)) return fromProp;
@@ -117,10 +101,7 @@ const ProcessForm: React.FC<Props> = ({ perfumes, onProcess, processing }) => {
       }
     })();
     return () => { mounted = false; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // run once
-
-  // Ako names promeni listu (npr. nakon fetch-a), osiguraj da selectedName bude validan
+  }, []); 
   useEffect(() => {
     if (names.length === 0) {
       setSelectedName("");
@@ -129,7 +110,6 @@ const ProcessForm: React.FC<Props> = ({ perfumes, onProcess, processing }) => {
     if (!selectedName || !names.includes(selectedName)) {
       setSelectedName(names[0]);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [names]);
 
   const submit = async (e: React.FormEvent) => {

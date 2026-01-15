@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useState } from "react";
 import { getSalesSummary, getSalesTrend, getTop10Revenue, type GroupBy, downloadReportPdf, getReports } from "../api/analysis/analysisSalesApi";
 import type { AnalysisReport } from "../models/analysis/analysisReport";
 
-// TODO: zameni ovim vašim auth context hookom (gde god čuvate token)
 function useAuthToken(): string | undefined {
   return undefined;
 }
@@ -22,7 +21,7 @@ function getDateRange(period: PeriodUI) {
     from.setDate(1);
   } else if (period === "week") {
     const day = now.getDay(); // 0..6
-    const diff = (day + 6) % 7; // monday start
+    const diff = (day + 6) % 7; 
     from.setDate(now.getDate() - diff);
   } else {
     from.setMonth(0, 1);
