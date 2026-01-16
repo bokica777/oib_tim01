@@ -1,3 +1,5 @@
+import { PaymentType } from "../../types/PaymentType";
+
 export interface CreateOrderItemDTO {
   perfumeId: number;
   quantity: number;
@@ -9,4 +11,5 @@ export interface CreateOrderDTO {
   items: CreateOrderItemDTO[];
   note?: string;
   contactPhone?: string;
+  paymentType?: PaymentType; // <= DODATO
 }

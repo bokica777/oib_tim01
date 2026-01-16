@@ -10,7 +10,8 @@ export class SalesService {
     customer: string,
     address: string,
     items: OrderItem[],
-    role?: string
+    role?: string,
+     paymentType: "cash"|"bank"|"card" = "cash"
   ) {
     if (!Array.isArray(items) || items.length === 0) {
       throw new Error("Order must contain at least one item");
@@ -34,6 +35,7 @@ export class SalesService {
       deliveryAddress: address,
       items: normalized,
       totalItems,
+       paymentType,
     });
 
     const saved = await this.orderRepo.save(order);

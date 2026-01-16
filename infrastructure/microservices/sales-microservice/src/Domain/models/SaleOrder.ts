@@ -21,6 +21,9 @@ export class SaleOrder {
   @Column({ type: "varchar", length: 64, nullable: true })
   serial!: string; 
 
+  @Column({ type: "varchar", length: 32, default: "cash" })
+paymentType!: string;
+
   @CreateDateColumn()
   createdAt!: Date;
 }

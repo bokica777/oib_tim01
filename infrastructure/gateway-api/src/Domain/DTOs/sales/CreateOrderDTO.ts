@@ -1,7 +1,6 @@
 import { Type } from "class-transformer";
-import { IsString, IsArray, ValidateNested, IsInt, Min } from "class-validator";
+import { IsString, IsArray, ValidateNested, IsIn } from "class-validator";
 import { OrderItemDTO } from "./OrderItemDTO";
-
 
 export class CreateOrderDTO {
   @IsString()
@@ -14,4 +13,8 @@ export class CreateOrderDTO {
   @ValidateNested({ each: true })
   @Type(() => OrderItemDTO)
   items!: OrderItemDTO[];
+
+  @IsString()
+  @IsIn(["cash", "bank", "card"])
+  paymentType!: "cash" | "bank" | "card"; // <= DODATO (obavezno polje)
 }

@@ -25,10 +25,10 @@ export class SalesController {
 
   private async createOrder(req: Request, res: Response) {
     try {
-      const { customerName, deliveryAddress, items } = req.body;
+      const { customerName, deliveryAddress, items ,paymentType } = req.body;
       const role = (req as any).user?.role;
 
-      const order = await this.service.createOrder(customerName, deliveryAddress, items, role);
+      const order = await this.service.createOrder(customerName, deliveryAddress, items, role,paymentType );
 
       await this.logger.log(
         `Order created id=${order.id} for ${customerName}`, 

@@ -506,6 +506,7 @@ private async createOrder(req: Request, res: Response) {
             quantity: Number(it.quantity ?? 1),
           }))
         : [],
+          paymentType: String(body.paymentType || "cash"),
     };
 
     const order = await this.gatewayService.createOrder(sanitized, headers);
