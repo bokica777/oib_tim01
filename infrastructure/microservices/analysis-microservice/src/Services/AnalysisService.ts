@@ -97,14 +97,17 @@ export class AnalysisService implements IAnalysisService {
   const to = query.to;
   const granularity = query.granularity ?? "day";
 
-  const qb = this.receiptRepository.createQueryBuilder("r");
+  const qb = this.receiptRepository
+  .createQueryBuilder("r")
+  .leftJoin("r.stavke", "i");
 
   if (from) qb.andWhere("DATE(r.datumVreme) >= :from", { from });
   if (to) qb.andWhere("DATE(r.datumVreme) <= :to", { to });
 
   // reset select
   qb.select("SUM(r.ukupanIznos)", "prihod")
-    .addSelect("COUNT(r.id)", "brojRacuna");
+  .addSelect("COUNT(DISTINCT r.id)", "brojRacuna")
+  .addSelect("COALESCE(SUM(i.kolicina), 0)", "kolicina");
 
   if (granularity === "month") {
     qb.addSelect("DATE_FORMAT(r.datumVreme, '%Y-%m')", "t")

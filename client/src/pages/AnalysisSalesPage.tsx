@@ -110,18 +110,25 @@ export default function AnalysisSalesPage() {
 
   const totalParfumsSold = top10List.reduce((acc: number, x: any) => acc + toNumber(x.kolicina), 0);
 
+  type TrendPoint = {
+  ts: number;
+  label: string;
+  qty: number;
+  revenue: number;
+  };
   // Trend chart data (sort by ts)
   const trendRows = Array.isArray(trendReport?.rezultat) ? trendReport.rezultat : [];
-  const trendChart = trendRows
-    .map((p: any) => {
-      const date = new Date(p.t);
-      return {
-        ts: date.getTime(),
-        label: date.toLocaleDateString("sr-RS"),
-        value: toNumber(p.prihod),
-      };
-    })
-    .sort((a: any, b: any) => a.ts - b.ts);
+  const trendChart: TrendPoint[] = trendRows
+  .map((p: any): TrendPoint => {
+    const date = new Date(p.t);
+    return {
+      ts: date.getTime(),
+      label: date.toLocaleDateString("sr-RS"),
+      qty: toNumber(p.kolicina),
+      revenue: toNumber(p.prihod),
+    };
+  })
+  .sort((a: any, b: any) => a.ts - b.ts);
 
   async function onDownloadPdf(id: number) {
     try {
@@ -174,18 +181,14 @@ export default function AnalysisSalesPage() {
       {/* Charts */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
         <MiniLineChart
-          title="Trend prodaje (prihod po danu)"
-          points={trendChart.map((x: any) => x.value)}
-          labels={trendChart.map((x: any) => x.label)}
-          formatY={(v) => money.format(v)}
-        />
-
+          title="Broj prodatih parfema po danima"
+          points={trendChart.map(x => x.qty)}
+          labels={trendChart.map(x => x.label)}
+          formatY={(v) => intFmt.format(v)}
+        />    
         <BarMini
-          title="Zarada po periodu (iz summary)"
-          rows={(summaryReport?.rezultat ?? []).map((r: any) => ({
-            label: r.period,
-            value: toNumber(r.prihod),
-          }))}
+          title="Prihod po danima"
+          rows={trendChart.map(x => ({ label: x.label, value: x.revenue }))}
           formatValue={(v) => money.format(v)}
         />
       </div>
