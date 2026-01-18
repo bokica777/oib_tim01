@@ -1,4 +1,3 @@
-// src/pages/PackagingPage.tsx
 import React, { useEffect,  useState } from "react";
 import PackagingForm from "../components/packaging/PackagingForm";
 import LocalPackageList from "../components/packaging/LocalPackageList";
@@ -53,7 +52,7 @@ export const PackagingPage: React.FC = () => {
     saveLocalPackagesToStorage(localPackages);
   }, [localPackages]);
 
-  useEffect(() => { loadAll(); }, []); // run once on mount
+  useEffect(() => { loadAll(); }, []);
 
   const loadAll = async () => {
     setLoading(true);
@@ -98,7 +97,6 @@ export const PackagingPage: React.FC = () => {
           name: p.name ?? (p.serialNumber ?? `Package ${p.id ?? ""}`),
           senderAddress: p.senderAddress ?? p.sender ?? "Centar za pakovanje",
           warehouseId: String(p.warehouseId ?? p.warehouse?.id ?? ""),
-          // map perfumeId preferirano
           perfumeId: p.perfumeId ,
           status: (p.status ?? "PACKED") as "PACKED" | "SENT" | "STORED",
           serialNumber: p.serialNumber ?? undefined,
@@ -131,7 +129,6 @@ export const PackagingPage: React.FC = () => {
     if (!perfumeName || !warehouseId || bottles <= 0) { alert("Neispravan unos"); return; }
     setProcessing(true);
     try {
-      // check availability
       const rAvail = await fetch(`${GATEWAY_ROOT}/processing/perfumes`, { headers: authHeaders() });
       if (!rAvail.ok) { alert("Greška pri proveri dostupnosti parfema."); setProcessing(false); return; }
       const availData: any[] = await rAvail.json();
@@ -146,8 +143,6 @@ export const PackagingPage: React.FC = () => {
         setProcessing(false);
         return;
       }
-
-      // reserve from processing
       const r1 = await fetch(`${GATEWAY_ROOT}/processing/perfumes/request`, {
         method: "POST",
         headers: authHeaders(),
@@ -168,15 +163,13 @@ export const PackagingPage: React.FC = () => {
         setProcessing(false);
         return;
       }
-
-      // create local packages — jedan parfemId po paketu
       const createdLocal: StoragePackageDTO[] = reservedIds.map((rid) => {
         const pkg: StoragePackageDTO = {
           id: `local-${rid}-${Date.now()}`,
           name: `Pakovanje-${perfumeName}-${rid}`,
           senderAddress: "Centar za pakovanje",
           warehouseId: String(warehouseId),
-          perfumeId: Number(rid),         // <-- JEDAN perfumeId
+          perfumeId: Number(rid),   
           status: "PACKED",
           createdAt: new Date().toISOString(),
           volume: Number(volumePerBottle),
@@ -208,25 +201,25 @@ export const PackagingPage: React.FC = () => {
     if (localPackages.length === 0) { alert("Nema lokalno spakovanih ambalaža."); return; }
     setSending(true);
     try {
-      const first = localPackages[localPackages.length - 1]; // oldest
-      const storeDto: any = {
-        name: first.name,
-        senderAddress: first.senderAddress,
-        warehouseId: Number(first.warehouseId),
-      };
-      // prefer single perfumeId
-      if (typeof first.perfumeId !== "undefined") {
-        storeDto.perfumeId = Number(first.perfumeId);
-      } else {
-        storeDto.perfumeId = undefined;
-      }
+      const first = localPackages[localPackages.length - 1];
+   const storeDto: any = {
+  name: String(first.name ?? "Pakovanje").trim(),
+  senderAddress: String(first.senderAddress ?? "Centar za pakovanje").trim(),
+  warehouseId: Number(first.warehouseId),
+};
+if (typeof first.perfumeId !== "undefined" && first.perfumeId !== null) {
+  const pid = Number(first.perfumeId);
+  if (Number.isFinite(pid) && pid > 0) storeDto.perfumeId = Math.trunc(pid);
+}
 
-      log(`Sending '${first.name}' to storage (perfumeId=${storeDto.perfumeId}) ...`);
-      const r = await fetch(`${GATEWAY_ROOT}/storage/store`, {
-        method: "POST",
-        headers: authHeaders(),
-        body: JSON.stringify(storeDto),
-      });
+const r = await fetch(`${GATEWAY_ROOT}/storage/store`, {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "Authorization": `Bearer ${localStorage.getItem("accessToken") ?? ""}`
+  },
+  body: JSON.stringify(storeDto),
+});
 
       if (!r.ok) {
         const errBody = await r.json().catch(() => ({}));
