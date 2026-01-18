@@ -1,12 +1,10 @@
-// src/pages/SalesPage.tsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { salesAPI } from "../api/sales/SalesAPI";
 import { PerfumeDTO } from "../models/sales/PerfumeDTO";
 import { OrderItemDTO } from "../models/sales/OrderItemDTO";
 import ProductCard from "../components/sales/ProductCard";
 import CartSidebar from "../components/sales/CartView";
-
-type PaymentType = "GOTOVINA" | "RACUN" | "KARTICA";
+import { PaymentType } from "../types/PaymentType"; 
 
 const SalesPage: React.FC = () => {
   const [products, setProducts] = useState<PerfumeDTO[]>([]);
@@ -50,7 +48,7 @@ const SalesPage: React.FC = () => {
         {
           productId: p.id!,
           name: p.name,
-          price: (p as any).price ?? 0,
+          price: p.price,
           quantity: qty,
           stock: (p as any).stock,
         },
@@ -70,7 +68,7 @@ const SalesPage: React.FC = () => {
     setCart((prev) => prev.filter((i) => i.productId !== productId));
   };
 
-  const totalPrice = useMemo(
+  const totalPrice = useMemo( 
     () => cart.reduce((sum, i) => sum + (i.price || 0) * i.quantity, 0),
     [cart]
   );
@@ -91,8 +89,8 @@ const SalesPage: React.FC = () => {
 
     const items = cart.map((i) => ({
       perfumeId: i.productId,
-      price: i.price,
       quantity: i.quantity,
+    
     }));
 
     const dto = {
@@ -100,7 +98,6 @@ const SalesPage: React.FC = () => {
       deliveryAddress: deliveryAddress.trim(),
       items,
       paymentType,
-      totalPrice
     };
 
     try {
@@ -109,7 +106,6 @@ const SalesPage: React.FC = () => {
       const serial = response?.serial ?? response?.id ?? null;
       alert(`Porudžbina uspješno kreirana! Broj porudžbine: ${serial ?? "n/a"}`);
 
-      // ažuriraj stanje proizvoda na frontu (smanjimo stock lokalno)
       setProducts((prev) =>
         prev.map((p) => {
           const cartItem = cart.find((c) => c.productId === p.id);
@@ -121,7 +117,6 @@ const SalesPage: React.FC = () => {
         })
       );
 
-      // očisti korpu i formu
       setCart([]);
       setCustomerName("");
       setDeliveryAddress("");
