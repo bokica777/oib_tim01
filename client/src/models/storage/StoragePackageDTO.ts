@@ -4,7 +4,6 @@ export type StoragePackageDTO = {
   senderAddress: string;
   warehouseId: string;
   perfumeId?: number;
-  perfumeIds?: number[];
   status?: "PACKED" | "SENT" | "STORED";
   serialNumber?: string;
   createdAt?: string;

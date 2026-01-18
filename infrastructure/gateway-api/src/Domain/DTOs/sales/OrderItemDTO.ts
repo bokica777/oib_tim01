@@ -10,5 +10,10 @@ export class OrderItemDTO {
   @Type(() => Number)
   @IsInt()
   @Min(1)
+  price!: number;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
   quantity!: number;
 }

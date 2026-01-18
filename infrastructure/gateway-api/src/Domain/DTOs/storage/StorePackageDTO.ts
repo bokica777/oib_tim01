@@ -13,5 +13,5 @@ export class StorePackageDTO {
 
   @IsOptional()
   @IsArray()
-  perfumeIds?: number[];
+  perfumeId?: number;
 }

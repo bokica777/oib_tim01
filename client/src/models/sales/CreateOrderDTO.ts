@@ -12,4 +12,5 @@ export interface CreateOrderDTO {
   note?: string;
   contactPhone?: string;
   paymentType?: PaymentType; // <= DODATO
+  totalPrice: number;
 }

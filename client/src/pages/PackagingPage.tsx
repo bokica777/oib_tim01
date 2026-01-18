@@ -99,8 +99,7 @@ export const PackagingPage: React.FC = () => {
           senderAddress: p.senderAddress ?? p.sender ?? "Centar za pakovanje",
           warehouseId: String(p.warehouseId ?? p.warehouse?.id ?? ""),
           // map perfumeId preferirano
-          perfumeId: p.perfumeId ?? (Array.isArray(p.perfumeIds) && p.perfumeIds.length ? Number(p.perfumeIds[0]) : undefined),
-          perfumeIds: Array.isArray(p.perfumeIds) ? p.perfumeIds.map((x: any) => Number(x)) : undefined,
+          perfumeId: p.perfumeId ,
           status: (p.status ?? "PACKED") as "PACKED" | "SENT" | "STORED",
           serialNumber: p.serialNumber ?? undefined,
           createdAt: p.createdAt ? String(p.createdAt) : undefined,
@@ -111,7 +110,7 @@ export const PackagingPage: React.FC = () => {
         const map: Record<string, string> = {};
         raw.forEach((p: any) => {
           const pid = String(p.id ?? p.serialNumber ?? p.code ?? "");
-          const maybeId = p.perfumeId ?? (Array.isArray(p.perfumeIds) && p.perfumeIds.length ? Number(p.perfumeIds[0]) : undefined);
+          const maybeId = p.perfumeId;
           if (maybeId) {
             const pf = perfumes.find(pp => Number(pp.id) === Number(maybeId));
             map[pid] = pf ? pf.name : String(maybeId);
@@ -218,8 +217,6 @@ export const PackagingPage: React.FC = () => {
       // prefer single perfumeId
       if (typeof first.perfumeId !== "undefined") {
         storeDto.perfumeId = Number(first.perfumeId);
-      } else if (Array.isArray(first.perfumeIds) && first.perfumeIds.length) {
-        storeDto.perfumeId = Number(first.perfumeIds[0]);
       } else {
         storeDto.perfumeId = undefined;
       }
@@ -294,7 +291,7 @@ export const PackagingPage: React.FC = () => {
                     <div style={{ fontWeight: 700 }}>{p.name}</div>
                     <div style={{ fontSize: 12 }}>{p.status} — {p.warehouseId ? `Warehouse ${p.warehouseId}` : "-"}</div>
                     {p.createdAt && <div style={{ fontSize: 11 }}>{new Date(p.createdAt).toLocaleString()}</div>}
-                    <div style={{ fontSize: 12, marginTop: 6 }}>Parfem: {perfumeNames[p.id] ?? (p.perfumeId ?? (p.perfumeIds && p.perfumeIds[0]) ?? "-")}</div>
+                    <div style={{ fontSize: 12, marginTop: 6 }}>Parfem: {perfumeNames[p.id] ?? (p.perfumeId)}</div>
                   </div>
                 ))}
               </div>

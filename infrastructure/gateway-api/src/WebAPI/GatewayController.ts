@@ -503,10 +503,12 @@ private async createOrder(req: Request, res: Response) {
       items: Array.isArray(body.items)
         ? body.items.map((it: any) => ({
             perfumeId: Number(it.perfumeId),
+            price: Number(it.price),
             quantity: Number(it.quantity ?? 1),
           }))
         : [],
-          paymentType: String(body.paymentType || "cash"),
+          paymentType: String(body.paymentType || "GOTOVINA"),
+          totalPrice: Number(body.totalPrice)
     };
 
     const order = await this.gatewayService.createOrder(sanitized, headers);

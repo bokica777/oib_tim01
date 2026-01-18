@@ -40,7 +40,7 @@ const PackagingTable: React.FC<Props> = ({ items, warehouses, selected, onToggle
 
           const perfumeLabel =
             perfumeNames?.[pkg.id] ??
-            (pkg.perfumeId ? String(pkg.perfumeId) : (Array.isArray(pkg.perfumeIds) && pkg.perfumeIds.length ? String(pkg.perfumeIds[0]) : "-"));
+            (pkg.perfumeId ? String(pkg.perfumeId) : '-');
 
           const code = pkg.serialNumber ?? pkg.id ?? pkg.name ?? "-";
           const status = pkg.status ?? "PACKED";

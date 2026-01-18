@@ -11,7 +11,7 @@ export class SalesService {
     address: string,
     items: OrderItem[],
     role?: string,
-     paymentType: "cash"|"bank"|"card" = "cash"
+     paymentType: "GOTOVINA"|"RACUN"|"KARTICA" = "GOTOVINA"
   ) {
     if (!Array.isArray(items) || items.length === 0) {
       throw new Error("Order must contain at least one item");
