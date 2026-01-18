@@ -90,7 +90,7 @@ const SalesPage: React.FC = () => {
     const items = cart.map((i) => ({
       perfumeId: i.productId,
       quantity: i.quantity,
-    
+      price: i.price,
     }));
 
     const dto = {
@@ -98,6 +98,7 @@ const SalesPage: React.FC = () => {
       deliveryAddress: deliveryAddress.trim(),
       items,
       paymentType,
+      totalPrice,
     };
 
     try {
