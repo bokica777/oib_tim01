@@ -25,15 +25,43 @@ export class SalesController {
 
   private async createOrder(req: Request, res: Response) {
     try {
-      const { customerName, deliveryAddress, items ,paymentType } = req.body;
+      const { customerName, deliveryAddress, items, paymentType, totalPrice } = req.body;
       const role = (req as any).user?.role;
 
-      const order = await this.service.createOrder(customerName, deliveryAddress, items, role,paymentType );
+      // Validacija: items mora sadržati cenu
+      if (!Array.isArray(items) || items.length === 0) {
+        return res.status(400).json({ message: "Items array is required and must not be empty" });
+      }
+
+      for (const item of items) {
+        if (!item.price || typeof item.price !== 'number') {
+          return res.status(400).json({ 
+            message: `Item ${item.perfumeId} missing valid price. Price must be provided from backend.` 
+          });
+        }
+      }
+
+      if (!totalPrice || typeof totalPrice !== 'number') {
+        return res.status(400).json({ message: "Total price is required" });
+      }
+
+      const order = await this.service.createOrder(
+        customerName, 
+        deliveryAddress, 
+        items, 
+        totalPrice,  // Prosleđujemo totalPrice
+        role,
+        paymentType
+      );
 
       await this.logger.log(
-        `Order created id=${order.id} for ${customerName}`, 
+        `Order created id=${order.id} for ${customerName}, total: ${order.totalPrice} RSD`, 
         "INFO",
-        { items: order.items }
+        { 
+          items: order.items,
+          totalPrice: order.totalPrice,
+          paymentType: order.paymentType
+        }
       );
 
       res.status(201).json(order);

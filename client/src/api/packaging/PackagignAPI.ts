@@ -58,8 +58,6 @@ export class PackagingAPI implements IPackagingAPI {
     let perfumeId: number | undefined = undefined;
     if (p.perfumeId !== undefined && p.perfumeId !== null) {
       perfumeId = Number(p.perfumeId);
-    } else if (Array.isArray(p.perfumeIds) && p.perfumeIds.length > 0) {
-      perfumeId = Number(p.perfumeIds[0]);
     } else if (p.perfume && typeof p.perfume.id !== "undefined") {
       perfumeId = Number(p.perfume.id);
     }
@@ -70,7 +68,6 @@ export class PackagingAPI implements IPackagingAPI {
       senderAddress: p.senderAddress ?? p.sender ?? "",
       warehouseId: String(p.warehouseId ?? p.warehouse?.id ?? ""),
       perfumeId,
-      perfumeIds: Array.isArray(p.perfumeIds) ? p.perfumeIds.map((x: any) => Number(x)) : undefined,
       status: (p.status ?? "PACKED") as "PACKED" | "SENT" | "STORED",
       serialNumber: p.serialNumber ?? undefined,
       createdAt: p.createdAt ? String(p.createdAt) : undefined,

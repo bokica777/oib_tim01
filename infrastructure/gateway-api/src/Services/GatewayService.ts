@@ -1,4 +1,3 @@
-// src/Services/GatewayService.ts
 import axios, { AxiosError, AxiosInstance } from "axios";
 import { IGatewayService } from "../Domain/services/IGatewayService";
 import { LoginUserDTO } from "../Domain/DTOs/user/LoginUserDTO";
@@ -14,7 +13,6 @@ import { PerfumeDTO } from "../Domain/DTOs/processing/PerfumeDTO";
 
 function normalizeUrl(url?: string) {
   if (!url) return undefined;
-  // ukloni trailing slash
   return url.endsWith("/") ? url.slice(0, -1) : url;
 }
 
@@ -22,14 +20,11 @@ function handleAxiosError(err: unknown): never {
   if (axios.isAxiosError(err)) {
     const ax = err as AxiosError<any>;
     const status = ax.response?.status ?? 500;
-
-    // pokušaj izvući poruku iz microservisa
     const message =
       (ax.response?.data && (ax.response.data.message || ax.response.data.error)) ||
       ax.message ||
       "Request failed";
 
-    // Ubaci i detalje ako postoje (npr validation errors)
     const details = ax.response?.data?.errors ?? ax.response?.data;
 
     const e = new Error(typeof message === "string" ? message : "Request failed");
@@ -210,7 +205,6 @@ export class GatewayService implements IGatewayService {
   ): Promise<any> {
     if (!this.productionClient) throw new Error("PRODUCTION_URL not configured");
 
-    // normalizacija: ako je 65 → 0.65, ako je 0.65 ostaje 0.65
     const factor = factorPercent > 1 ? Number((factorPercent / 100).toFixed(4)) : factorPercent;
 
     try {
@@ -268,11 +262,8 @@ export class GatewayService implements IGatewayService {
       handleAxiosError(err);
     }
   }
-
-  // zameni postojeću metodu
   async getProductionLogs(headers: Record<string, string>): Promise<any[]> {
     if (!this.auditClient) throw new Error("AUDIT_URL not configured");
-    // ispravan poziv na audit servis (auditClient baseURL = http://.../api/v1)
     const resp = await this.auditClient.get(`/audit`, { headers, params: { source: "production" } });
     return resp.data;
   }
@@ -336,8 +327,6 @@ export class GatewayService implements IGatewayService {
         handleAxiosError(err);
       }
     }
-
-    // ako nijedan kandidat nije radio
     const e = new Error("Warehouses endpoint not found on storage service (tried /storage/warehouses and /warehouses)");
     (e as any).status = 404;
     throw e;
@@ -414,6 +403,7 @@ export class GatewayService implements IGatewayService {
       handleAxiosError(err);
     }
   }
+
   async getSalePackages(headers: Record<string, string>): Promise<any[]> {
     if (!this.storageClient) throw new Error("STORAGE_URL not configured");
     if (!this.processingClient) throw new Error("PROCESSING_URL not configured");
@@ -423,21 +413,19 @@ export class GatewayService implements IGatewayService {
       const packages: any[] = resp.data || [];
       console.log("Statusi paketa:", packages.map(p => p.status));
       const salePackages = packages.filter(p => ["SENT"].includes(p.status));
+
       const stockMap: Record<number, number> = {};
       for (const pkg of salePackages) {
         const pid = Number(pkg.perfumeId);
         if (!Number.isFinite(pid)) continue;
         stockMap[pid] = (stockMap[pid] || 0) + 1;
       }
+
       const perfumeIds = Array.from(new Set(Object.keys(stockMap).map(k => Number(k))));
       const perfumePromises = perfumeIds.map(async (id) => {
         try {
           const r = await this.processingClient!.get(`/perfumes/${id}`, { headers });
-          const p: PerfumeDTO = r.data;
-
-          const pricePerMl = 50;
-          const price = (p.netVolumeMl ?? 0) * pricePerMl;
-
+          const p: any = r.data;
           return {
             id: p.id ?? id,
             name: p.name,
@@ -448,7 +436,7 @@ export class GatewayService implements IGatewayService {
             expirationDate: p.expirationDate,
             status: p.status,
             stock: stockMap[id] ?? 0,
-            price
+            price: p.price ?? 0
           };
         } catch (err) {
           console.warn(`Failed to fetch perfume ${id}`, err);
@@ -464,7 +452,6 @@ export class GatewayService implements IGatewayService {
       });
 
       const perfumes = (await Promise.all(perfumePromises)).filter(Boolean);
-
       return perfumes;
     } catch (err) {
       handleAxiosError(err);
@@ -525,28 +512,20 @@ export class GatewayService implements IGatewayService {
       handleAxiosError(err);
     }
   }
-
   // ================= AUDIT =================
 
-  // ================= AUDIT =================
-
-  // accept either a forwarded token string OR a headers object
   async createAudit(data: any, forwardedHeaders?: string | Record<string, string>): Promise<any> {
     if (!this.auditClient) throw new Error("AUDIT_SERVICE_API not configured");
     try {
       const headers: Record<string, string> = {};
-
-      // if caller passed a raw token string (e.g. "Bearer ...")
       if (typeof forwardedHeaders === "string" && forwardedHeaders.trim()) {
         headers.Authorization = forwardedHeaders;
       }
 
-      // if caller passed a headers object, copy it (prefer its Authorization if present)
       if (typeof forwardedHeaders === "object" && forwardedHeaders !== null) {
         Object.assign(headers, forwardedHeaders);
       }
 
-      // Gateway forwards to audit microservice's /audit endpoint
       const resp = await this.auditClient.post(`/audit`, data, { headers });
       return resp.data;
     } catch (err) {
@@ -629,74 +608,73 @@ export class GatewayService implements IGatewayService {
   }
 
   async getTop10Revenue(query: Record<string, any>, headers: Record<string, string>): Promise<any> {
-  if (!this.analyticsClient) throw new Error("ANALYTICS_URL not configured");
-  try {
-    const q = new URLSearchParams();
-    Object.entries(query ?? {}).forEach(([k, v]) => {
-      if (v !== undefined && v !== null) q.append(k, String(v));
-    });
-    const resp = await this.analyticsClient.get(`/analysis/top10-revenue?${q.toString()}`, { headers });
-    return resp.data;
-  } catch (err) {
-    handleAxiosError(err);
+    if (!this.analyticsClient) throw new Error("ANALYTICS_URL not configured");
+    try {
+      const q = new URLSearchParams();
+      Object.entries(query ?? {}).forEach(([k, v]) => {
+        if (v !== undefined && v !== null) q.append(k, String(v));
+      });
+      const resp = await this.analyticsClient.get(`/analysis/top10-revenue?${q.toString()}`, { headers });
+      return resp.data;
+    } catch (err) {
+      handleAxiosError(err);
+    }
   }
-  }
-  
+
   async getSalesSummary(query: Record<string, any>, headers: Record<string, string>): Promise<any> {
-  if (!this.analyticsClient) throw new Error("ANALYTICS_URL not configured");
-  try {
-    const q = new URLSearchParams();
-    Object.entries(query ?? {}).forEach(([k, v]) => {
-      if (v !== undefined && v !== null) q.append(k, String(v));
-    });
-    const resp = await this.analyticsClient.get(`/analysis/sales-summary?${q.toString()}`, { headers });
-    return resp.data;
-  } catch (err) {
-    handleAxiosError(err);
+    if (!this.analyticsClient) throw new Error("ANALYTICS_URL not configured");
+    try {
+      const q = new URLSearchParams();
+      Object.entries(query ?? {}).forEach(([k, v]) => {
+        if (v !== undefined && v !== null) q.append(k, String(v));
+      });
+      const resp = await this.analyticsClient.get(`/analysis/sales-summary?${q.toString()}`, { headers });
+      return resp.data;
+    } catch (err) {
+      handleAxiosError(err);
+    }
   }
-}
 
-async getSalesTrend(query: Record<string, any>, headers: Record<string, string>): Promise<any> {
-  if (!this.analyticsClient) throw new Error("ANALYTICS_URL not configured");
-  try {
-    const q = new URLSearchParams();
-    Object.entries(query ?? {}).forEach(([k, v]) => {
-      if (v !== undefined && v !== null) q.append(k, String(v));
-    });
-    const resp = await this.analyticsClient.get(`/analysis/sales-trend?${q.toString()}`, { headers });
-    return resp.data;
-  } catch (err) {
-    handleAxiosError(err);
+  async getSalesTrend(query: Record<string, any>, headers: Record<string, string>): Promise<any> {
+    if (!this.analyticsClient) throw new Error("ANALYTICS_URL not configured");
+    try {
+      const q = new URLSearchParams();
+      Object.entries(query ?? {}).forEach(([k, v]) => {
+        if (v !== undefined && v !== null) q.append(k, String(v));
+      });
+      const resp = await this.analyticsClient.get(`/analysis/sales-trend?${q.toString()}`, { headers });
+      return resp.data;
+    } catch (err) {
+      handleAxiosError(err);
+    }
   }
-}
 
-async getReports(query: Record<string, any>, headers: Record<string, string>): Promise<any> {
-  if (!this.analyticsClient) throw new Error("ANALYTICS_URL not configured");
-  try {
-    const q = new URLSearchParams();
-    Object.entries(query ?? {}).forEach(([k, v]) => {
-      if (v !== undefined && v !== null) q.append(k, String(v));
-    });
-    const resp = await this.analyticsClient.get(`/analysis/reports?${q.toString()}`, { headers });
-    return resp.data;
-  } catch (err) {
-    handleAxiosError(err);
+  async getReports(query: Record<string, any>, headers: Record<string, string>): Promise<any> {
+    if (!this.analyticsClient) throw new Error("ANALYTICS_URL not configured");
+    try {
+      const q = new URLSearchParams();
+      Object.entries(query ?? {}).forEach(([k, v]) => {
+        if (v !== undefined && v !== null) q.append(k, String(v));
+      });
+      const resp = await this.analyticsClient.get(`/analysis/reports?${q.toString()}`, { headers });
+      return resp.data;
+    } catch (err) {
+      handleAxiosError(err);
+    }
   }
-}
 
-async downloadReportPdf(id: number, headers: Record<string, string>): Promise<Buffer> {
-  if (!this.analyticsClient) throw new Error("ANALYTICS_URL not configured");
-  try {
-    // BITNO: responseType arraybuffer da bi dobio PDF bytes
-    const resp = await this.analyticsClient.get(`/analysis/reports/${id}/pdf`, {
-      headers,
-      responseType: "arraybuffer",
-    });
-    return resp.data;
-  } catch (err) {
-    handleAxiosError(err);
+  async downloadReportPdf(id: number, headers: Record<string, string>): Promise<Buffer> {
+    if (!this.analyticsClient) throw new Error("ANALYTICS_URL not configured");
+    try {
+      const resp = await this.analyticsClient.get(`/analysis/reports/${id}/pdf`, {
+        headers,
+        responseType: "arraybuffer",
+      });
+      return resp.data;
+    } catch (err) {
+      handleAxiosError(err);
+    }
   }
-}
 
 
   // ================= GENERIC AUDIT HELPER =================

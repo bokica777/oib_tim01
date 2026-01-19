@@ -11,5 +11,5 @@ export interface CreateOrderDTO {
   items: CreateOrderItemDTO[];
   note?: string;
   contactPhone?: string;
-  paymentType?: PaymentType; // <= DODATO
+  paymentType?: PaymentType; 
 }

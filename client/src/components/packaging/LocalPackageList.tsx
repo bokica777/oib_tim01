@@ -36,7 +36,7 @@ const LocalPackageList: React.FC<Props> = ({ items, perfumeNames, warehouses, on
           <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
             {items.map(p => {
               const warehouseName = warehouses?.find(w => String(w.id) === String(p.warehouseId))?.name ?? p.warehouseId;
-              const perfumeLabel = perfumeNames?.[p.id] ?? (p.perfumeId ? String(p.perfumeId) : (p.perfumeIds && p.perfumeIds.length ? String(p.perfumeIds[0]) : "-"));
+              const perfumeLabel = perfumeNames?.[p.id] ?? (p.perfumeId ? String(p.perfumeId) : '-');
               return (
                 <li key={p.id} style={{ padding: "10px 8px", borderBottom: "1px solid rgba(255,255,255,0.02)" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>

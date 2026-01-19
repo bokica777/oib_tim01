@@ -1,4 +1,3 @@
-// src/WebAPI/controllers/ProcessingController.ts
 import { Router, Request, Response } from "express";
 import { ProcessingService } from "../../Services/ProcessingService";
 import LogerService from "../../Services/LogerService";
@@ -22,9 +21,9 @@ export class ProcessingController {
 
   private initializeRoutes() {
     this.router.post("/process", validateDTO(ProcessRequestDTO), this.processPerfume.bind(this));
-    this.router.get("/perfumes", this.getPerfumes.bind(this));
+    this.router.get("/perfumes", this.getPerfumes.bind(this)); 
     this.router.get("/perfumes/:id", this.getPerfume.bind(this));
-    this.router.post("/perfumes/request", this.requestPerfumes.bind(this)); // used by packaging
+    this.router.post("/perfumes/request", this.requestPerfumes.bind(this));
   }
 
   private async processPerfume(req: Request, res: Response) {
@@ -46,6 +45,7 @@ export class ProcessingController {
         "processing"
       );
 
+      // produced već sadrži price za svaki parfem
       res.status(201).json(produced);
     } catch (err) {
       const errMsg = (err as Error).message ?? String(err);
@@ -57,6 +57,7 @@ export class ProcessingController {
   private async getPerfumes(req: Request, res: Response) {
     try {
       const list = await this.service.listAvailablePerfumes();
+      // list već sadrži price za svaki parfem
       res.status(200).json(list);
     } catch (err) {
       const errMsg = (err as Error).message ?? String(err);
@@ -69,6 +70,7 @@ export class ProcessingController {
     try {
       const id = Number(req.params.id);
       const p = await this.service.getPerfumeById(id);
+      // p već sadrži price
       res.status(200).json(p);
     } catch (err) {
       const errMsg = (err as Error).message ?? String(err);
@@ -86,6 +88,7 @@ export class ProcessingController {
       }
       await this.logger.log(`Packaging request for ${count} of ${name}`, "INFO", { name, count }, "processing");
       const reserved = await this.service.reservePerfumes(name, count);
+      // reserved već sadrži price za svaki parfem
       res.status(200).json(reserved);
     } catch (err) {
       const errMsg = (err as Error).message ?? String(err);

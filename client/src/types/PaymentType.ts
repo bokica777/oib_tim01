@@ -1,1 +1,1 @@
-export type PaymentType = "cash" | "bank" | "card";
+export type PaymentType = "GOTOVINA" | "RACUN" | "KARTICA";

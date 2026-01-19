@@ -29,7 +29,10 @@ export class StorageService {
     }
 
     const p = this.pkgRepo.create({
-      ...data,
+      name : data.name,
+      senderAddress : data.senderAddress,
+      warehouseId : data.warehouseId,
+      perfumeId : data.perfumeId,
       status: PackageStatus.PACKED,
     });
 

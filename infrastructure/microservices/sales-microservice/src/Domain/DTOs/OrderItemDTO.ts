@@ -8,6 +8,11 @@ export class OrderItemDTO {
   @Min(1)
   perfumeId!: number;
 
+   @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  price!: number;
+
   @Type(() => Number)
   @IsInt()
   @Min(1)

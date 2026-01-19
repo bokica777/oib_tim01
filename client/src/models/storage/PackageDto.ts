@@ -3,7 +3,7 @@ export type PackageDto = {
   name: string;
   senderAddress: string;
   warehouseId: number;
-  perfumeIds?: number[];
+  perfumeId?: number;
   serialNumber?: string;
   status?: string;
   createdAt?: string;
