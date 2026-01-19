@@ -28,7 +28,7 @@ export default function PerformancePage() {
     setLoading(true);
     setError(null);
     try {
-      const list = await performanceAPI.getReports(); // <-- vraća res.data
+      const list = await performanceAPI.getReports();
       const mapped = list.map(mapPerformanceReport);
       setReports(mapped);
       setSelected(mapped[0] ?? null);
@@ -55,8 +55,8 @@ export default function PerformancePage() {
   async function refreshSelected(id: number) {
     setError(null);
     try {
-      const raw = await performanceAPI.getReportById(id); 
-      const one = mapPerformanceReport(raw);              
+      const raw = await performanceAPI.getReportById(id);
+      const one = mapPerformanceReport(raw);
       setSelected(one);
     } catch (e: any) {
       setError(e?.message ?? "Ne mogu da učitam izveštaj.");
@@ -77,7 +77,6 @@ export default function PerformancePage() {
     loadReports();
   }, []);
 
-  
   const lastN = useMemo(() => reports.slice(0, 10).reverse(), [reports]);
   const timeSeries = useMemo(() => lastN.map((r) => r.executionTime), [lastN]);
   const successSeries = useMemo(() => lastN.map((r) => r.successRate), [lastN]);
@@ -89,7 +88,6 @@ export default function PerformancePage() {
 
   return (
     <div style={{ padding: 16 }}>
-      {/* Header */}
       <div
         style={{
           display: "flex",
@@ -124,7 +122,6 @@ export default function PerformancePage() {
         </div>
       </div>
 
-      {/* Errors */}
       {error ? (
         <div
           style={{
@@ -139,7 +136,6 @@ export default function PerformancePage() {
         </div>
       ) : null}
 
-      {/* KPI cards */}
       <div
         style={{
           display: "grid",
@@ -153,12 +149,11 @@ export default function PerformancePage() {
           value={loading ? "..." : reports.length}
           hint="Izveštaji se čuvaju u bazi (DESC)"
         />
-        <KpiCard title="Vreme izvršavanja" value={kpiExecution.toFixed(2)} suffix="s" hint="Niže je bolje" />
+        <KpiCard title="Vreme izvršavanja" value={kpiExecution.toFixed(0)} suffix="ms" hint="Niže je bolje" />
         <KpiCard title="Stopa uspeha" value={kpiSuccess.toFixed(0)} suffix="%" hint="Više je bolje" />
         <KpiCard title="Resursi" value={kpiResources.toFixed(0)} suffix="%" hint="Opterećenje sistema" />
       </div>
 
-      {/* Charts */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
         <MiniLineChart title="Trend vremena izvršavanja" values={timeSeries} valueSuffix="s" />
         <MiniLineChart title="Trend uspešnosti" values={successSeries} valueSuffix="%" />
@@ -182,14 +177,18 @@ export default function PerformancePage() {
 
           {selected ? (
             <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
-              <button disabled={loading} onClick={() => refreshSelected(selected.id)}>Osveži detalj</button>
-              <button disabled={loading} onClick={() => onPdf(selected.id)}>Preuzmi PDF</button>
+              <button type="button" disabled={loading} onClick={() => refreshSelected(selected.id)}>
+                Osveži detalje
+              </button>
+              <button type="button" disabled={loading} onClick={() => onPdf(selected.id)}>
+                Preuzmi PDF
+              </button>
+
             </div>
           ) : null}
         </div>
       </div>
 
-      {/* Table */}
       <ReportsTable
         reports={reports}
         selectedId={selected?.id ?? null}

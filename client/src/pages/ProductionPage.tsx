@@ -177,7 +177,8 @@ export const ProductionPage: React.FC = () => {
         </div>
 
         {/* Gornji meni (kao na slici) */}
-        <div className="window-content" style={{ padding: 0 }}>
+        <div className="window-content" style={{ padding: 10, height: "calc(100vh - 160px)", overflowY: "auto" }}>
+
           <div className="prod-menubar" style={{ display: "flex", gap: 6, padding: "6px 10px" }}>
             <button
               className={activeTopTab === "proizvodnja" ? "active" : ""}
@@ -219,13 +220,13 @@ export const ProductionPage: React.FC = () => {
             )}
 
             {isAdmin && (
-            <button
-              className={activeTopTab === "analiza_prodaje" ? "active" : ""}
-              onClick={() => setActiveTopTab("analiza_prodaje")}
-            >
-              Analiza prodaje
-            </button>
-            )}    
+              <button
+                className={activeTopTab === "analiza_prodaje" ? "active" : ""}
+                onClick={() => setActiveTopTab("analiza_prodaje")}
+              >
+                Analiza prodaje
+              </button>
+            )}
 
 
           </div>
@@ -268,7 +269,7 @@ export const ProductionPage: React.FC = () => {
             {activeTopTab == "prodaja" && (
               <SalesPage />
             )}
-            {activeTopTab === "analiza_performansi" && (
+            {isAdmin && activeTopTab === "analiza_performansi" && (
               <PerformancePage />
             )}
             {activeTopTab === "analiza_prodaje" && (

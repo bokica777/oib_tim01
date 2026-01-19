@@ -5,7 +5,7 @@ import { IAuditLogService } from "../Domain/services/IAuditLogService";
 import { CreateAuditLogDTO } from "../Domain/DTOs/CreateAuditLogDTO";
 
 export class AuditLogService implements IAuditLogService {
-  constructor(private readonly repo: Repository<AuditLog>) {}
+  constructor(private readonly repo: Repository<AuditLog>) { }
 
   async createLog(data: CreateAuditLogDTO): Promise<AuditLog> {
     const log = this.repo.create({

@@ -10,15 +10,16 @@ export class PerformanceAnalysisService implements IPerformanceAnalysisService {
     }
 
     async runSimulation(algorithmName: string): Promise<PerformanceReport> {
-        // Za sada fake logika – možeš kasnije da je pametno prilagodiš
-        const executionTime = Math.random() * 10; // 0–10 sekundi
-        const successRate = 70 + Math.random() * 30; // 70–100%
-        const resourceUsage = Math.random() * 100; // 0–100%
+        const seed = this.hashString(algorithmName);
+
+        const executionTime = 100 + (seed % 1900);
+        const successRate = 80 + (seed % 20);
+        const resourceUsage = 20 + (seed % 70);
 
         const summary = `Simulacija algoritma ${algorithmName} završena.
-Vreme: ${executionTime.toFixed(2)}s, uspeh: ${successRate.toFixed(
-            2
-        )}%, resursi: ${resourceUsage.toFixed(2)}%.`;
+            Vreme izvršavanja: ${executionTime} ms.
+            Stopa uspeha: ${successRate}%.
+            Iskorišcenje resursa: ${resourceUsage}%.`;
 
         const report = this.repo.create({
             algorithmName,
@@ -39,5 +40,14 @@ Vreme: ${executionTime.toFixed(2)}s, uspeh: ${successRate.toFixed(
 
     async getReportById(id: number): Promise<PerformanceReport | null> {
         return await this.repo.findOne({ where: { id } });
+    }
+
+    private hashString(value: string): number {
+        let hash = 0;
+        for (let i = 0; i < value.length; i++) {
+            hash = (hash << 5) - hash + value.charCodeAt(i);
+            hash |= 0;
+        }
+        return Math.abs(hash);
     }
 }

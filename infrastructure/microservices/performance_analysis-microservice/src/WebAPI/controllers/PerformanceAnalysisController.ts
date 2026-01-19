@@ -2,14 +2,12 @@ import { Router, Request, Response, NextFunction } from "express";
 import { IPerformanceAnalysisService } from "../../Domain/services/IPerformanceAnalysisService";
 import { RunSimulationDTO } from "../../Domain/DTOs/RunSimulationDTO";
 import { generatePerformanceReportPdf } from "../../Services/PerformanceReportPDF";
-
+import { requireAdmin, requireGateway } from "../middlewares/auth";
 
 export class PerformanceAnalysisController {
     private readonly router: Router;
 
-    constructor(
-        private readonly performanceService: IPerformanceAnalysisService
-    ) {
+    constructor(private readonly performanceService: IPerformanceAnalysisService) {
         this.router = Router();
         this.initializeRoutes();
     }
@@ -21,35 +19,31 @@ export class PerformanceAnalysisController {
     private initializeRoutes(): void {
         this.router.post(
             "/simulate",
-            this.handleRunSimulation as (
-                req: Request,
-                res: Response,
-                next: NextFunction
-            ) => void
+            requireGateway,
+            requireAdmin,
+            this.handleRunSimulation
         );
 
         this.router.get(
             "/reports",
-            this.handleGetAllReports as (
-                req: Request,
-                res: Response,
-                next: NextFunction
-            ) => void
+            requireGateway,
+            requireAdmin,
+            this.handleGetAllReports
         );
 
         this.router.get(
             "/reports/:id",
-            this.handleGetReportById as (
-                req: Request,
-                res: Response,
-                next: NextFunction
-            ) => void
-        );
-        this.router.get(
-            "/reports/:id/pdf",
-            this.getReportPdf.bind(this)
+            requireGateway,
+            requireAdmin,
+            this.handleGetReportById
         );
 
+        this.router.get(
+            "/reports/:id/pdf",
+            requireGateway,
+            requireAdmin,
+            this.getReportPdf
+        );
     }
 
     private handleRunSimulation = async (
@@ -61,9 +55,7 @@ export class PerformanceAnalysisController {
             const { algorithmName } = req.body;
 
             if (!algorithmName || algorithmName.trim().length === 0) {
-                return res.status(400).json({
-                    message: "algorithmName is required",
-                });
+                return res.status(400).json({ message: "algorithmName is required" });
             }
 
             const report = await this.performanceService.runSimulation(algorithmName);
@@ -95,17 +87,13 @@ export class PerformanceAnalysisController {
             const id = Number(req.params.id);
 
             if (Number.isNaN(id)) {
-                return res.status(400).json({
-                    message: "Invalid report id",
-                });
+                return res.status(400).json({ message: "Invalid report id" });
             }
 
             const report = await this.performanceService.getReportById(id);
 
             if (!report) {
-                return res.status(404).json({
-                    message: "Report not found",
-                });
+                return res.status(404).json({ message: "Report not found" });
             }
 
             return res.status(200).json(report);
@@ -113,7 +101,12 @@ export class PerformanceAnalysisController {
             next(error);
         }
     };
-    private getReportPdf = async (req: Request, res: Response, next: NextFunction) => {
+
+    private getReportPdf = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ) => {
         try {
             const reportId = Number(req.params.id);
 
@@ -140,5 +133,4 @@ export class PerformanceAnalysisController {
             next(error);
         }
     };
-
 }

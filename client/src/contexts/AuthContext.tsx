@@ -5,7 +5,6 @@ import { readValueByKey, removeValueByKey, saveValueByKey } from "../helpers/loc
 import { AuthContextType } from "../types/AuthContextType";
 import { AuthTokenClaimsType } from "../types/AuthTokenClaimsType";
 
-// Create the context
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -13,7 +12,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load token from localStorage on mount
   useEffect(() => {
     const savedToken = readValueByKey("accessToken");
 

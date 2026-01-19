@@ -46,15 +46,16 @@ export const ReportsTable: React.FC<Props> = ({ reports, selectedId, onSelect, o
               >
                 <td>{r.id}</td>
                 <td>{r.algorithmName}</td>
-                <td>{r.executionTime.toFixed(2)} s</td>
+                <td>{r.executionTime.toFixed(0)} ms</td>
                 <td>{r.successRate.toFixed(0)}%</td>
                 <td>{r.resourceUsage.toFixed(0)}%</td>
                 <td>{new Date(r.createdAt).toLocaleString()}</td>
                 <td style={{ whiteSpace: "nowrap", textAlign: "right" }}>
-                  <button onClick={() => onSelect(r)} style={{ marginRight: 8 }}>
+                  <button type="button" onClick={() => onSelect(r)} style={{ marginRight: 8 }}>
                     Prikaži
                   </button>
-                  <button onClick={() => onPdf(r.id)}>PDF</button>
+                  <button type="button" onClick={() => onPdf(r.id)}>PDF</button>
+
                 </td>
               </tr>
             );

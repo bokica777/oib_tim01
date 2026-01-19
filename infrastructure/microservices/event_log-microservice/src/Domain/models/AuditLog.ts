@@ -17,7 +17,6 @@ export class AuditLog {
 
   @Column("json", { nullable: true })
   meta?: any;
-
   @CreateDateColumn()
   createdAt!: Date;
 }

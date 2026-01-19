@@ -95,10 +95,10 @@ export class GatewayController {
     );
 
     // ================= PERFORMANCE =================
-    this.router.post("/performance/simulate", authenticate, validateDTO(RunSimulationDTO), this.runSimulation.bind(this));
-    this.router.get("/performance/reports", authenticate, this.listPerformanceReports.bind(this));
-    this.router.get("/performance/reports/:id", authenticate, this.getPerformanceReportById.bind(this));
-    this.router.get("/performance/reports/:id/pdf", authenticate, this.getPerformanceReportPdf.bind(this));
+    this.router.post("/performance/simulate", authenticate, authorize("admin"), validateDTO(RunSimulationDTO), this.runSimulation.bind(this));
+    this.router.get("/performance/reports", authenticate, authorize("admin"), this.listPerformanceReports.bind(this));
+    this.router.get("/performance/reports/:id", authenticate, authorize("admin"), this.getPerformanceReportById.bind(this));
+    this.router.get("/performance/reports/:id/pdf", authenticate, authorize("admin"), this.getPerformanceReportPdf.bind(this));
 
     // ================= ANALYTICS =================
     this.router.get("/analysis/top-perfumes", authenticate, this.getTopPerfumes.bind(this));
