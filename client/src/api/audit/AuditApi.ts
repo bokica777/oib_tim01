@@ -16,7 +16,7 @@ export class AuditAPI {
 
   constructor() {
     const raw = (import.meta.env.VITE_GATEWAY_URL as string) ?? "http://localhost:4000";
-    this.base = raw.replace(/\/+$/, ""); // no trailing slash
+    this.base = raw.replace(/\/+$/, "");
 
     const auditBase = this.base.endsWith("/api/v1") ? `${this.base}` : `${this.base}/api/v1`;
 

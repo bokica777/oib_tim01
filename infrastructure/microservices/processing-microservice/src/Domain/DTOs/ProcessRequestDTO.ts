@@ -13,8 +13,7 @@ export class ProcessRequestDTO {
   @IsInt()
   @Min(1)
   bottles!: number;
-
-  // allowed volumes 150 or 250 (we accept only 150 or 250; keep Min/Max and check allowed values)
+  
   @Type(() => Number)
   @IsInt()
   @Min(150)

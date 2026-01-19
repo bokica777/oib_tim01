@@ -4,7 +4,7 @@ export class PackagingClient {
   private baseUrl?: string;
 
   constructor() {
-    this.baseUrl = process.env.PACKAGING_URL; // e.g. http://localhost:6003/api/v1
+    this.baseUrl = process.env.PACKAGING_URL;
   }
 
   async requestPackaging(requiredPackages: number): Promise<void> {

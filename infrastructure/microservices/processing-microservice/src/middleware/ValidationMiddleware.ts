@@ -20,6 +20,6 @@ export const validateDTO =
       return res.status(400).json({ message: "Validation failed" });
     }
 
-    req.body = dtoObject; // BITNO
+    req.body = dtoObject;
     next();
   };

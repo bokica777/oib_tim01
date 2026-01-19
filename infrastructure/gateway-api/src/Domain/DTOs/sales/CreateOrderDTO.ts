@@ -16,7 +16,7 @@ export class CreateOrderDTO {
 
   @IsString()
   @IsIn(["GOTOVINA", "RACUN", "KARTICA"])
-  paymentType!: "GOTOVINA" | "RACUN" | "KARTICA"; // <= DODATO (obavezno polje)
+  paymentType!: "GOTOVINA" | "RACUN" | "KARTICA";
 
  
   @IsNumber()

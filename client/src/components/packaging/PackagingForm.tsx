@@ -41,16 +41,29 @@ const PackagingForm: React.FC<Props> = ({ perfumes, warehouses, processing, onPa
   };
 
   return (
-    <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+    <form
+      onSubmit={submit}
+      style={{
+        display: "grid",
+        gridTemplateColumns: "1fr 1fr",
+        gap: 16,
+        maxWidth: 520
+      }}
+    >
       {/* PARFEM */}
-      <div>
-        <label style={{ display: "block", marginBottom: 6, fontWeight: 600 }}>
+      <div style={{ gridColumn: "1 / -1" }}>
+        <label style={{ display: "block", marginBottom: 8, fontWeight: 600 }}>
           Parfem
         </label>
         <select
           value={perfumeName}
           onChange={e => setPerfumeName(e.target.value)}
-          style={{ width: "100%" }}
+          style={{
+            width: "100%",
+            padding: "10px 12px",
+            borderRadius: 8,
+            border: "1px solid rgba(0,0,0,0.15)"
+          }}
         >
           {names.length === 0 && <option value="">-- nema parfema --</option>}
           {names.map(n => (
@@ -59,74 +72,94 @@ const PackagingForm: React.FC<Props> = ({ perfumes, warehouses, processing, onPa
         </select>
       </div>
 
-      {}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 140px 1.4fr",
-          gap: 12,
-          alignItems: "end",
-        }}
-      >
-        <div>
-          <label style={{ display: "block", marginBottom: 6, fontWeight: 600 }}>
-            Broj boca
-          </label>
-          <input
-            type="number"
-            min={1}
-            value={bottles}
-            onChange={e => setBottles(Number(e.target.value) || 1)}
-            style={{ width: "100%" }}
-          />
-        </div>
-
-        <div>
-          <label style={{ display: "block", marginBottom: 6, fontWeight: 600 }}>
-            Zapremina
-          </label>
-          <select
-            value={String(volumePerBottle)}
-            onChange={e => setVolumePerBottle(Number(e.target.value) as 150 | 250)}
-            style={{ width: "100%" }}
-          >
-            <option value="150">150 ml</option>
-            <option value="250">250 ml</option>
-          </select>
-        </div>
-
-        <div>
-          <label style={{ display: "block", marginBottom: 6, fontWeight: 600 }}>
-            Skladište
-          </label>
-          <select
-            value={warehouseId ?? ""}
-            onChange={e => setWarehouseId(Number(e.target.value))}
-            style={{ width: "100%" }}
-          >
-            {warehouses.length === 0 && <option value="">-- nema skladišta --</option>}
-            {warehouses.map(w => (
-              <option key={w.id} value={w.id}>
-                {w.name}{w.location ? ` — ${w.location}` : ""}
-              </option>
-            ))}
-          </select>
-        </div>
+      {/* ZAPREMINA */}
+      <div>
+        <label style={{ display: "block", marginBottom: 8, fontWeight: 600 }}>
+          Zapremina
+        </label>
+        <select
+          value={String(volumePerBottle)}
+          onChange={e =>
+            setVolumePerBottle(Number(e.target.value) as 150 | 250)
+          }
+          style={{
+            width: "100%",
+            padding: "10px 12px",
+            borderRadius: 8,
+            border: "1px solid rgba(0,0,0,0.15)"
+          }}
+        >
+          <option value="150">150 ml</option>
+          <option value="250">250 ml</option>
+        </select>
       </div>
 
-      {}
-      <div style={{ marginTop: 8 }}>
+      {/* BROJ BOCA */}
+      <div>
+        <label style={{ display: "block", marginBottom: 8, fontWeight: 600 }}>
+          Broj boca
+        </label>
+        <input
+          type="number"
+          min={1}
+          value={bottles}
+          onChange={e => setBottles(Number(e.target.value) || 1)}
+          style={{
+            width: "100%",
+            padding: "10px 12px",
+            borderRadius: 8,
+            border: "1px solid rgba(0,0,0,0.15)"
+          }}
+        />
+      </div>
+
+      {/* SKLADIŠTE */}
+      <div style={{ gridColumn: "1 / -1" }}>
+        <label style={{ display: "block", marginBottom: 8, fontWeight: 600 }}>
+          Skladište
+        </label>
+        <select
+          value={warehouseId ?? ""}
+          onChange={e => setWarehouseId(Number(e.target.value))}
+          style={{
+            width: "100%",
+            padding: "10px 12px",
+            borderRadius: 8,
+            border: "1px solid rgba(0,0,0,0.15)"
+          }}
+        >
+          {warehouses.length === 0 && (
+            <option value="">-- nema skladišta --</option>
+          )}
+          {warehouses.map(w => (
+            <option key={w.id} value={w.id}>
+              {w.name}{w.location ? ` — ${w.location}` : ""}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* DUGME */}
+      <div style={{ gridColumn: "1 / -1", marginTop: 8 }}>
         <button
           className="btn btn-accent"
           type="submit"
           disabled={processing}
-          style={{ width: "100%" }}
+          style={{
+            width: "100%",
+            padding: "12px",
+            borderRadius: 8,
+            fontWeight: 700,
+            fontSize: 15,
+            cursor: processing ? "not-allowed" : "pointer"
+          }}
         >
-          {processing ? "Pakuje..." : "Započni preradu i pakuje"}
+          {processing ? "Pakuje..." : "Započni pakovanje"}
         </button>
       </div>
     </form>
   );
+
 };
 
 export default PackagingForm;

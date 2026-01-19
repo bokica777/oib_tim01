@@ -16,11 +16,9 @@ export class Perfume {
   @Column({ type: "int" })
   netVolumeMl!: number;
 
-  // serial like PP-2025-<id>
   @Column({ type: "varchar", length: 64, nullable: true, unique: true })
   serialNumber?: string;
 
-  // store array of source plant ids as json
   @Column({ type: "simple-json", nullable: true })
   sourcePlantIds?: number[];
 

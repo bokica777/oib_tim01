@@ -9,8 +9,6 @@ import { gatewayAuth } from "./middleware/GatewayAuth";
 dotenv.config();
 const app = express();
 app.use(express.json());
-
-// ================= CORS =================
 const corsOrigin = process.env.GATEWAY_ORIGIN ?? process.env.CORS_ORIGIN ?? "http://localhost:5173";
 const corsMethods = (process.env.CORS_METHODS ?? "GET,POST,PUT,DELETE,OPTIONS").split(",").map(s => s.trim());
 
@@ -21,10 +19,8 @@ app.use(cors({
   credentials: true,
 }));
 
-// ================= DATABASE =================
 initialize_database();
 
-// ================= ROUTES =================
 const storageController = new StorageController();
 
 app.use("/api/v1", gatewayAuth, storageController.router);

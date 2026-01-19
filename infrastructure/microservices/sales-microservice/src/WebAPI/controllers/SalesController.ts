@@ -28,7 +28,6 @@ export class SalesController {
       const { customerName, deliveryAddress, items, paymentType, totalPrice } = req.body;
       const role = (req as any).user?.role;
 
-      // Validacija: items mora sadržati cenu
       if (!Array.isArray(items) || items.length === 0) {
         return res.status(400).json({ message: "Items array is required and must not be empty" });
       }
@@ -49,7 +48,7 @@ export class SalesController {
         customerName, 
         deliveryAddress, 
         items, 
-        totalPrice,  // Prosleđujemo totalPrice
+        totalPrice,  
         role,
         paymentType
       );

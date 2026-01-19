@@ -1,4 +1,3 @@
-// src/middleware/GatewayAuth.ts
 import { Request, Response, NextFunction } from "express";
 
 export interface GatewayUser {

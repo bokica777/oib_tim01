@@ -7,7 +7,7 @@ export class StoragePackage {
   id!: number;
 
   @Column({ type: "varchar", length: 150 })
-  name!: string; // package name / pack id descriptive
+  name!: string; 
 
   @Column({ type: "varchar", length: 250 })
   senderAddress!: string;
@@ -15,7 +15,6 @@ export class StoragePackage {
   @Column({ type: "int" })
   warehouseId!: number;
 
-  // single perfume id inside this package (spec: one perfume per package)
   @Column({ type: "int", nullable: true })
   perfumeId?: number;
 
@@ -26,5 +25,5 @@ export class StoragePackage {
   createdAt!: Date;
 
   @Column({ type: "varchar", length: 64, nullable: true, unique: true })
-  serialNumber?: string; // PKG-2025-<id>
+  serialNumber?: string; 
 }

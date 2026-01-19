@@ -4,7 +4,7 @@ import { ProcessRequestDTO } from "../../models/processing/ProcessRequestDTO";
 import { PerfumeType } from "../../enums/processing/PerfumeType";
 
 type Props = {
-  perfumes: PerfumeDTO[]; 
+  perfumes: PerfumeDTO[];
   onProcess: (dto: ProcessRequestDTO) => Promise<void>;
   processing?: boolean;
 };
@@ -20,9 +20,9 @@ const authHeaders = (): HeadersInit => {
 
 const tryFetchNames = async (): Promise<string[] | null> => {
   const candidatePaths = [
-    "/processing/perfumes",        
-    "/processing/perfumes/all",    
-    "/processing/catalog",         
+    "/processing/perfumes",
+    "/processing/perfumes/all",
+    "/processing/catalog",
     "/catalog/perfumes",
     "/perfumes",
     "/perfumes/all"
@@ -36,7 +36,6 @@ const tryFetchNames = async (): Promise<string[] | null> => {
       if (!res.ok) continue;
       const data = await res.json();
 
-      // normalize possible wrapper { items: [...] }
       const maybeArray = Array.isArray(data) ? data : (Array.isArray((data as any)?.items) ? (data as any).items : null);
       if (!Array.isArray(maybeArray)) continue;
 
@@ -101,7 +100,7 @@ const ProcessForm: React.FC<Props> = ({ perfumes, onProcess, processing }) => {
       }
     })();
     return () => { mounted = false; };
-  }, []); 
+  }, []);
   useEffect(() => {
     if (names.length === 0) {
       setSelectedName("");
@@ -133,65 +132,120 @@ const ProcessForm: React.FC<Props> = ({ perfumes, onProcess, processing }) => {
   };
 
   return (
-    <form onSubmit={submit}>
+    <form
+      onSubmit={submit}
+      style={{
+        display: "grid",
+        gridTemplateColumns: "1fr 1fr",
+        gap: 16,
+        maxWidth: 520
+      }}
+    >
       {/* Parfem */}
-      <div style={{ marginBottom: 8 }}>
-        <label>Parfem (ime)</label>
+      <div style={{ gridColumn: "1 / -1" }}>
+        <label style={{ display: "block", marginBottom: 8, fontWeight: 600 }}>
+          Parfem (ime)
+        </label>
         <select
           value={selectedName}
           onChange={e => setSelectedName(e.target.value)}
-          style={{ width: "100%" }}
+          style={{
+            width: "100%",
+            padding: "10px 12px",
+            borderRadius: 8,
+            border: "1px solid rgba(0,0,0,0.15)"
+          }}
         >
-          {loadingNames && names.length === 0 && <option value="">-- učitavanje imena... --</option>}
-          {!loadingNames && names.length === 0 && <option value="">-- nema imena (fallback) --</option>}
+          {loadingNames && names.length === 0 && (
+            <option value="">-- učitavanje imena... --</option>
+          )}
+          {!loadingNames && names.length === 0 && (
+            <option value="">-- nema imena --</option>
+          )}
           {names.map(name => (
-            <option key={name} value={name}>{name}</option>
+            <option key={name} value={name}>
+              {name}
+            </option>
           ))}
         </select>
-        {loadingNames && <div style={{ fontSize: 12, marginTop: 6 }}>Povlačim ceo katalog parfema…</div>}
       </div>
 
-      {/* Tip, Boca i Zapremina */}
-      <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-        <div style={{ flex: 1 }}>
-          <label>Tip</label>
-          <select
-            value={type}
-            onChange={e => setType(e.target.value as PerfumeType)}
-            style={{ width: "100%" }}
-          >
-            <option value={PerfumeType.PERFUME}>PERFUME</option>
-            <option value={PerfumeType.COLOGNE}>COLOGNE</option>
-          </select>
-        </div>
+      {/* Tip (PERFUME / COLOGNE) */}
+      <div style={{ gridColumn: "1 / -1" }}>
+        <label style={{ display: "block", marginBottom: 8, fontWeight: 600 }}>
+          Tip
+        </label>
+        <select
+          value={type}
+          onChange={e => setType(e.target.value as PerfumeType)}
+          style={{
+            width: "100%",
+            padding: "10px 12px",
+            borderRadius: 8,
+            border: "1px solid rgba(0,0,0,0.15)"
+          }}
+        >
+          <option value={PerfumeType.PERFUME}>PERFUME</option>
+          <option value={PerfumeType.COLOGNE}>COLOGNE</option>
+        </select>
+      </div>
 
-        <div style={{ width: 120 }}>
-          <label>Boca</label>
-          <input
-            type="number"
-            min={1}
-            value={bottles}
-            onChange={e => setBottles(Number(e.target.value))}
-            style={{ width: "100%" }}
-          />
-        </div>
+      {/* Broj boca */}
+      <div>
+        <label style={{ display: "block", marginBottom: 8, fontWeight: 600 }}>
+          Broj boca
+        </label>
+        <input
+          type="number"
+          min={1}
+          value={bottles}
+          onChange={e => setBottles(Number(e.target.value))}
+          style={{
+            width: "100%",
+            padding: "10px 12px",
+            borderRadius: 8,
+            border: "1px solid rgba(0,0,0,0.15)"
+          }}
+        />
+      </div>
 
-        <div style={{ width: 140 }}>
-          <label>Zapremina</label>
-          <select
-            value={volumePerBottle}
-            onChange={e => setVolumePerBottle(Number(e.target.value) as 150 | 250)}
-            style={{ width: "100%" }}
-          >
-            <option value={150}>150 ml</option>
-            <option value={250}>250 ml</option>
-          </select>
-        </div>
+      {/* Zapremina */}
+      <div>
+        <label style={{ display: "block", marginBottom: 8, fontWeight: 600 }}>
+          Zapremina
+        </label>
+        <select
+          value={volumePerBottle}
+          onChange={e =>
+            setVolumePerBottle(Number(e.target.value) as 150 | 250)
+          }
+          style={{
+            width: "100%",
+            padding: "10px 12px",
+            borderRadius: 8,
+            border: "1px solid rgba(0,0,0,0.15)"
+          }}
+        >
+          <option value={150}>150 ml</option>
+          <option value={250}>250 ml</option>
+        </select>
       </div>
 
       {/* Dugme */}
-      <div>
-        <button className="btn btn-accent" type="submit" disabled={processing}>
+      <div style={{ gridColumn: "1 / -1", marginTop: 8 }}>
+        <button
+          type="submit"
+          disabled={processing}
+          className="btn btn-accent"
+          style={{
+            width: "100%",
+            padding: "12px",
+            borderRadius: 8,
+            fontWeight: 700,
+            fontSize: 15,
+            cursor: processing ? "not-allowed" : "pointer"
+          }}
+        >
           {processing ? "Prerada..." : "Pokreni preradu"}
         </button>
       </div>

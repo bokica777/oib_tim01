@@ -1,9 +1,10 @@
-import React, { useEffect,  useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import PackagingForm from "../components/packaging/PackagingForm";
 import LocalPackageList from "../components/packaging/LocalPackageList";
 import { PerfumeDTO } from "../models/processing/PerfumeDTO";
 import { WarehouseDTO } from "../models/storage/WarehouseDTO";
 import { StoragePackageDTO } from "../models/storage/StoragePackageDTO";
+import PackagingTable from "../components/packaging/PackageTable";
 
 const GATEWAY_ROOT = (import.meta.env.VITE_GATEWAY_URL ?? "http://localhost:4000");
 const LOCAL_KEY = "localPackages_v1";
@@ -36,6 +37,41 @@ function saveLocalPackagesToStorage(pkgs: StoragePackageDTO[]) {
   }
 }
 
+type Message = {
+  type: "success" | "error" | "info";
+  text: string;
+};
+
+const MessageBanner: React.FC<{ msg: Message; onClose: () => void }> = ({ msg, onClose }) => {
+  const bg = msg.type === "success" ? "#ecfccb" : msg.type === "error" ? "#fee2e2" : "#eff6ff";
+  const color = msg.type === "success" ? "#365314" : msg.type === "error" ? "#991b1b" : "#1e3a8a";
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        padding: 12,
+        borderRadius: 8,
+        background: bg,
+        color,
+        marginBottom: 12,
+        border: "1px solid rgba(0,0,0,0.04)",
+      }}
+    >
+      <div style={{ fontSize: 14 }}>{msg.text}</div>
+      <button
+        onClick={onClose}
+        style={{ marginLeft: 12, background: "transparent", border: "none", cursor: "pointer", color }}
+        aria-label="Zatvori obaveštenje"
+      >
+        ✕
+      </button>
+    </div>
+  );
+};
+
 export const PackagingPage: React.FC = () => {
   const [perfumes, setPerfumes] = useState<PerfumeDTO[]>([]);
   const [warehouses, setWarehouses] = useState<WarehouseDTO[]>([]);
@@ -46,6 +82,9 @@ export const PackagingPage: React.FC = () => {
   const [processing, setProcessing] = useState<boolean>(false);
   const [sending, setSending] = useState<boolean>(false);
 
+  const [message, setMessage] = useState<Message | null>(null);
+  const messageTimerRef = useRef<number | null>(null);
+
   const log = (text: string) => console.debug("[PackagingPage] " + text);
 
   useEffect(() => {
@@ -53,6 +92,28 @@ export const PackagingPage: React.FC = () => {
   }, [localPackages]);
 
   useEffect(() => { loadAll(); }, []);
+
+  useEffect(() => {
+    if (!message) return;
+    if (messageTimerRef.current) {
+      window.clearTimeout(messageTimerRef.current);
+    }
+    messageTimerRef.current = window.setTimeout(() => {
+      setMessage(null);
+      messageTimerRef.current = null;
+    }, 3000);
+
+    return () => {
+      if (messageTimerRef.current) {
+        window.clearTimeout(messageTimerRef.current);
+        messageTimerRef.current = null;
+      }
+    };
+  }, [message]);
+
+  const showMessage = (m: Message) => {
+    setMessage(m);
+  };
 
   const loadAll = async () => {
     setLoading(true);
@@ -97,7 +158,7 @@ export const PackagingPage: React.FC = () => {
           name: p.name ?? (p.serialNumber ?? `Package ${p.id ?? ""}`),
           senderAddress: p.senderAddress ?? p.sender ?? "Centar za pakovanje",
           warehouseId: String(p.warehouseId ?? p.warehouse?.id ?? ""),
-          perfumeId: p.perfumeId ,
+          perfumeId: p.perfumeId,
           status: (p.status ?? "PACKED") as "PACKED" | "SENT" | "STORED",
           serialNumber: p.serialNumber ?? undefined,
           createdAt: p.createdAt ? String(p.createdAt) : undefined,
@@ -125,12 +186,12 @@ export const PackagingPage: React.FC = () => {
     }
   };
 
-  const handlePackAndCreateLocal = async (perfumeName: string, bottles: number, volumePerBottle: 150|250, warehouseId: number) => {
-    if (!perfumeName || !warehouseId || bottles <= 0) { alert("Neispravan unos"); return; }
+  const handlePackAndCreateLocal = async (perfumeName: string, bottles: number, volumePerBottle: 150 | 250, warehouseId: number) => {
+    if (!perfumeName || !warehouseId || bottles <= 0) { showMessage({ type: "error", text: "Neispravan unos" }); return; }
     setProcessing(true);
     try {
       const rAvail = await fetch(`${GATEWAY_ROOT}/processing/perfumes`, { headers: authHeaders() });
-      if (!rAvail.ok) { alert("Greška pri proveri dostupnosti parfema."); setProcessing(false); return; }
+      if (!rAvail.ok) { showMessage({ type: "error", text: "Greška pri proveri dostupnosti parfema." }); setProcessing(false); return; }
       const availData: any[] = await rAvail.json();
       const getVolume = (it: any) => Number(it.netVolumeMl ?? it.volume ?? it.netVolume ?? 0);
       const availableMatching = availData.filter(it =>
@@ -139,7 +200,7 @@ export const PackagingPage: React.FC = () => {
         ((it.status ?? "AVAILABLE") === "AVAILABLE")
       );
       if ((availableMatching?.length ?? 0) < bottles) {
-        alert(`Nema dovoljno parfema sa imenom "${perfumeName}" i zapreminom ${volumePerBottle} ml (dostupno: ${availableMatching.length}).`);
+        showMessage({ type: "error", text: `Nema dovoljno parfema sa imenom "${perfumeName}" i zapreminom ${volumePerBottle} ml (dostupno: ${availableMatching.length}).` });
         setProcessing(false);
         return;
       }
@@ -151,7 +212,7 @@ export const PackagingPage: React.FC = () => {
 
       if (!r1.ok) {
         const errBody = await r1.json().catch(() => ({}));
-        alert(`Ne mogu rezervisati parfeme: ${errBody?.message ?? r1.statusText}`);
+        showMessage({ type: "error", text: `Ne mogu rezervisati parfeme: ${errBody?.message ?? r1.statusText}` });
         setProcessing(false);
         return;
       }
@@ -159,7 +220,7 @@ export const PackagingPage: React.FC = () => {
       const reserved = await r1.json();
       const reservedIds: number[] = Array.isArray(reserved) ? reserved.map((x: any) => Number(x.id)).filter(Boolean) : [];
       if (reservedIds.length === 0) {
-        alert("Rezervacija je bila prazna.");
+        showMessage({ type: "info", text: "Rezervacija je bila prazna." });
         setProcessing(false);
         return;
       }
@@ -169,7 +230,7 @@ export const PackagingPage: React.FC = () => {
           name: `Pakovanje-${perfumeName}-${rid}`,
           senderAddress: "Centar za pakovanje",
           warehouseId: String(warehouseId),
-          perfumeId: Number(rid),   
+          perfumeId: Number(rid),
           status: "PACKED",
           createdAt: new Date().toISOString(),
           volume: Number(volumePerBottle),
@@ -185,45 +246,45 @@ export const PackagingPage: React.FC = () => {
 
       createdLocal.forEach(p => log(`Local package created id=${p.id} perfumeId=${p.perfumeId} (${p.volume ?? "-"} ml)`));
 
-      try { const r = await fetch(`${GATEWAY_ROOT}/processing/perfumes`, { headers: authHeaders() }); if (r.ok) setPerfumes(await r.json()); } catch {}
+      try { const r = await fetch(`${GATEWAY_ROOT}/processing/perfumes`, { headers: authHeaders() }); if (r.ok) setPerfumes(await r.json()); } catch { }
 
       await reloadStoragePackages();
-      alert("Pakovanje kreirano lokalno. Pošalji u skladište kada budeš spremna.");
+      showMessage({ type: "success", text: "Pakovanje kreirano lokalno. Pošalji u skladište kada budeš spremna." });
     } catch (err: any) {
       console.error(err);
-      alert("Greška pri pakovanju — pogledaj konzolu.");
+      showMessage({ type: "error", text: "Greška pri pakovanju — pogledaj konzolu." });
     } finally {
       setProcessing(false);
     }
   };
 
   const sendFirstLocalToStorage = async () => {
-    if (localPackages.length === 0) { alert("Nema lokalno spakovanih ambalaža."); return; }
+    if (localPackages.length === 0) { showMessage({ type: "info", text: "Nema lokalno spakovanih ambalaža." }); return; }
     setSending(true);
     try {
       const first = localPackages[localPackages.length - 1];
-   const storeDto: any = {
-  name: String(first.name ?? "Pakovanje").trim(),
-  senderAddress: String(first.senderAddress ?? "Centar za pakovanje").trim(),
-  warehouseId: Number(first.warehouseId),
-};
-if (typeof first.perfumeId !== "undefined" && first.perfumeId !== null) {
-  const pid = Number(first.perfumeId);
-  if (Number.isFinite(pid) && pid > 0) storeDto.perfumeId = Math.trunc(pid);
-}
+      const storeDto: any = {
+        name: String(first.name ?? "Pakovanje").trim(),
+        senderAddress: String(first.senderAddress ?? "Centar za pakovanje").trim(),
+        warehouseId: Number(first.warehouseId),
+      };
+      if (typeof first.perfumeId !== "undefined" && first.perfumeId !== null) {
+        const pid = Number(first.perfumeId);
+        if (Number.isFinite(pid) && pid > 0) storeDto.perfumeId = Math.trunc(pid);
+      }
 
-const r = await fetch(`${GATEWAY_ROOT}/storage/store`, {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    "Authorization": `Bearer ${localStorage.getItem("accessToken") ?? ""}`
-  },
-  body: JSON.stringify(storeDto),
-});
+      const r = await fetch(`${GATEWAY_ROOT}/storage/store`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${localStorage.getItem("accessToken") ?? ""}`
+        },
+        body: JSON.stringify(storeDto),
+      });
 
       if (!r.ok) {
         const errBody = await r.json().catch(() => ({}));
-        alert(`Slanje nije uspelo: ${errBody?.message ?? r.statusText}`);
+        showMessage({ type: "error", text: `Slanje nije uspelo: ${errBody?.message ?? r.statusText}` });
         setSending(false);
         return;
       }
@@ -238,10 +299,10 @@ const r = await fetch(`${GATEWAY_ROOT}/storage/store`, {
       });
 
       await reloadStoragePackages();
-      alert("Ambalaža uspešno poslana u skladište.");
+      showMessage({ type: "success", text: "Ambalaža uspešno poslata u skladište." });
     } catch (err: any) {
       log(`[ERR] sendFirstLocalToStorage: ${err?.message ?? err}`);
-      alert("Greška pri slanju u skladište.");
+      showMessage({ type: "error", text: "Greška pri slanju u skladište." });
     } finally {
       setSending(false);
     }
@@ -251,6 +312,8 @@ const r = await fetch(`${GATEWAY_ROOT}/storage/store`, {
 
   return (
     <div style={{ padding: 12, height: "calc(100vh - 60px)", boxSizing: "border-box" }}>
+      {message && <MessageBanner msg={message} onClose={() => setMessage(null)} />}
+
       <div style={{ display: "grid", gridTemplateColumns: "360px 360px 1fr", gap: 12, height: "100%", minHeight: 0 }}>
         <div style={{ display: "flex", flexDirection: "column", minHeight: 0 }}>
           <div style={{ height: 48, padding: 12, borderRadius: 8, color: "#fff", fontWeight: 700, background: "linear-gradient(90deg,#fb923c,#f97316)" }}>
@@ -278,16 +341,11 @@ const r = await fetch(`${GATEWAY_ROOT}/storage/store`, {
             {storagePackages.length === 0 ? (
               <div>Nema paketa u skladištu.</div>
             ) : (
-              <div style={{ display: "grid", gap: 8 }}>
-                {storagePackages.map((p) => (
-                  <div key={p.id} style={{ padding: 10, borderRadius: 6, background: "rgba(0,0,0,0.12)" }}>
-                    <div style={{ fontWeight: 700 }}>{p.name}</div>
-                    <div style={{ fontSize: 12 }}>{p.status} — {p.warehouseId ? `Warehouse ${p.warehouseId}` : "-"}</div>
-                    {p.createdAt && <div style={{ fontSize: 11 }}>{new Date(p.createdAt).toLocaleString()}</div>}
-                    <div style={{ fontSize: 12, marginTop: 6 }}>Parfem: {perfumeNames[p.id] ?? (p.perfumeId)}</div>
-                  </div>
-                ))}
-              </div>
+              <PackagingTable
+                items={storagePackages}
+                warehouses={warehouses}
+                perfumeNames={perfumeNames}
+              />
             )}
           </div>
         </div>

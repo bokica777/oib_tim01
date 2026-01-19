@@ -23,13 +23,13 @@ const btnBase: React.CSSProperties = {
 
 const btnDanger: React.CSSProperties = {
   ...btnBase,
-  background: "#7f1d1d", // tamnija, neutralnija crvena
-  color: "#fff",           // bijeli tekst za kontrast
-  border: "none",          // uklonjen prozirni border
-  borderRadius: 6,         // blago zaobljeni uglovi
+  background: "#7f1d1d", 
+  color: "#fff",           
+  border: "none",         
+  borderRadius: 6,         
   padding: "8px 14px",
   cursor: "pointer",
-  boxShadow: "0 2px 6px rgba(0,0,0,0.2)", // suptilni shadow
+  boxShadow: "0 2px 6px rgba(0,0,0,0.2)", 
   transition: "transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease",
 };
 

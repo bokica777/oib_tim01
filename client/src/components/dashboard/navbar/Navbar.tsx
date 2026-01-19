@@ -22,7 +22,7 @@ export const DashboardNavbar: React.FC<DashboardNavbarProps> = ({ userAPI }) => 
           setUser(userData);
         } catch (error) {
           console.error("Failed to fetch user:", error);
-          setUser(null); // fallback
+          setUser(null); 
         } finally {
           setIsLoading(false);
         }

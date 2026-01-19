@@ -1,10 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn } from "typeorm";
-
-export enum ProductionLogType {
-  INFO = "INFO",
-  WARNING = "WARNING",
-  ACTION = "ACTION",
-}
+import { ProductionLogType } from "../enums/ProductionLogType";
 
 @Entity("production_logs")
 export class ProductionLog {

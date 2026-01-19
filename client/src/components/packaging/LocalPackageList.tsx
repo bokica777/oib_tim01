@@ -21,42 +21,135 @@ const LocalPackageList: React.FC<Props> = ({ items, perfumeNames, warehouses, on
   };
 
   return (
-    <div>
-      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-        <strong>Napakovano (lokalno)</strong>
-        <button className="btn" onClick={onSendFirst} disabled={items.length === 0 || sending}>
-          {sending ? "Šaljem..." : "Pošalji prvu u skladište"}
-        </button>
-      </div>
+    <div
+      style={{
+        borderRadius: 12,
+        background: "rgba(255,255,255,0.03)",
+        padding: 16
+      }}
+    >
+      {/* HEADER */}
+      <div
+  style={{
+    display: "flex",
+    justifyContent: "flex-end",
+    alignItems: "center",
+    marginBottom: 14
+  }}
+>
+  <button
+    className="btn btn-accent"
+    onClick={onSendFirst}
+    disabled={items.length === 0 || sending}
+    style={{
+      padding: "6px 12px",
+      fontSize: 13,
+      borderRadius: 8
+    }}
+  >
+    {sending ? "Šaljem..." : "Pošalji prvu"}
+  </button>
+</div>
 
-      <div style={{ border: "1px solid rgba(255,255,255,0.04)", padding: 8, borderRadius: 6 }}>
-        {items.length === 0 ? (
-          <div style={{ opacity: 0.7 }}>Nema lokalno spakovanih ambalaža</div>
-        ) : (
-          <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-            {items.map(p => {
-              const warehouseName = warehouses?.find(w => String(w.id) === String(p.warehouseId))?.name ?? p.warehouseId;
-              const perfumeLabel = perfumeNames?.[p.id] ?? (p.perfumeId ? String(p.perfumeId) : '-');
-              return (
-                <li key={p.id} style={{ padding: "10px 8px", borderBottom: "1px solid rgba(255,255,255,0.02)" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <div style={{ fontWeight: 700 }}>{p.name}</div>
-                    <div style={{ fontSize: 12, opacity: 0.8 }}>{formatDate(p.createdAt)}</div>
+
+      {/* LISTA */}
+      {items.length === 0 ? (
+        <div
+          style={{
+            opacity: 0.6,
+            fontSize: 14,
+            padding: 12,
+            textAlign: "center"
+          }}
+        >
+          Nema lokalno spakovanih ambalaža
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {items.map(p => {
+            const warehouseName =
+              warehouses?.find(w => String(w.id) === String(p.warehouseId))
+                ?.name ?? p.warehouseId;
+
+            const perfumeLabel =
+              perfumeNames?.[p.id] ??
+              (p.perfumeId ? String(p.perfumeId) : "-");
+
+            return (
+              <div
+                key={p.id}
+                style={{
+                  padding: 12,
+                  borderRadius: 10,
+                  background: "rgba(0,0,0,0.25)",
+                  border: "1px solid rgba(255,255,255,0.05)"
+                }}
+              >
+                {/* GORNJI RED */}
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: 8
+                  }}
+                >
+                  <div style={{ fontWeight: 700 }}>{p.name}</div>
+                  <div style={{ fontSize: 11, opacity: 0.7 }}>
+                    {formatDate(p.createdAt)}
+                  </div>
+                </div>
+
+                {/* INFO GRID */}
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: 6,
+                    fontSize: 13,
+                    opacity: 0.9
+                  }}
+                >
+                  <div>
+                    <strong>Parfem:</strong> {perfumeLabel}
                   </div>
 
-                  <div style={{ fontSize: 13, opacity: 0.85, marginTop: 6 }}>
-                    <div><strong>Parfem:</strong> {perfumeLabel}</div>
-                    <div><strong>Zapremina:</strong> {p.volume ? `${p.volume} ml` : "-"}</div>
-                    <div><strong>Skladište (cilj):</strong> {warehouseName}</div>
+                  <div>
+                    <strong>Zapremina:</strong>{" "}
+                    <span
+                      style={{
+                        padding: "2px 6px",
+                        borderRadius: 6,
+                        background: "rgba(255,255,255,0.08)",
+                        fontSize: 12
+                      }}
+                    >
+                      {p.volume ? `${p.volume} ml` : "-"}
+                    </span>
                   </div>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </div>
+
+                  <div style={{ gridColumn: "1 / -1" }}>
+                    <strong>Skladište (cilj):</strong>{" "}
+                    <span
+                      style={{
+                        padding: "2px 6px",
+                        borderRadius: 6,
+                        background: "rgba(255,255,255,0.08)",
+                        fontSize: 12
+                      }}
+                    >
+                      {warehouseName}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
+
 };
 
 export default LocalPackageList;

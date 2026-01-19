@@ -1,4 +1,5 @@
-import AuditClient, { AuditType } from "../clients/AuditClient";
+import AuditClient from "../clients/AuditClient";
+import { AuditType } from "../Domain/types/AuditType";
 import { ILogerService } from "../Domain/services/ILogerService";
 
 export class LogerService implements ILogerService {

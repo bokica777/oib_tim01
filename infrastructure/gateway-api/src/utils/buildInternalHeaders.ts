@@ -19,10 +19,8 @@ export function buildInternalHeaders(req: Request): Record<string, string> {
   if (role) headers["x-user-role"] = String(role);
   if (username) headers["x-user-name"] = String(username);
 
-  // ***** NOVO: prosledjujemo i originalni Authorization ako postoji *****
   if (req.headers && req.headers.authorization) {
     const auth = String(req.headers.authorization);
-    // forward raw bearer token so internal services can verify user identity if needed
     headers["authorization"] = auth;
   }
 

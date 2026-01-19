@@ -4,32 +4,18 @@ import { ProductionClient } from "../clients/ProductionClient";
 import { PerfumeType } from "../Domain/enums/PerfumeType";
 import { PerfumeStatus } from "../Domain/enums/PerfumeStatus";
 import { IProcessingService } from "../Domain/services/IProcessingService";
+import { computeExpirationDate } from "../helpers/ComuteExpirationDate";
+import { calculatePrice } from "../helpers/CalculatePrice";
+import { toDTO } from "../helpers/ToDTO";
 
 export class ProcessingService implements IProcessingService {
   private productionClient: ProductionClient;
-  private readonly PRICE_PER_ML = 50; // RSD po mililitru
+
   
   constructor(private perfumeRepo: Repository<Perfume>) {
     this.productionClient = new ProductionClient();
   }
 
-  private calculatePrice(netVolumeMl: number): number {
-    return netVolumeMl * this.PRICE_PER_ML;
-  }
-
-  private toDTO(p: Perfume) {
-    return {
-      id: p.id,
-      name: p.name,
-      type: p.type,
-      netVolumeMl: p.netVolumeMl,
-      serialNumber: p.serialNumber,
-      sourcePlantIds: p.sourcePlantIds,
-      expirationDate: p.expirationDate?.toISOString(),
-      status: p.status,
-      price: this.calculatePrice(p.netVolumeMl),
-    };
-  }
 
   async processPerfume(perfumeName: string, type: PerfumeType, bottles: number, volumePerBottle: number) {
     const totalMlNeeded = bottles * volumePerBottle;
@@ -44,7 +30,6 @@ export class ProcessingService implements IProcessingService {
     for (const pl of plants) {
       if (pl.aromaticOilStrength && pl.aromaticOilStrength > 4.0) {
         try {
-          // ask production to plant scaled offspring with factor 65%
           await this.productionClient.plantAndScale(pl.aromaticOilStrength, 65);
         } catch (err) {
           console.warn("[ProcessingService] plantAndScale failed", (err as Error).message);
@@ -59,34 +44,30 @@ export class ProcessingService implements IProcessingService {
         type,
         netVolumeMl: volumePerBottle,
         sourcePlantIds: plantIds,
-        expirationDate: this.computeExpirationDate(),
+        expirationDate: computeExpirationDate(),
         status: PerfumeStatus.AVAILABLE,
       });
       const saved = await this.perfumeRepo.save(p);
       saved.serialNumber = `PP-2025-${saved.id}`;
       await this.perfumeRepo.save(saved);
-      created.push(this.toDTO(saved)); 
+      created.push(toDTO(saved)); 
     }
     await this.productionClient.sendUsedPlants(plantIds);
 
     return created;
   }
 
-  computeExpirationDate(): Date {
-    const d = new Date();
-    d.setDate(d.getDate() + 365);
-    return d;
-  }
+
 
   async listAvailablePerfumes(): Promise<any[]> {
     const rows = await this.perfumeRepo.find({ where: { status: PerfumeStatus.AVAILABLE } });
-    return rows.map(r => this.toDTO(r));
+    return rows.map(r =>toDTO(r));
   }
 
   async getPerfumeById(id: number): Promise<any> {
     const p = await this.perfumeRepo.findOne({ where: { id } });
     if (!p) throw new Error("Perfume not found");
-    return this.toDTO(p); 
+    return toDTO(p); 
   }
 
   async reservePerfumes(name: string, count: number) {
@@ -100,6 +81,6 @@ export class ProcessingService implements IProcessingService {
       r.status = PerfumeStatus.RESERVED;
       await this.perfumeRepo.save(r);
     }
-    return rows.map(r => this.toDTO(r));
+    return rows.map(r => toDTO(r));
   }
 }

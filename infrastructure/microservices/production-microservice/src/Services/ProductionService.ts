@@ -1,19 +1,14 @@
-// src/Services/ProductionService.ts
 import { Repository, In } from "typeorm";
 import { Plant } from "../Domain/models/Plant";
 import { PlantStatus } from "../Domain/enums/PlantStatus";
 import { IProductionService } from "../Domain/services/IProductionService";
 import { PlantDTO } from "../Domain/DTOs/PlantDTO";
-
-type ProductionLogItem = {
-  time: string;
-  message: string;
-};
+import { ProductionLogItem } from "../Domain/types/ProductionLogItem";
+import { toDTO } from "../Domain/helpers/toDTO";
 
 export class ProductionService implements IProductionService {
-  constructor(private readonly plantRepo: Repository<Plant>) {}
+  constructor(private readonly plantRepo: Repository<Plant>) { }
 
-  // 🔹 IN-MEMORY DNEVNIK (NAMJERNO JEDNOSTAVNO)
   private logs: ProductionLogItem[] = [];
 
   private addLog(message: string) {
@@ -23,18 +18,6 @@ export class ProductionService implements IProductionService {
     });
   }
 
-  private toDTO(p: Plant): PlantDTO {
-    return {
-      id: p.id,
-      commonName: p.commonName,
-      latinName: p.latinName,
-      aromaticOilStrength: p.aromaticOilStrength,
-      countryOfOrigin: p.countryOfOrigin,
-      status: p.status,
-    };
-  }
-
-  // 1️⃣ Sadnja nove biljke
   async plantNew(seedData?: Partial<PlantDTO>): Promise<PlantDTO> {
     const strength =
       seedData?.aromaticOilStrength ??
@@ -49,64 +32,49 @@ export class ProductionService implements IProductionService {
     });
 
     const saved = await this.plantRepo.save(plant);
-
-    // 📝 LOG
     this.addLog(
       `Zasađena biljka "${saved.commonName}" (jačina: ${saved.aromaticOilStrength})`
     );
 
-    return this.toDTO(saved);
+    return toDTO(saved);
   }
 
-  // 2️⃣ Promjena jačine aromatičnog ulja
-async adjustAromaticStrength(
-  plantId: number,
-  value: number,
-  mode: "inc" | "scale" = "inc"
-): Promise<PlantDTO> {
-  const plant = await this.plantRepo.findOne({ where: { id: plantId } });
-  if (!plant) throw new Error("Plant not found");
+  async adjustAromaticStrength(
+    plantId: number,
+    value: number,
+    mode: "inc" | "scale" = "inc"
+  ): Promise<PlantDTO> {
+    const plant = await this.plantRepo.findOne({ where: { id: plantId } });
+    if (!plant) throw new Error("Plant not found");
 
-  const before = plant.aromaticOilStrength;
+    const before = plant.aromaticOilStrength;
 
-  if (mode === "inc") {
-    // value je PROCENAT (npr 10 ili -10)
-    const multiplier = value / 100;
-    plant.aromaticOilStrength = Number(
-      (
-        plant.aromaticOilStrength +
-        plant.aromaticOilStrength * multiplier
-      ).toFixed(2)
-    );
-  } else {
-    // scale → value je PROCENAT (npr 65)
-    const factor = value / 100;
-    plant.aromaticOilStrength = Number(
-      (plant.aromaticOilStrength * factor).toFixed(2)
-    );
-  }
-
-  // ✅ SNIMI PROMJENU U BAZU
-  const saved = await this.plantRepo.save(plant);
-
-  // 📝 LOG PROMJENE
-  this.addLog(
-    `Promijenjena jačina biljke "${saved.commonName}" (${before} → ${saved.aromaticOilStrength})`
-  );
-
-  // ⚠️ UPOZORENJE AKO PREĐE 4.00
-  if (saved.aromaticOilStrength > 4.0) {
+    if (mode === "inc") {
+      const multiplier = value / 100;
+      plant.aromaticOilStrength = Number(
+        (
+          plant.aromaticOilStrength +
+          plant.aromaticOilStrength * multiplier
+        ).toFixed(2)
+      );
+    } else {
+      const factor = value / 100;
+      plant.aromaticOilStrength = Number(
+        (plant.aromaticOilStrength * factor).toFixed(2)
+      );
+    }
+    const saved = await this.plantRepo.save(plant);
     this.addLog(
-      `⚠️ Upozorenje: jačina biljke "${saved.commonName}" prešla dozvoljenu granicu (4.00)`
+      `Promijenjena jačina biljke "${saved.commonName}" (${before} → ${saved.aromaticOilStrength})`
     );
+    if (saved.aromaticOilStrength > 4.0) {
+      this.addLog(
+        `⚠️ Upozorenje: jačina biljke "${saved.commonName}" prešla dozvoljenu granicu (4.00)`
+      );
+    }
+    return toDTO(saved);
   }
 
-  // ✅ VRATI DTO (DA SE FRONTEND AŽURIRA)
-  return this.toDTO(saved);
-}
-
-
-  // 3️⃣ Berba biljaka
   async harvestMany(
     commonName: string,
     count: number
@@ -125,15 +93,13 @@ async adjustAromaticStrength(
       await this.plantRepo.save(p);
     }
 
-    // 📝 LOG
     this.addLog(
       `Ubrano ${available.length} biljaka vrste "${commonName}"`
     );
 
-    return available.map(p => this.toDTO(p));
+    return available.map(p => toDTO(p));
   }
 
-  // 4️⃣ Označavanje biljaka kao prerađene
   async markPlantsUsed(ids: number[]): Promise<void> {
     if (!Array.isArray(ids) || ids.length === 0) return;
 
@@ -143,22 +109,18 @@ async adjustAromaticStrength(
       p.status = PlantStatus.PROCESSED;
       await this.plantRepo.save(p);
     }
-
-    // 📝 LOG
     this.addLog(`Označeno ${plants.length} biljaka kao prerađene`);
   }
 
-  // 5️⃣ Dohvatanje dostupnih biljaka
   async getAvailablePlants(count: number): Promise<PlantDTO[]> {
     const available = await this.plantRepo.find({
       where: { status: PlantStatus.PLANTED },
       take: count,
     });
 
-    return available.map(p => this.toDTO(p));
+    return available.map(p => toDTO(p));
   }
 
-  // 6️⃣ Specijalna proizvodna operacija
   async plantAndScale(sourceStrength: number): Promise<PlantDTO> {
     const deviation = Number((sourceStrength - 4.0).toFixed(2));
     const factor = deviation > 0 ? deviation : 1;
@@ -167,7 +129,6 @@ async adjustAromaticStrength(
       aromaticOilStrength: Number((sourceStrength * factor).toFixed(2)),
     });
 
-    // 📝 LOG
     this.addLog(
       `Izvršena specijalna operacija plantAndScale (source: ${sourceStrength})`
     );
@@ -175,7 +136,6 @@ async adjustAromaticStrength(
     return result;
   }
 
-  // 7️⃣ Dnevnik proizvodnje
   async getProductionLogs(): Promise<{ time: string; message: string }[]> {
     return this.logs;
   }

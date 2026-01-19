@@ -1,4 +1,3 @@
-// src/server.ts
 console.clear();
 import app from "./app";
 const port = Number(process.env.PORT ?? 9896);

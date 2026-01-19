@@ -59,7 +59,6 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ authAPI }) => {
       if (response.success) {
         setSuccess(response.message || "Registration successful!");
         
-        // Auto-login if token is provided
         if (response.token) {
           login(response.token);
           setTimeout(() => {

@@ -1,4 +1,4 @@
-import { AuditType } from "../../clients/AuditClient";
+import { AuditType } from "../types/AuditType";
 
 export interface ILogerService {
   log(message: string, type?: AuditType, meta?: any, source?: string): Promise<boolean>;

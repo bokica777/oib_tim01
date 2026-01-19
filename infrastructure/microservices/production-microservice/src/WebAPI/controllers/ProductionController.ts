@@ -1,4 +1,3 @@
-// src/WebAPI/controllers/ProductionController.ts
 import { Router, Request, Response } from "express";
 import { ProductionService } from "../../Services/ProductionService";
 import { ILogerService } from "../../Domain/services/ILogerService";
@@ -21,8 +20,6 @@ export class ProductionController {
     this.router.get("/plants", this.getPlants.bind(this));
     this.router.post("/plants/used", this.markPlantsUsed.bind(this));
     this.router.post("/balance", this.plantAndScale.bind(this));
-    // NOTE: this is optional - frontend should use gateway/audit endpoints directly,
-    // but we keep it to allow production service to return its own logs via gateway-call.
     this.router.get("/logs", this.getLogs.bind(this));
   }
 
@@ -128,7 +125,6 @@ export class ProductionController {
 
   async getLogs(req: Request, res: Response) {
     try {
-      // opcioni token koji gateway može proslediti audit servisu
       const forwardedToken = req.headers.authorization as string | undefined;
       const logs = await this.logger.getLogs("production", forwardedToken);
       res.json(logs);

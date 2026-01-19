@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { storageAPI } from "../api/storage/StorageAPIClient";
 import WarehouseCard from "../components/storage/WarehouseCard";
 import PackagingTable from "../components/storage/PackagingTable";
@@ -21,6 +21,41 @@ function getUserRoleFromToken(): string | null {
 const DISTRIBUTION = { max: 3, msPerItem: 500, label: "Centralno skladište (Distribucioni centar)" };
 const WAREHOUSE = { max: 1, msPerItem: 2500, label: "Južno skladište (Magacinski centar)" };
 
+type Message = {
+  type: "success" | "error" | "info";
+  text: string;
+};
+
+const MessageBanner: React.FC<{ msg: Message; onClose: () => void }> = ({ msg, onClose }) => {
+  const bg = msg.type === "success" ? "#ecfccb" : msg.type === "error" ? "#fee2e2" : "#eff6ff";
+  const color = msg.type === "success" ? "#365314" : msg.type === "error" ? "#991b1b" : "#1e3a8a";
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        padding: 12,
+        borderRadius: 8,
+        background: bg,
+        color,
+        marginBottom: 12,
+        border: "1px solid rgba(0,0,0,0.04)",
+      }}
+    >
+      <div style={{ fontSize: 14 }}>{msg.text}</div>
+      <button
+        onClick={onClose}
+        style={{ marginLeft: 12, background: "transparent", border: "none", cursor: "pointer", color }}
+        aria-label="Zatvori obaveštenje"
+      >
+        ✕
+      </button>
+    </div>
+  );
+};
+
 export const StoragePage: React.FC = () => {
   const [warehouses, setWarehouses] = useState<WarehouseDTO[]>([]);
   const [packaging, setPackaging] = useState<PackagingDTO[]>([]);
@@ -30,16 +65,37 @@ export const StoragePage: React.FC = () => {
   const [selectedWarehouse, setSelectedWarehouse] = useState<string | null>(null);
   const [sendCount, setSendCount] = useState<number>(1);
   const [sending, setSending] = useState(false);
-
-  const token = localStorage.getItem("accessToken") ?? "";
   const roleRaw = getUserRoleFromToken();
   const role = roleRaw ? roleRaw.replace("ROLE_", "").toLowerCase() : null;
 
   const center = role === "sales_manager" ? DISTRIBUTION : role === "seller" ? WAREHOUSE : null;
 
+  const [message, setMessage] = useState<Message | null>(null);
+  const messageTimerRef = useRef<number | null>(null);
+
   useEffect(() => {
     loadAll();
   }, []);
+
+  useEffect(() => {
+    if (!message) return;
+    if (messageTimerRef.current) {
+      window.clearTimeout(messageTimerRef.current);
+    }
+    messageTimerRef.current = window.setTimeout(() => {
+      setMessage(null);
+      messageTimerRef.current = null;
+    }, 3000);
+
+    return () => {
+      if (messageTimerRef.current) {
+        window.clearTimeout(messageTimerRef.current);
+        messageTimerRef.current = null;
+      }
+    };
+  }, [message]);
+
+  const showMessage = (m: Message) => setMessage(m);
 
   const loadAll = async () => {
     try {
@@ -110,15 +166,15 @@ export const StoragePage: React.FC = () => {
 
   const handleSend = async () => {
     if (!center) {
-      alert("Nemate pristup: prijavite se kao Menadžer prodaje ili Prodavac");
+      showMessage({ type: "error", text: "Nemate pristup: prijavite se kao Menadžer prodaje ili Prodavac" });
       return;
     }
     if (!Number.isInteger(sendCount) || sendCount <= 0) {
-      alert("Neispravan broj");
+      showMessage({ type: "error", text: "Neispravan broj" });
       return;
     }
     if (sendCount > center.max) {
-      alert(`Za vašu ulogu maksimum je ${center.max}`);
+      showMessage({ type: "error", text: `Za vašu ulogu maksimum je ${center.max}` });
       return;
     }
 
@@ -133,10 +189,13 @@ export const StoragePage: React.FC = () => {
 
       const res = await storageAPI.requestSend({ count: sendCount });
       console.log(`Uspešno poslato ${sendCount} ambalaža`, res);
+      showMessage({ type: "success", text: `Uspešno poslato ${sendCount} ambalaža.` });
       await loadAll();
     } catch (e: any) {
       console.error(e);
-      setError(e?.message || "Slanje nije uspelo");
+      const msg = e?.message || "Slanje nije uspelo";
+      setError(msg);
+      showMessage({ type: "error", text: msg });
     } finally {
       setSending(false);
     }
@@ -170,6 +229,22 @@ export const StoragePage: React.FC = () => {
       className="overlay-blur-none"
       style={{ padding: 12, height: "calc(100vh - 60px)", boxSizing: "border-box" }}
     >
+      {message && (
+  <div
+    style={{
+      position: "fixed",
+      top: 16,
+      left: "50%",
+      transform: "translateX(-50%)",
+      zIndex: 1000,
+      width: "min(520px, calc(100% - 32px))",
+    }}
+  >
+    <MessageBanner msg={message} onClose={() => setMessage(null)} />
+  </div>
+)}
+
+
       <style>{`
         /* Layout */
         .stk-window { height: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; min-height: 0; }

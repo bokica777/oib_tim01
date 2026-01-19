@@ -1,4 +1,3 @@
-// src/app.ts
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
@@ -28,10 +27,8 @@ const logger = new LogerService();
 const productionService = new ProductionService(plantRepo);
 const productionController = new ProductionController(productionService, logger);
 
-// Attach middleware: all /api/v1 routes must come from gateway
 app.use("/api/v1", gatewayAuth, productionController.getRouter());
 
-// Example: protect client facing health
 app.get("/health", (req, res) => res.json({ ok: true }));
 
 export default app;

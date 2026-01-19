@@ -1,5 +1,4 @@
-// src/components/production/ProductionLog.tsx
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import productionAPI from "../../api/production/ProductionAPI";
 import { processingAPI } from "../../api/processing/ProcessingAPI";
 
@@ -26,7 +25,7 @@ type LogItem = {
   action?: string;
 };
 
-const POLL_MS = 2000;
+const POLL_MS = 10000;
 
 const iconForSource = (s: string) => {
   const src = (s ?? "").toLowerCase();
@@ -46,7 +45,13 @@ const severityFrom = (t?: string) => {
 };
 
 const colorForSeverity = (sev: LogItem["severity"]) =>
-  sev === "error" ? "#ef4444" : sev === "warn" ? "#f59e0b" : sev === "action" ? "#60a5fa" : "#10b981";
+  sev === "error"
+    ? "#ef4444"
+    : sev === "warn"
+    ? "#f59e0b"
+    : sev === "action"
+    ? "#60a5fa"
+    : "#10b981";
 
 const niceTime = (ts: number) => new Date(ts).toLocaleString();
 
@@ -57,38 +62,38 @@ export const ProductionLog: React.FC = () => {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"all" | "production" | "processing">("all");
 
+  const lastTsRef = useRef<number | null>(null);
+  const mountedRef = useRef(true);
+
   useEffect(() => {
-    let mounted = true;
+    mountedRef.current = true;
     let interval: number | undefined;
 
-    const fetchAll = async () => {
+    const isTabVisible = () => typeof document !== "undefined" ? document.visibilityState === "visible" : true;
+
+    const fetchDeltas = async () => {
+      if (!isTabVisible()) return;
+
       try {
         setError(null);
         setLoading(true);
 
         const [prodRaw, procRaw] = await Promise.all([
-          productionAPI.getLogs().catch((e) => {
-            console.warn("productionAPI.getLogs failed", e);
-            return [];
-          }),
-          processingAPI.getLogs().catch((e) => {
-            console.warn("processingAPI.getLogs failed", e);
-            return [];
-          }),
+          productionAPI.getLogs().catch(() => []),
+          processingAPI.getLogs().catch(() => []),
         ]);
 
         const combined = ([...(prodRaw ?? []), ...(procRaw ?? [])] as RawLog[]).filter(Boolean);
+        if (combined.length === 0) return;
 
         const mapped: LogItem[] = combined.map((r) => {
           const tsRaw = (r.createdAt ?? r.timestamp) as string | undefined;
           const ts = Date.parse(tsRaw ?? "") || Date.now();
           const severity = severityFrom(r.type);
-
           const action = r.action ?? r.meta?.action ?? r.meta?.event;
           const title = action
-            ? `${String(action).replace(/_/g, " ")}`
+            ? String(action).replace(/_/g, " ")
             : (r.message ?? "").split("\n")[0] ?? r.source ?? "Event";
-
           const message = (r.message ?? JSON.stringify(r.meta ?? r, null, 2)) as string;
           const id = String(r.id ?? `${ts}-${Math.random().toString(36).slice(2, 8)}`);
 
@@ -102,27 +107,46 @@ export const ProductionLog: React.FC = () => {
             message,
             meta: r.meta,
             action: action ? String(action) : undefined,
-          } as LogItem;
+          };
         });
 
         mapped.sort((a, b) => b.ts - a.ts);
-        if (!mounted) return;
-        setLogs(mapped);
+
+        const newestTs = mapped[0]?.ts;
+        if (newestTs && (!lastTsRef.current || newestTs > lastTsRef.current)) {
+          lastTsRef.current = newestTs;
+        }
+
+        if (!mountedRef.current) return;
+        setLogs((prev) => {
+          const existingIds = new Set(prev.map((p) => p.id));
+          const newOnes = mapped.filter((m) => !existingIds.has(m.id));
+          if (newOnes.length === 0) return prev;
+          return [...newOnes, ...prev].slice(0, 500);
+        });
       } catch (err: any) {
-        if (!mounted) return;
+        if (!mountedRef.current) return;
         setError("Dnevnik proizvodnje trenutno nije dostupan.");
         console.error("ProductionLog load error:", err);
       } finally {
-        if (mounted) setLoading(false);
+        if (mountedRef.current) setLoading(false);
       }
     };
 
-    fetchAll();
-    interval = window.setInterval(fetchAll, POLL_MS);
+    fetchDeltas();
+    interval = window.setInterval(fetchDeltas, POLL_MS);
+
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") {
+        fetchDeltas();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibility);
 
     return () => {
-      mounted = false;
+      mountedRef.current = false;
       if (interval) window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisibility);
     };
   }, []);
 
@@ -180,7 +204,9 @@ export const ProductionLog: React.FC = () => {
       <div style={{ padding: 10, display: "flex", flexDirection: "column", gap: 8, flex: 1, overflow: "auto" }}>
         {loading && <div style={{ opacity: 0.8, fontSize: 13 }}>Učitavanje zapisa...</div>}
         {error && <div style={{ color: "#ef4444", fontSize: 13 }}>{error}</div>}
-        {!loading && filtered.length === 0 && <div style={{ opacity: 0.6, fontSize: 13 }}>Nema zapisa koji odgovaraju filteru.</div>}
+        {!loading && filtered.length === 0 && (
+          <div style={{ opacity: 0.6, fontSize: 13 }}>Nema zapisa koji odgovaraju filteru.</div>
+        )}
 
         {filtered.map((it) => (
           <div
@@ -194,9 +220,8 @@ export const ProductionLog: React.FC = () => {
               background: "rgba(255,255,255,0.01)",
               alignItems: "flex-start",
             }}
-            title={it.message} // hover shows full text
+            title={it.message}
           >
-            {/* left color bar + icon */}
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: 44 }}>
               <div
                 style={{
@@ -212,7 +237,15 @@ export const ProductionLog: React.FC = () => {
 
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <div style={{ fontWeight: 700, fontSize: 14, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                <div
+                  style={{
+                    fontWeight: 700,
+                    fontSize: 14,
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
+                >
                   {it.title}
                 </div>
 
@@ -221,9 +254,16 @@ export const ProductionLog: React.FC = () => {
                 </div>
               </div>
 
-              {/* source badge + truncated message (3 lines) */}
               <div style={{ marginTop: 8, display: "flex", gap: 10, alignItems: "flex-start" }}>
-                <div style={{ fontSize: 12, padding: "2px 8px", borderRadius: 999, background: "rgba(255,255,255,0.03)", color: "#cbd5e1" }}>
+                <div
+                  style={{
+                    fontSize: 12,
+                    padding: "2px 8px",
+                    borderRadius: 999,
+                    background: "rgba(255,255,255,0.03)",
+                    color: "#cbd5e1",
+                  }}
+                >
                   {it.source}
                 </div>
                 <div
@@ -247,7 +287,14 @@ export const ProductionLog: React.FC = () => {
         ))}
       </div>
 
-      <div style={{ padding: "8px 12px", borderTop: "1px solid rgba(255,255,255,0.03)", fontSize: 12, color: "var(--win11-text-tertiary)" }}>
+      <div
+        style={{
+          padding: "8px 12px",
+          borderTop: "1px solid rgba(255,255,255,0.03)",
+          fontSize: 12,
+          color: "var(--win11-text-tertiary)",
+        }}
+      >
         Ukupno zapisa: {logs.length} • Prikazano: {filtered.length}
       </div>
     </div>

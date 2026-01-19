@@ -1,12 +1,7 @@
 import { Repository } from "typeorm";
 import { SaleOrder } from "../Domain/models/SaleOrder";
+import { OrderItem } from "../Domain/types/OrderItem";
 
-type OrderItem = { 
-  perfumeId: number; 
-  quantity: number; 
-  name?: string; 
-  price?: number;  // Cena po komadu iz backend-a
-};
 
 export class SalesService {
   constructor(private readonly orderRepo: Repository<SaleOrder>) {}
@@ -15,7 +10,7 @@ export class SalesService {
     customer: string,
     address: string,
     items: OrderItem[],
-    totalPrice: number,  // Dodato: ukupna cena
+    totalPrice: number, 
     role?: string,
     paymentType: "GOTOVINA" | "RACUN" | "KARTICA" = "GOTOVINA"
   ) {
@@ -27,7 +22,7 @@ export class SalesService {
       perfumeId: Number(it.perfumeId),
       quantity: Math.max(1, Number(it.quantity) || 1),
       name: it.name,
-      price: it.price  // Cena iz backend-a
+      price: it.price  
     }));
 
     if (normalized.some(i => !Number.isFinite(i.perfumeId) || i.perfumeId <= 0)) {

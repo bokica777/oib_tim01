@@ -76,7 +76,6 @@ export class StorageController {
     }
   }
 
-  // lista skladišta
   private async listWarehouses(req: Request, res: Response) {
     try {
       const warehouses = await this.service.listWarehouses();

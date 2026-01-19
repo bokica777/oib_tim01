@@ -44,8 +44,6 @@ export class ProcessingController {
         { perfumeName: dto.perfumeName, producedCount: produced.length },
         "processing"
       );
-
-      // produced već sadrži price za svaki parfem
       res.status(201).json(produced);
     } catch (err) {
       const errMsg = (err as Error).message ?? String(err);
@@ -57,7 +55,6 @@ export class ProcessingController {
   private async getPerfumes(req: Request, res: Response) {
     try {
       const list = await this.service.listAvailablePerfumes();
-      // list već sadrži price za svaki parfem
       res.status(200).json(list);
     } catch (err) {
       const errMsg = (err as Error).message ?? String(err);
@@ -70,7 +67,6 @@ export class ProcessingController {
     try {
       const id = Number(req.params.id);
       const p = await this.service.getPerfumeById(id);
-      // p već sadrži price
       res.status(200).json(p);
     } catch (err) {
       const errMsg = (err as Error).message ?? String(err);
@@ -88,7 +84,6 @@ export class ProcessingController {
       }
       await this.logger.log(`Packaging request for ${count} of ${name}`, "INFO", { name, count }, "processing");
       const reserved = await this.service.reservePerfumes(name, count);
-      // reserved već sadrži price za svaki parfem
       res.status(200).json(reserved);
     } catch (err) {
       const errMsg = (err as Error).message ?? String(err);

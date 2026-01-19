@@ -4,7 +4,7 @@ export class PerfumeDTO {
   type!: string;
   netVolumeMl!: number;
   serialNumber?: string;
-  price!: number;   // cijena po komadu
-  stock!: number;   // trenutno dostupno
+  price!: number;   
+  stock!: number; 
   expirationDate?: string;
 }

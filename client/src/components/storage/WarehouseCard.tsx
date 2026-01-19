@@ -14,7 +14,6 @@ const WarehouseCard: React.FC<Props> = ({ warehouse, selected, onShow, onShowAll
       ? Math.min(100, Math.round((warehouse.capacityUsed / warehouse.capacity) * 100))
       : 0;
 
-  // Robust fallback for location/address naming differences
   const loc =
     (warehouse as any).location ??
     (warehouse as any).address ??

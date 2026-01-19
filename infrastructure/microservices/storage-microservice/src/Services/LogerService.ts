@@ -1,6 +1,6 @@
-// src/Services/LogerService.ts
-import AuditClient, { AuditType } from "../clients/AuditClient";
+import AuditClient from "../clients/AuditClient";
 import { ILogerService } from "../Domain/services/ILogerService";
+import { AuditType } from "../Domain/types/AuditType";
 
 export class LogerService implements ILogerService {
   private audit = new AuditClient();
