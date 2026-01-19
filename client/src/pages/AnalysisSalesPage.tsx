@@ -63,6 +63,8 @@ export default function AnalysisSalesPage() {
   const [top10RevenueReport, setTop10RevenueReport] = useState<any>(null);
   const [reportsList, setReportsList] = useState<any[]>([]);
 
+  
+
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -101,14 +103,12 @@ export default function AnalysisSalesPage() {
   // KPI: sales-summary
   const summaryRow = summaryReport?.rezultat?.[0];
   const totalRevenue = summaryRow ? toNumber(summaryRow.prihod) : 0;
-  const totalReceipts = summaryRow ? toNumber(summaryRow.brojRacuna) : 0;
 
   // TOP10
   const top10Obj = top10RevenueReport?.rezultat;
   const top10List = Array.isArray(top10Obj?.top10) ? top10Obj.top10 : [];
   const totalRevenueTop10 = toNumber(top10Obj?.totalRevenueTop10);
 
-  const totalParfumsSold = top10List.reduce((acc: number, x: any) => acc + toNumber(x.kolicina), 0);
 
   type TrendPoint = {
   ts: number;
@@ -129,6 +129,12 @@ export default function AnalysisSalesPage() {
     };
   })
   .sort((a: any, b: any) => a.ts - b.ts);
+  const totalSoldAll = trendChart.reduce((acc, x) => acc + x.qty, 0);
+  const avgDailySold = trendChart.length > 0 ? totalSoldAll / trendChart.length : 0;
+  const bestDay = trendChart.reduce(
+  (best, x) => (x.qty > best.qty ? x : best),
+  trendChart[0]
+);
 
   async function onDownloadPdf(id: number) {
     try {
@@ -173,9 +179,9 @@ export default function AnalysisSalesPage() {
       {/* KPI */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 10, marginBottom: 12 }}>
         <KpiCard title="Ukupan prihod" value={money.format(totalRevenue)} suffix="RSD" hint="Ukupno u periodu" />
-        <KpiCard title="Prodatih parfema (Top10 suma)" value={intFmt.format(totalParfumsSold)} hint="Suma količina" />
-        <KpiCard title="Broj računa" value={intFmt.format(totalReceipts)} hint="Ukupno fiskalnih računa" />
-        <KpiCard title="Prihod top 10" value={money.format(totalRevenueTop10)} suffix="RSD" hint="Top 10 parfema" />
+        <KpiCard title="Prodatih parfema" value={intFmt.format(totalSoldAll)} hint="Svi parfemi (ukupno)" />
+        <KpiCard title="Prosečno dnevno" value={avgDailySold.toFixed(1)} hint="Prosek po danu" />
+        <KpiCard title="Najbolji dan" value={bestDay ? bestDay.label : "-"} hint={bestDay ? `${intFmt.format(bestDay.qty)} parfema` : ""} />
       </div>
 
       {/* Charts */}

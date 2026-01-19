@@ -59,7 +59,7 @@ export class GatewayService implements IGatewayService {
     const SALES_URL = normalizeUrl(process.env.SALES_URL);
     const AUDIT_SERVICE_API = normalizeUrl(process.env.AUDIT_URL);
     const PERFORMANCE_URL = normalizeUrl(process.env.PERFORMANCE_URL);
-    const ANALYTICS_URL = normalizeUrl(process.env.ANALYTICS_URL);
+    const ANALYSIS_URL = normalizeUrl(process.env.ANALYSIS_URL);
 
     this.authClient = axios.create({
       baseURL: AUTH_SERVICE_API,
@@ -130,9 +130,9 @@ export class GatewayService implements IGatewayService {
     }
 
 
-    if (ANALYTICS_URL) {
+    if (ANALYSIS_URL) {
       this.analyticsClient = axios.create({
-        baseURL: ANALYTICS_URL,
+        baseURL: ANALYSIS_URL,
         headers: { "Content-Type": "application/json" },
         timeout: 10000,
       });
