@@ -4,7 +4,27 @@ import { PerfumeDTO } from "../models/sales/PerfumeDTO";
 import { OrderItemDTO } from "../models/sales/OrderItemDTO";
 import ProductCard from "../components/sales/ProductCard";
 import CartSidebar from "../components/sales/CartView";
+import CheckoutModal from "./CheckoutModal";
 import { PaymentType } from "../types/PaymentType";
+
+type Message = {
+  type: "success" | "error" | "info";
+  text: string;
+};
+
+const MessageBanner: React.FC<{ msg: Message; onClose: () => void }> = ({ msg, onClose }) => {
+  const bg = msg.type === "success" ? "#ecfccb" : msg.type === "error" ? "#fee2e2" : "#eff6ff";
+  const color = msg.type === "success" ? "#365314" : msg.type === "error" ? "#991b1b" : "#1e3a8a";
+
+  return (
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: 12, borderRadius: 8, background: bg, color, marginBottom: 12, border: "1px solid rgba(0,0,0,0.04)" }}>
+      <div style={{ fontSize: 14 }}>{msg.text}</div>
+      <button onClick={onClose} style={{ marginLeft: 12, background: "transparent", border: "none", cursor: "pointer", color }}>
+        ✕
+      </button>
+    </div>
+  );
+};
 
 const SalesPage: React.FC = () => {
   const [products, setProducts] = useState<PerfumeDTO[]>([]);
@@ -15,6 +35,10 @@ const SalesPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [paymentType, setPaymentType] = useState<PaymentType>("GOTOVINA");
 
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [message, setMessage] = useState<Message | null>(null);
+  const messageTimerRef = useRef<number | null>(null);
+
   const nameRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -22,7 +46,6 @@ const SalesPage: React.FC = () => {
       try {
         setLoading(true);
         const list = await salesAPI.listProducts();
-        // Backend već šalje proizvode sa cenom
         setProducts(list || []);
       } catch (e: any) {
         setError(e?.message ?? "Greška pri učitavanju proizvoda");
@@ -33,6 +56,28 @@ const SalesPage: React.FC = () => {
 
     loadProducts();
   }, []);
+
+  useEffect(() => {
+    if (!message) return;
+    if (messageTimerRef.current) {
+      window.clearTimeout(messageTimerRef.current);
+    }
+    messageTimerRef.current = window.setTimeout(() => {
+      setMessage(null);
+      messageTimerRef.current = null;
+    }, 3000);
+
+    return () => {
+      if (messageTimerRef.current) {
+        window.clearTimeout(messageTimerRef.current);
+        messageTimerRef.current = null;
+      }
+    };
+  }, [message]);
+
+  const showMessage = (m: Message) => {
+    setMessage(m);
+  };
 
   const addToCart = (p: PerfumeDTO, qty: number) => {
     setCart((prev) => {
@@ -55,6 +100,7 @@ const SalesPage: React.FC = () => {
         },
       ];
     });
+    showMessage({ type: "info", text: `Dodato ${qty} x ${p.name} u korpu.` });
   };
 
   const updateQty = (productId: number, qty: number) => {
@@ -66,10 +112,11 @@ const SalesPage: React.FC = () => {
   };
 
   const removeFromCart = (productId: number) => {
+    const removed = cart.find((c) => c.productId === productId);
     setCart((prev) => prev.filter((i) => i.productId !== productId));
+    if (removed) showMessage({ type: "info", text: `Uklonjeno ${removed.name} iz korpe.` });
   };
 
-  // Izračunaj ukupnu cenu koristeći cene iz backend-a
   const totalPrice = useMemo(
     () => cart.reduce((sum, i) => sum + (i.price || 0) * i.quantity, 0),
     [cart]
@@ -87,13 +134,14 @@ const SalesPage: React.FC = () => {
     if (!deliveryAddress.trim()) {
       alert("Unesite adresu isporuke");
       return;
+
     }
 
     const items = cart.map((i) => ({
       perfumeId: i.productId,
       quantity: i.quantity,
       price: i.price,
-      name: i.name
+      name: i.name,
     }));
 
     const dto = {
@@ -108,7 +156,7 @@ const SalesPage: React.FC = () => {
       setLoading(true);
       const response: any = await salesAPI.createOrder(dto);
       const serial = response?.serial ?? response?.id ?? null;
-      alert(`Porudžbina uspješno kreirana! Broj porudžbine: ${serial ?? "n/a"}`);
+      showMessage({ type: "success", text: `Porudžbina uspješno kreirana! Broj porudžbine: ${serial ?? "n/a"}` });
 
       setProducts((prev) =>
         prev.map((p) => {
@@ -126,8 +174,9 @@ const SalesPage: React.FC = () => {
       setDeliveryAddress("");
       setPaymentType("GOTOVINA");
       nameRef.current?.focus();
+      setCheckoutOpen(false); 
     } catch (e: any) {
-      alert(e?.message ?? "Greška pri kreiranju porudžbine");
+      showMessage({ type: "error", text: e?.message ?? "Greška pri kreiranju porudžbine" });
     } finally {
       setLoading(false);
     }
@@ -143,6 +192,8 @@ const SalesPage: React.FC = () => {
           </div>
 
           <div style={{ padding: 18, overflow: "auto", flex: 1, minHeight: 0 }}>
+            {message && <MessageBanner msg={message} onClose={() => setMessage(null)} />}
+
             {error && <div style={{ background: "#fee2e2", color: "#991b1b", padding: 10, borderRadius: 6 }}>{error}</div>}
             {loading && <div>Učitavanje...</div>}
             {!loading && products.length === 0 && !error && <div>Nema proizvoda</div>}
@@ -163,40 +214,8 @@ const SalesPage: React.FC = () => {
 
           <div style={{ overflowY: "auto", flex: 1, minHeight: 0 }}>
             <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: 16 }}>
-              <div>
-                <label style={{ display: "block", marginBottom: 8 }}>Ime kupca</label>
-                <input
-                  ref={nameRef}
-                  value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
-                  type="text"
-                  style={{ width: "100%", padding: 12, borderRadius: 8, border: "1px solid rgba(0,0,0,0.12)", fontSize: 14 }}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: "block", marginBottom: 8 }}>Adresa isporuke</label>
-                <input
-                  value={deliveryAddress}
-                  onChange={(e) => setDeliveryAddress(e.target.value)}
-                  type="text"
-                  style={{ width: "100%", padding: 12, borderRadius: 8, border: "1px solid rgba(0,0,0,0.12)", fontSize: 14 }}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: "block", marginBottom: 8 }}>Način plaćanja</label>
-                <select
-                  value={paymentType}
-                  onChange={(e) => setPaymentType(e.target.value as PaymentType)}
-                  style={{ width: "100%", padding: 12, borderRadius: 8, border: "1px solid rgba(0,0,0,0.12)", fontSize: 14 }}
-                >
-                  <option value="GOTOVINA">Gotovina</option>
-                  <option value="RACUN">Uplata na račun</option>
-                  <option value="KARTICA">Kartično plaćanje</option>
-                </select>
-              </div>
-
+              {/* U glavnom prikazu korpe više ne prikazujemo polja za ime/adresu/plaćanje -
+                  to je sada u checkout modal-u. Ovdje je samo lista stavki. */}
               <div>
                 <label style={{ display: "block", marginBottom: 8 }}>Stavke u korpi</label>
                 <CartSidebar
@@ -233,7 +252,10 @@ const SalesPage: React.FC = () => {
             }}
           >
             <button
-              onClick={() => setCart([])}
+              onClick={() => {
+                setCart([]);
+                showMessage({ type: "info", text: "Korpa je ispražnjena." });
+              }}
               disabled={cart.length === 0 || loading}
               style={{
                 padding: "12px 16px",
@@ -249,58 +271,67 @@ const SalesPage: React.FC = () => {
               }}
               aria-label="Isprazni korpu"
               title="Isprazni"
-              onMouseEnter={(e) => {
-                if (!(cart.length === 0 || loading)) {
-                  (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-2px)";
-                  (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 8px 16px rgba(0,0,0,0.1)";
-                  (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.1)";
-                }
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.transform = "translateY(0)";
-                (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 4px 12px rgba(0,0,0,0.06)";
-                (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.05)";
-              }}
             >
               Isprazni
             </button>
 
-            <button
-              style={{
-                flex: 1,
-                borderRadius: 6,
-                border: "1px solid rgba(59,130,246,0.3)",
-                background: "rgba(59,130,246,0.1)",
-                color: "#fff",
-                padding: "14px 16px",
-                fontSize: 15,
-                cursor: cart.length === 0 || loading ? "not-allowed" : "pointer",
-                backdropFilter: "blur(6px)",
-                boxShadow: "0 4px 12px rgba(0,0,0,0.06)",
-                transition: "transform 0.2s, box-shadow 0.2s, background 0.2s",
-              }}
-              onClick={handleCheckout}
-              disabled={cart.length === 0 || loading}
-              aria-label="Zavrsi kupovinu"
-              title="Završi kupovinu"
-              onMouseEnter={(e) => {
-                if (!(cart.length === 0 || loading)) {
-                  (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-2px)";
-                  (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 8px 16px rgba(0,0,0,0.1)";
-                  (e.currentTarget as HTMLButtonElement).style.background = "rgba(59,130,246,0.15)";
-                }
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.transform = "translateY(0)";
-                (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 4px 12px rgba(0,0,0,0.06)";
-                (e.currentTarget as HTMLButtonElement).style.background = "rgba(59,130,246,0.1)";
-              }}
-            >
-              {loading ? "Slanje..." : "Završi kupovinu"}
-            </button>
+ <button
+  onClick={() => setCheckoutOpen(true)}
+  disabled={cart.length === 0 || loading}
+  aria-label="Naruči"
+  title="Naruči"
+  style={{
+    flex: 1,
+    padding: "10px 14px",
+    borderRadius: 10,
+    border: "none",
+    background: cart.length === 0
+      ? "linear-gradient(135deg, rgba(52,211,153,0.22), rgba(16,185,129,0.18))"
+      : "linear-gradient(135deg, #34d399, #10b981)",
+    color: "#fff",
+    cursor: cart.length === 0 || loading ? "not-allowed" : "pointer",
+    backdropFilter: "blur(6px)",
+    boxShadow: cart.length === 0 ? "none" : "0 8px 20px rgba(16,185,129,0.12)",
+    transition: "transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease",
+    opacity: cart.length === 0 ? 0.6 : 1,
+  }}
+  onMouseEnter={(e) => {
+    if (!(cart.length === 0 || loading)) {
+      (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-2px)";
+      (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 12px 30px rgba(16,185,129,0.16)";
+    }
+  }}
+  onMouseLeave={(e) => {
+    (e.currentTarget as HTMLButtonElement).style.transform = "translateY(0)";
+    (e.currentTarget as HTMLButtonElement).style.boxShadow = cart.length === 0 ? "none" : "0 8px 20px rgba(16,185,129,0.12)";
+  }}
+>
+  Naruči
+</button>
+
+
           </div>
         </div>
       </div>
+
+      <CheckoutModal
+        open={checkoutOpen}
+        onClose={() => setCheckoutOpen(false)}
+        cart={cart}
+        totalPrice={totalPrice}
+        customerName={customerName}
+        setCustomerName={setCustomerName}
+        deliveryAddress={deliveryAddress}
+        setDeliveryAddress={setDeliveryAddress}
+        paymentType={paymentType}
+        setPaymentType={setPaymentType}
+        onInc={updateQty}
+        onDec={updateQty}
+        onRemove={removeFromCart}
+        onConfirm={handleCheckout}
+        loading={loading}
+        nameRef={nameRef}
+      />
     </div>
   );
 };
