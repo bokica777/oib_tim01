@@ -1,7 +1,12 @@
 import { Repository } from "typeorm";
 import { SaleOrder } from "../Domain/models/SaleOrder";
 
-type OrderItem = { perfumeId: number; quantity: number; name?: string; price?: number };
+type OrderItem = { 
+  perfumeId: number; 
+  quantity: number; 
+  name?: string; 
+  price?: number;  // Cena po komadu iz backend-a
+};
 
 export class SalesService {
   constructor(private readonly orderRepo: Repository<SaleOrder>) {}
@@ -10,8 +15,9 @@ export class SalesService {
     customer: string,
     address: string,
     items: OrderItem[],
+    totalPrice: number,  // Dodato: ukupna cena
     role?: string,
-     paymentType: "GOTOVINA"|"RACUN"|"KARTICA" = "GOTOVINA"
+    paymentType: "GOTOVINA" | "RACUN" | "KARTICA" = "GOTOVINA"
   ) {
     if (!Array.isArray(items) || items.length === 0) {
       throw new Error("Order must contain at least one item");
@@ -21,11 +27,19 @@ export class SalesService {
       perfumeId: Number(it.perfumeId),
       quantity: Math.max(1, Number(it.quantity) || 1),
       name: it.name,
-      price: it.price
+      price: it.price  // Cena iz backend-a
     }));
 
     if (normalized.some(i => !Number.isFinite(i.perfumeId) || i.perfumeId <= 0)) {
       throw new Error("Invalid perfumeId in items");
+    }
+    const calculatedTotal = normalized.reduce((sum, it) => {
+      const itemPrice = it.price ?? 0;
+      return sum + (itemPrice * it.quantity);
+    }, 0);
+
+    if (Math.abs(calculatedTotal - totalPrice) > 1) {
+      console.warn(`Total price mismatch: expected ${calculatedTotal}, got ${totalPrice}`);
     }
 
     const totalItems = normalized.reduce((s, it) => s + it.quantity, 0);
@@ -35,7 +49,8 @@ export class SalesService {
       deliveryAddress: address,
       items: normalized,
       totalItems,
-       paymentType,
+      paymentType,
+      totalPrice: Math.round(totalPrice)  
     });
 
     const saved = await this.orderRepo.save(order);

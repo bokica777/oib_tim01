@@ -7,8 +7,14 @@ import { IProcessingService } from "../Domain/services/IProcessingService";
 
 export class ProcessingService implements IProcessingService {
   private productionClient: ProductionClient;
+  private readonly PRICE_PER_ML = 50; // RSD po mililitru
+  
   constructor(private perfumeRepo: Repository<Perfume>) {
     this.productionClient = new ProductionClient();
+  }
+
+  private calculatePrice(netVolumeMl: number): number {
+    return netVolumeMl * this.PRICE_PER_ML;
   }
 
   private toDTO(p: Perfume) {
@@ -21,6 +27,7 @@ export class ProcessingService implements IProcessingService {
       sourcePlantIds: p.sourcePlantIds,
       expirationDate: p.expirationDate?.toISOString(),
       status: p.status,
+      price: this.calculatePrice(p.netVolumeMl),
     };
   }
 
@@ -34,7 +41,6 @@ export class ProcessingService implements IProcessingService {
     }
     const plantIds = plants.map(p => p.id!).filter(Boolean) as number[];
 
-    // If any plant has aromaticOilStrength > 4.00 -> request production to plant scaled one
     for (const pl of plants) {
       if (pl.aromaticOilStrength && pl.aromaticOilStrength > 4.0) {
         try {
@@ -59,7 +65,7 @@ export class ProcessingService implements IProcessingService {
       const saved = await this.perfumeRepo.save(p);
       saved.serialNumber = `PP-2025-${saved.id}`;
       await this.perfumeRepo.save(saved);
-      created.push(this.toDTO(saved));
+      created.push(this.toDTO(saved)); 
     }
     await this.productionClient.sendUsedPlants(plantIds);
 
@@ -67,7 +73,6 @@ export class ProcessingService implements IProcessingService {
   }
 
   computeExpirationDate(): Date {
-    // for demo: expiration 365 days from now; could be configurable
     const d = new Date();
     d.setDate(d.getDate() + 365);
     return d;
@@ -81,7 +86,7 @@ export class ProcessingService implements IProcessingService {
   async getPerfumeById(id: number): Promise<any> {
     const p = await this.perfumeRepo.findOne({ where: { id } });
     if (!p) throw new Error("Perfume not found");
-    return this.toDTO(p);
+    return this.toDTO(p); 
   }
 
   async reservePerfumes(name: string, count: number) {

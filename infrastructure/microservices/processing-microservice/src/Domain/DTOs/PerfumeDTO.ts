@@ -1,4 +1,4 @@
-import { IsOptional, IsString, IsNumber, Min, Max, IsEnum, IsArray, IsDateString,} from "class-validator";
+import { IsOptional, IsString, IsNumber, Min, Max, IsEnum, IsArray, IsDateString } from "class-validator";
 import { PerfumeType } from "../enums/PerfumeType"; 
 import { PerfumeStatus } from "../enums/PerfumeStatus";
 
@@ -33,4 +33,9 @@ export class PerfumeDTO {
   @IsOptional()
   @IsEnum(PerfumeStatus)
   status?: PerfumeStatus;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  price?: number;
 }

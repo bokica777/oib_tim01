@@ -4,7 +4,7 @@ import { PerfumeDTO } from "../models/sales/PerfumeDTO";
 import { OrderItemDTO } from "../models/sales/OrderItemDTO";
 import ProductCard from "../components/sales/ProductCard";
 import CartSidebar from "../components/sales/CartView";
-import { PaymentType } from "../types/PaymentType"; 
+import { PaymentType } from "../types/PaymentType";
 
 const SalesPage: React.FC = () => {
   const [products, setProducts] = useState<PerfumeDTO[]>([]);
@@ -22,6 +22,7 @@ const SalesPage: React.FC = () => {
       try {
         setLoading(true);
         const list = await salesAPI.listProducts();
+        // Backend već šalje proizvode sa cenom
         setProducts(list || []);
       } catch (e: any) {
         setError(e?.message ?? "Greška pri učitavanju proizvoda");
@@ -50,7 +51,7 @@ const SalesPage: React.FC = () => {
           name: p.name,
           price: p.price,
           quantity: qty,
-          stock: (p as any).stock,
+          stock: p.stock,
         },
       ];
     });
@@ -68,7 +69,8 @@ const SalesPage: React.FC = () => {
     setCart((prev) => prev.filter((i) => i.productId !== productId));
   };
 
-  const totalPrice = useMemo( 
+  // Izračunaj ukupnu cenu koristeći cene iz backend-a
+  const totalPrice = useMemo(
     () => cart.reduce((sum, i) => sum + (i.price || 0) * i.quantity, 0),
     [cart]
   );
@@ -91,6 +93,7 @@ const SalesPage: React.FC = () => {
       perfumeId: i.productId,
       quantity: i.quantity,
       price: i.price,
+      name: i.name
     }));
 
     const dto = {
@@ -155,7 +158,7 @@ const SalesPage: React.FC = () => {
         <div style={{ display: "flex", flexDirection: "column", border: "1px solid rgba(0,0,0,0.06)", borderRadius: 8, minHeight: 0 }}>
           <div style={{ padding: 12, fontWeight: 700, display: "flex", justifyContent: "space-between", background: "linear-gradient(135deg, #93c5fd, #60a5fa)", color: "white", borderRadius: "8px 8px 0 0", alignItems: "center" }}>
             <div style={{ fontSize: 16 }}>Korpa ({cart.reduce((s, c) => s + c.quantity, 0)})</div>
-            <div style={{ fontSize: 15 }}>Total: {totalPrice.toLocaleString()} РСД</div>
+            <div style={{ fontSize: 15 }}>Total: {totalPrice.toLocaleString()} RSD</div>
           </div>
 
           <div style={{ overflowY: "auto", flex: 1, minHeight: 0 }}>
@@ -182,15 +185,15 @@ const SalesPage: React.FC = () => {
               </div>
 
               <div>
-                <label style={{ display: "block", marginBottom: 8 }}>Начин плаћања</label>
+                <label style={{ display: "block", marginBottom: 8 }}>Način plaćanja</label>
                 <select
                   value={paymentType}
                   onChange={(e) => setPaymentType(e.target.value as PaymentType)}
                   style={{ width: "100%", padding: 12, borderRadius: 8, border: "1px solid rgba(0,0,0,0.12)", fontSize: 14 }}
                 >
-                  <option value="GOTOVINA">Готовина</option>
-                  <option value="RACUN">Уплата на рачун</option>
-                  <option value="KARTICA">Картично плаћање</option>
+                  <option value="GOTOVINA">Gotovina</option>
+                  <option value="RACUN">Uplata na račun</option>
+                  <option value="KARTICA">Kartično plaćanje</option>
                 </select>
               </div>
 

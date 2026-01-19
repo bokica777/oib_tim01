@@ -1,5 +1,5 @@
 import { Type } from "class-transformer";
-import { IsString, IsInt, Min, ValidateNested, IsArray, isIn,isNumber, IsIn, IsNumber } from "class-validator";
+import { IsString, IsInt, Min, ValidateNested, IsArray, IsIn, IsNumber } from "class-validator";
 import { OrderItemDTO } from "./OrderItemDTO";
 
 export class CreateOrderDTO {
@@ -16,8 +16,9 @@ export class CreateOrderDTO {
 
   @IsString()
   @IsIn(["GOTOVINA", "RACUN", "KARTICA"])
-  paymentType!: "GOTOVINA" | "RACUN" | "KARTICA"; // <= DODATO (obavezno polje)
+  paymentType!: "GOTOVINA" | "RACUN" | "KARTICA";
 
   @IsNumber()
-  totalPrice!: number;
+  @Min(0)
+  totalPrice!: number;  
 }
