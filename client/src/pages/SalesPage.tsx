@@ -1,34 +1,21 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { salesAPI } from "../api/sales/SalesAPI";
-import { PerfumeDTO } from "../models/sales/PerfumeDTO";
-import { OrderItemDTO } from "../models/sales/OrderItemDTO";
+import processingAPI from "../api/processing/ProcessingAPI";
+import { CreateOrderDTO } from "../models/sales/CreateOrderDTO";
+import { PerfumeType } from "../enums/processing/PerfumeType";
 import ProductCard from "../components/sales/ProductCard";
 import CartSidebar from "../components/sales/CartView";
 import CheckoutModal from "./CheckoutModal";
 import { PaymentType } from "../types/PaymentType";
-
-type Message = {
-  type: "success" | "error" | "info";
-  text: string;
-};
-
-const MessageBanner: React.FC<{ msg: Message; onClose: () => void }> = ({ msg, onClose }) => {
-  const bg = msg.type === "success" ? "#ecfccb" : msg.type === "error" ? "#fee2e2" : "#eff6ff";
-  const color = msg.type === "success" ? "#365314" : msg.type === "error" ? "#991b1b" : "#1e3a8a";
-
-  return (
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: 12, borderRadius: 8, background: bg, color, marginBottom: 12, border: "1px solid rgba(0,0,0,0.04)" }}>
-      <div style={{ fontSize: 14 }}>{msg.text}</div>
-      <button onClick={onClose} style={{ marginLeft: 12, background: "transparent", border: "none", cursor: "pointer", color }}>
-        ✕
-      </button>
-    </div>
-  );
-};
+import { OrderItemDTO } from "../models/sales/OrderItemDTO";
+import { Variant } from "../models/sales/Variant";
+import { CartItem } from "../models/sales/CartItem";
+import { Message } from "../types/Message";
+import { LocalPerfume } from "../models/sales/LocalPerfume";
 
 const SalesPage: React.FC = () => {
-  const [products, setProducts] = useState<PerfumeDTO[]>([]);
-  const [cart, setCart] = useState<OrderItemDTO[]>([]);
+  const [products, setProducts] = useState<LocalPerfume[]>([]);
+  const [cart, setCart] = useState<CartItem[]>([]);
   const [customerName, setCustomerName] = useState("");
   const [deliveryAddress, setDeliveryAddress] = useState("");
   const [loading, setLoading] = useState(false);
@@ -38,16 +25,83 @@ const SalesPage: React.FC = () => {
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [message, setMessage] = useState<Message | null>(null);
   const messageTimerRef = useRef<number | null>(null);
-
   const nameRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     const loadProducts = async () => {
       try {
         setLoading(true);
-        const list = await salesAPI.listProducts();
-        setProducts(list || []);
+        const list: any[] = await processingAPI.listPerfumes();
+
+        const map = new Map<string, LocalPerfume>();
+        for (const p of list || []) {
+          const name = p?.name ?? `Perfume ${p?.id ?? ""}`;
+          const volume = Number(p?.netVolumeMl ?? p?.volume ?? 150);
+          const key = name;
+
+          const variant: Variant = {
+            volume,
+            id: p?.id,
+            price: typeof p?.price === "number" ? p.price : undefined,
+            stock: typeof p?.stock === "number" ? p.stock : undefined,
+          };
+
+          if (!map.has(key)) {
+            const repPrice = typeof p?.price === "number" ? p.price : (volume * 50);
+            const repVolume = volume;
+            map.set(key, {
+              id: p?.id ?? `${name}-${repVolume}`,
+              name,
+              netVolumeMl: repVolume,
+              price: repPrice,
+              stock: typeof p?.stock === "number" ? p.stock : 0,
+              variants: [variant],
+            });
+          } else {
+            const ex = map.get(key)!;
+            if (!ex.variants.some(v => Number(v.volume) === Number(volume))) {
+              ex.variants.push(variant);
+              ex.stock = (typeof ex.stock === "number" ? ex.stock : 0) + (variant.stock ?? 0);
+            } else {
+              ex.variants = ex.variants.map(v => v.volume === variant.volume ? { ...v, stock: Math.max(v.stock ?? 0, variant.stock ?? 0), id: v.id ?? variant.id, price: v.price ?? variant.price } : v);
+            }
+          }
+        }
+
+        const ensureVariants = Array.from(map.entries()).map(([k, prod]) => {
+          const unitPricePerMl = (() => {
+            const vWithPrice = prod.variants.find(v => typeof v.price === "number" && typeof v.volume === "number" && v.volume > 0);
+            if (vWithPrice) return vWithPrice.price! / vWithPrice.volume;
+            if (typeof prod.price === "number" && typeof prod.netVolumeMl === "number" && prod.netVolumeMl > 0) return prod.price / prod.netVolumeMl;
+            return 50;
+          })();
+
+          const vols = [150, 250];
+          for (const vol of vols) {
+            if (!prod.variants.some(v => Number(v.volume) === vol)) {
+              prod.variants.push({
+                volume: vol,
+                id: undefined,
+                price: Math.round(unitPricePerMl * vol),
+                stock: undefined,
+              });
+            } else {
+              prod.variants = prod.variants.map(v => {
+                if (Number(v.volume) === vol && typeof v.price !== "number") {
+                  return { ...v, price: Math.round(unitPricePerMl * v.volume) };
+                }
+                return v;
+              });
+            }
+          }
+
+          prod.variants = prod.variants.slice().sort((a, b) => a.volume - b.volume);
+          return [k, prod] as [string, LocalPerfume];
+        });
+
+        setProducts(ensureVariants.map(([_, v]) => v));
       } catch (e: any) {
+        console.error("loadProducts error", e);
         setError(e?.message ?? "Greška pri učitavanju proizvoda");
       } finally {
         setLoading(false);
@@ -59,14 +113,11 @@ const SalesPage: React.FC = () => {
 
   useEffect(() => {
     if (!message) return;
-    if (messageTimerRef.current) {
-      window.clearTimeout(messageTimerRef.current);
-    }
+    if (messageTimerRef.current) window.clearTimeout(messageTimerRef.current);
     messageTimerRef.current = window.setTimeout(() => {
       setMessage(null);
       messageTimerRef.current = null;
     }, 3000);
-
     return () => {
       if (messageTimerRef.current) {
         window.clearTimeout(messageTimerRef.current);
@@ -75,107 +126,136 @@ const SalesPage: React.FC = () => {
     };
   }, [message]);
 
-  const showMessage = (m: Message) => {
-    setMessage(m);
-  };
+  const showMessage = (m: Message) => setMessage(m);
+  const addToCart = async (p: LocalPerfume, qty: number, volume?: number) => {
+    try {
+      setLoading(true);
+      const chosenVolume = Number(volume ?? p.netVolumeMl ?? 150);
 
-  const addToCart = (p: PerfumeDTO, qty: number) => {
-    setCart((prev) => {
-      const found = prev.find((i) => i.productId === p.id);
-      if (found) {
-        return prev.map((i) =>
-          i.productId === p.id
-            ? { ...i, quantity: Math.min((p.stock ?? 9999), i.quantity + qty) }
-            : i
-        );
+      const variant = p.variants.find(v => Number(v.volume) === Number(chosenVolume));
+
+      let usedPerfumeId: number;
+      let usedPrice: number;
+      let resultingStock: number | undefined = undefined;
+
+      if (variant && typeof variant.id !== "undefined" && !isNaN(Number(variant.id)) && (variant.stock ?? 0) >= qty) {
+        usedPerfumeId = Number(variant.id);
+        usedPrice = Math.round(typeof variant.price === "number" ? variant.price : ((variant.price ?? (chosenVolume * 50))));
+        resultingStock = (variant.stock ?? 0) - qty;
+      } else {
+        const processReq = {
+          perfumeName: p.name,
+          type: PerfumeType.PERFUME,
+          bottles: qty,
+          volumePerBottle: chosenVolume,
+        } as any;
+
+        const produced: any[] = await processingAPI.processPerfume(processReq);
+        if (!Array.isArray(produced) || produced.length === 0) {
+          throw new Error("Prerada nije uspela");
+        }
+
+        usedPerfumeId = Number(produced[0].id) || Date.now();
+        usedPrice = Math.round(typeof produced[0].price === "number" ? produced[0].price : (chosenVolume * 50));
+        resultingStock = (produced.length ? produced.length - qty : 0);
+
+        setProducts(prev => {
+          const idx = prev.findIndex(x => x.name === p.name);
+          if (idx >= 0) {
+            const copy = [...prev];
+            const ex = copy[idx];
+            const vIdx = ex.variants.findIndex(v => Number(v.volume) === Number(chosenVolume));
+            if (vIdx >= 0) {
+              const v = { ...ex.variants[vIdx] };
+              v.id = v.id ?? produced[0].id;
+              v.price = v.price ?? produced[0].price ?? Math.round((produced[0].price ?? (chosenVolume * 50)));
+              v.stock = (v.stock ?? 0) + produced.length;
+              ex.variants[vIdx] = v;
+            } else {
+              ex.variants.unshift({ volume: chosenVolume, id: produced[0].id ?? `${p.name}-${chosenVolume}`, price: produced[0].price ?? usedPrice, stock: produced.length });
+            }
+            ex.stock = (ex.stock ?? 0) + produced.length;
+            copy[idx] = { ...ex };
+            return copy;
+          }
+          return [{ id: produced[0].id ?? `${p.name}-${chosenVolume}`, name: produced[0].name ?? p.name, netVolumeMl: chosenVolume, price: produced[0].price ?? usedPrice, stock: produced.length, variants: [{ volume: chosenVolume, id: produced[0].id, price: produced[0].price ?? usedPrice, stock: produced.length }] }, ...prev];
+        });
       }
-      return [
-        ...prev,
-        {
-          productId: p.id!,
-          name: p.name,
-          price: p.price,
-          quantity: qty,
-          stock: p.stock,
-        },
-      ];
-    });
-    showMessage({ type: "info", text: `Dodato ${qty} x ${p.name} u korpu.` });
+      setCart(prev => {
+        const idx = prev.findIndex(i => i.productId === Number(usedPerfumeId) && Number(i.volume) === Number(chosenVolume));
+        if (idx >= 0) {
+          const copy = [...prev];
+          copy[idx] = { ...copy[idx], quantity: copy[idx].quantity + qty, stock: resultingStock ?? copy[idx].stock };
+          return copy;
+        }
+        return [...prev, { productId: Number(usedPerfumeId), name: p.name, price: usedPrice, quantity: qty, stock: resultingStock, volume: chosenVolume }];
+      });
+
+      showMessage({ type: "info", text: `Dodato ${qty} x ${p.name} (${chosenVolume} ml) u korpu.` });
+    } catch (err: any) {
+      console.error("addToCart failed", err);
+      showMessage({ type: "error", text: err?.message ?? "Greška pri dodavanju u korpu" });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const updateQty = (productId: number, qty: number) => {
-    setCart((prev) =>
-      prev
-        .map((i) => (i.productId === productId ? { ...i, quantity: qty } : i))
-        .filter((i) => i.quantity > 0)
-    );
+    setCart(prev => prev.map(i => i.productId === productId ? { ...i, quantity: qty } : i).filter(i => i.quantity > 0));
   };
 
   const removeFromCart = (productId: number) => {
-    const removed = cart.find((c) => c.productId === productId);
-    setCart((prev) => prev.filter((i) => i.productId !== productId));
-    if (removed) showMessage({ type: "info", text: `Uklonjeno ${removed.name} iz korpe.` });
+    const removed = cart.find(c => c.productId === productId);
+    setCart(prev => prev.filter(i => i.productId !== productId));
+    if (removed) showMessage({ type: "info", text: `Uklonjeno ${removed.name} (${removed.volume ?? ""} ml) iz korpe.` });
   };
 
-  const totalPrice = useMemo(
-    () => cart.reduce((sum, i) => sum + (i.price || 0) * i.quantity, 0),
-    [cart]
-  );
+  const totalPrice = useMemo(() => cart.reduce((s, i) => s + (i.price || 0) * i.quantity, 0), [cart]);
 
   const handleCheckout = async () => {
-    if (cart.length === 0) {
-      alert("Korpa je prazna");
-      return;
-    }
-    if (!customerName.trim()) {
-      alert("Unesite ime kupca");
-      return;
-    }
-    if (!deliveryAddress.trim()) {
-      alert("Unesite adresu isporuke");
-      return;
+    if (cart.length === 0) { alert("Korpa je prazna"); return; }
+    if (!customerName.trim()) { alert("Unesite ime kupca"); return; }
+    if (!deliveryAddress.trim()) { alert("Unesite adresu isporuke"); return; }
 
-    }
-
-    const items = cart.map((i) => ({
-      perfumeId: i.productId,
+    const items: OrderItemDTO[] = cart.map(i => ({
+      perfumeId: Number(i.productId),
+      price: Math.round(i.price),
       quantity: i.quantity,
-      price: i.price,
-      name: i.name,
-    }));
+    }) as any);
 
-    const dto = {
+    const dto: any = {
       customerName: customerName.trim(),
       deliveryAddress: deliveryAddress.trim(),
       items,
       paymentType,
       totalPrice,
-    };
+    } as any as CreateOrderDTO;
 
     try {
       setLoading(true);
-      const response: any = await salesAPI.createOrder(dto);
-      const serial = response?.serial ?? response?.id ?? null;
-      showMessage({ type: "success", text: `Porudžbina uspješno kreirana! Broj porudžbine: ${serial ?? "n/a"}` });
+      const res: any = await salesAPI.createOrder(dto);
+      showMessage({ type: "success", text: `Porudžbina kreirana (id=${res?.id ?? "?"}).` });
 
-      setProducts((prev) =>
-        prev.map((p) => {
-          const cartItem = cart.find((c) => c.productId === p.id);
-          if (!cartItem) return p;
-          return {
-            ...p,
-            stock: Math.max(0, (p.stock ?? 0) - cartItem.quantity),
-          };
-        })
-      );
+      setProducts(prev => prev.map(p => {
+        const ci = cart.find(c => Number(c.productId) === Number(p.id) || p.variants.some(v => Number(v.id) === Number(c.productId)));
+        if (!ci) return p;
+        const variants = p.variants.map(v => {
+          if (Number(v.id) === Number(ci.productId) || (Number(v.volume) === Number(ci.volume) && Number(v.id) === Number(ci.productId))) {
+            return { ...v, stock: Math.max(0, (v.stock ?? 0) - ci.quantity) };
+          }
+          return v;
+        });
+        return { ...p, variants, stock: Math.max(0, (p.stock ?? 0) - ci.quantity) };
+      }));
 
       setCart([]);
       setCustomerName("");
       setDeliveryAddress("");
       setPaymentType("GOTOVINA");
       nameRef.current?.focus();
-      setCheckoutOpen(false); 
+      setCheckoutOpen(false);
     } catch (e: any) {
+      console.error("checkout failed", e);
       showMessage({ type: "error", text: e?.message ?? "Greška pri kreiranju porudžbine" });
     } finally {
       setLoading(false);
@@ -192,15 +272,25 @@ const SalesPage: React.FC = () => {
           </div>
 
           <div style={{ padding: 18, overflow: "auto", flex: 1, minHeight: 0 }}>
-            {message && <MessageBanner msg={message} onClose={() => setMessage(null)} />}
+            {message && <div style={{ marginBottom: 12 }}><div style={{ padding: 12, borderRadius: 8, background: message.type === "success" ? "#ecfccb" : message.type === "error" ? "#fee2e2" : "#eff6ff", color: message.type === "success" ? "#365314" : message.type === "error" ? "#991b1b" : "#1e3a8a" }}>{message.text}</div></div>}
 
             {error && <div style={{ background: "#fee2e2", color: "#991b1b", padding: 10, borderRadius: 6 }}>{error}</div>}
             {loading && <div>Učitavanje...</div>}
             {!loading && products.length === 0 && !error && <div>Nema proizvoda</div>}
 
             {products.map((p) => (
-              <div key={p.id} style={{ marginBottom: 16, minWidth: 280 }}>
-                <ProductCard product={p} onAdd={(qty) => addToCart(p, qty)} />
+              <div key={String(p.id)} style={{ marginBottom: 16, minWidth: 280 }}>
+                <ProductCard
+                  product={{
+                    id: Number(p.id) || p.id,
+                    name: p.name,
+                    netVolumeMl: p.netVolumeMl,
+                    price: p.price,
+                    stock: p.stock,
+                    variants: p.variants,
+                  } as any}
+                  onAdd={(qty: number, volume?: number) => addToCart(p, qty, volume)}
+                />
               </div>
             ))}
           </div>
@@ -214,12 +304,10 @@ const SalesPage: React.FC = () => {
 
           <div style={{ overflowY: "auto", flex: 1, minHeight: 0 }}>
             <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: 16 }}>
-              {/* U glavnom prikazu korpe više ne prikazujemo polja za ime/adresu/plaćanje -
-                  to je sada u checkout modal-u. Ovdje je samo lista stavki. */}
               <div>
                 <label style={{ display: "block", marginBottom: 8 }}>Stavke u korpi</label>
                 <CartSidebar
-                  items={cart}
+                  items={cart.map(c => ({ productId: c.productId, name: c.name, price: c.price, quantity: c.quantity, stock: c.stock, volume: c.volume })) as any}
                   onInc={(id) => {
                     const it = cart.find((c) => c.productId === id);
                     if (!it) return;
@@ -236,80 +324,12 @@ const SalesPage: React.FC = () => {
             </div>
           </div>
 
-          <div
-            style={{
-              position: "sticky",
-              bottom: 0,
-              left: 0,
-              right: 0,
-              display: "flex",
-              gap: 12,
-              padding: 16,
-              borderTop: "1px solid rgba(0,0,0,0.06)",
-              zIndex: 20,
-              alignItems: "center",
-              borderRadius: "0 0 8px 8px",
-            }}
-          >
-            <button
-              onClick={() => {
-                setCart([]);
-                showMessage({ type: "info", text: "Korpa je ispražnjena." });
-              }}
-              disabled={cart.length === 0 || loading}
-              style={{
-                padding: "12px 16px",
-                borderRadius: 8,
-                border: "1px solid rgba(255,255,255,0.3)",
-                background: "rgba(255,255,255,0.05)",
-                color: "#fff",
-                cursor: cart.length === 0 ? "not-allowed" : "pointer",
-                fontSize: 14,
-                backdropFilter: "blur(8px)",
-                boxShadow: "0 4px 12px rgba(0,0,0,0.06)",
-                transition: "transform 0.2s, box-shadow 0.2s, background 0.2s",
-              }}
-              aria-label="Isprazni korpu"
-              title="Isprazni"
-            >
-              Isprazni
+          <div style={{ position: "sticky", bottom: 0, left: 0, right: 0, display: "flex", gap: 12, padding: 16, borderTop: "1px solid rgba(0,0,0,0.06)", zIndex: 20, alignItems: "center", borderRadius: "0 0 8px 8px" }}>
+            <button onClick={() => { setCart([]); showMessage({ type: "info", text: "Korpa je ispražnjena." }); }} disabled={cart.length === 0 || loading} style={{ padding: "12px 16px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.3)", background: "rgba(255,255,255,0.05)", color: "#fff", cursor: cart.length === 0 ? "not-allowed" : "pointer", fontSize: 14, backdropFilter: "blur(8px)", boxShadow: "0 4px 12px rgba(0,0,0,0.06)", transition: "transform 0.2s, box-shadow 0.2s, background 0.2s" }} aria-label="Isprazni korpu" title="Isprazni">Isprazni</button>
+
+            <button onClick={() => setCheckoutOpen(true)} disabled={cart.length === 0 || loading} aria-label="Naruči" title="Naruči" style={{ flex: 1, padding: "10px 14px", borderRadius: 10, border: "none", background: cart.length === 0 ? "linear-gradient(135deg, rgba(52,211,153,0.22), rgba(16,185,129,0.18))" : "linear-gradient(135deg, #34d399, #10b981)", color: "#fff", cursor: cart.length === 0 || loading ? "not-allowed" : "pointer", backdropFilter: "blur(6px)", boxShadow: cart.length === 0 ? "none" : "0 8px 20px rgba(16,185,129,0.12)", transition: "transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease", opacity: cart.length === 0 ? 0.6 : 1 }}>
+              Naruči
             </button>
-
- <button
-  onClick={() => setCheckoutOpen(true)}
-  disabled={cart.length === 0 || loading}
-  aria-label="Naruči"
-  title="Naruči"
-  style={{
-    flex: 1,
-    padding: "10px 14px",
-    borderRadius: 10,
-    border: "none",
-    background: cart.length === 0
-      ? "linear-gradient(135deg, rgba(52,211,153,0.22), rgba(16,185,129,0.18))"
-      : "linear-gradient(135deg, #34d399, #10b981)",
-    color: "#fff",
-    cursor: cart.length === 0 || loading ? "not-allowed" : "pointer",
-    backdropFilter: "blur(6px)",
-    boxShadow: cart.length === 0 ? "none" : "0 8px 20px rgba(16,185,129,0.12)",
-    transition: "transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease",
-    opacity: cart.length === 0 ? 0.6 : 1,
-  }}
-  onMouseEnter={(e) => {
-    if (!(cart.length === 0 || loading)) {
-      (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-2px)";
-      (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 12px 30px rgba(16,185,129,0.16)";
-    }
-  }}
-  onMouseLeave={(e) => {
-    (e.currentTarget as HTMLButtonElement).style.transform = "translateY(0)";
-    (e.currentTarget as HTMLButtonElement).style.boxShadow = cart.length === 0 ? "none" : "0 8px 20px rgba(16,185,129,0.12)";
-  }}
->
-  Naruči
-</button>
-
-
           </div>
         </div>
       </div>
@@ -317,7 +337,7 @@ const SalesPage: React.FC = () => {
       <CheckoutModal
         open={checkoutOpen}
         onClose={() => setCheckoutOpen(false)}
-        cart={cart}
+        cart={cart.map(c => ({ productId: c.productId, name: c.name, price: c.price, quantity: c.quantity, stock: c.stock, volume: c.volume })) as any}
         totalPrice={totalPrice}
         customerName={customerName}
         setCustomerName={setCustomerName}
@@ -325,8 +345,8 @@ const SalesPage: React.FC = () => {
         setDeliveryAddress={setDeliveryAddress}
         paymentType={paymentType}
         setPaymentType={setPaymentType}
-        onInc={updateQty}
-        onDec={updateQty}
+        onInc={(id, qty) => updateQty(id, qty)}
+        onDec={(id, qty) => updateQty(id, qty)}
         onRemove={removeFromCart}
         onConfirm={handleCheckout}
         loading={loading}

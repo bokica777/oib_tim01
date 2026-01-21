@@ -5,11 +5,7 @@ import ProcessForm from "../components/processing/ProcessForm";
 import PerfumeTable from "../components/processing/PerfumeTable";
 import { ProcessRequestDTO } from "../models/processing/ProcessRequestDTO";
 import { PerfumeStatus } from "../enums/processing/PerfumeStatus";
-
-type Message = {
-  type: "success" | "error" | "info";
-  text: string;
-};
+import { Message } from "../types/Message";
 
 const MessageBanner: React.FC<{ msg: Message; onClose: () => void }> = ({ msg, onClose }) => {
   const bg = msg.type === "success" ? "#ecfccb" : msg.type === "error" ? "#fee2e2" : "#eff6ff";

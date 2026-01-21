@@ -6,4 +6,5 @@ export type PerfumeDTO = {
   count: number;
   status?: PerfumeStatus;
   createdAt?: string;
+  price?: number; 
 };

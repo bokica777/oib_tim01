@@ -30,26 +30,26 @@ const LocalPackageList: React.FC<Props> = ({ items, perfumeNames, warehouses, on
     >
       {/* HEADER */}
       <div
-  style={{
-    display: "flex",
-    justifyContent: "flex-end",
-    alignItems: "center",
-    marginBottom: 14
-  }}
->
-  <button
-    className="btn btn-accent"
-    onClick={onSendFirst}
-    disabled={items.length === 0 || sending}
-    style={{
-      padding: "6px 12px",
-      fontSize: 13,
-      borderRadius: 8
-    }}
-  >
-    {sending ? "Šaljem..." : "Pošalji prvu"}
-  </button>
-</div>
+        style={{
+          display: "flex",
+          justifyContent: "flex-end",
+          alignItems: "center",
+          marginBottom: 14
+        }}
+      >
+        <button
+          className="btn btn-accent"
+          onClick={onSendFirst}
+          disabled={items.length === 0 || sending}
+          style={{
+            padding: "6px 12px",
+            fontSize: 13,
+            borderRadius: 8
+          }}
+        >
+          {sending ? "Šaljem..." : "Pošalji prvu"}
+        </button>
+      </div>
 
 
       {/* LISTA */}

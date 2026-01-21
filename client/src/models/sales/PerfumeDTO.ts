@@ -1,3 +1,5 @@
+import { PerfumeType } from "../../enums/processing/PerfumeType";
+
 export interface PerfumeDTO {
   id: number;
   name: string;
@@ -7,4 +9,5 @@ export interface PerfumeDTO {
   description?: string;
   sku?: string;
   imageUrl?: string;
+  type: PerfumeType;
 }
