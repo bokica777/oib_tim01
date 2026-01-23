@@ -4,27 +4,13 @@ import WarehouseCard from "../components/storage/WarehouseCard";
 import PackagingTable from "../components/storage/PackagingTable";
 import { WarehouseDTO } from "../models/storage/WarehouseDTO";
 import { PackagingDTO } from "../models/storage/PackagingDTO";
+import { Message } from "../types/Message";
+import { getUserRoleFromToken } from "../helpers/GetUserRoleFromToken";
 
 const sleep = (ms: number) => new Promise((res) => setTimeout(res, ms));
-
-function getUserRoleFromToken(): string | null {
-  const token = localStorage.getItem("accessToken");
-  if (!token) return null;
-  try {
-    const payload = JSON.parse(atob(token.split(".")[1]));
-    return payload.role || payload.userRole || payload.authorities?.[0] || null;
-  } catch {
-    return null;
-  }
-}
-
 const DISTRIBUTION = { max: 3, msPerItem: 500, label: "Centralno skladište (Distribucioni centar)" };
 const WAREHOUSE = { max: 1, msPerItem: 2500, label: "Južno skladište (Magacinski centar)" };
 
-type Message = {
-  type: "success" | "error" | "info";
-  text: string;
-};
 
 const MessageBanner: React.FC<{ msg: Message; onClose: () => void }> = ({ msg, onClose }) => {
   const bg = msg.type === "success" ? "#ecfccb" : msg.type === "error" ? "#fee2e2" : "#eff6ff";

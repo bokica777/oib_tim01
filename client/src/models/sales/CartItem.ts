@@ -5,6 +5,7 @@ export interface CartItem {
   name: string;
   price: number;
   quantity: number;
-  stock: number;
+  stock?: number;
+  volume? : number;
   product?: PerfumeDTO;
 }

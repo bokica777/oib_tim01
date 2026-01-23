@@ -5,9 +5,11 @@ import { PerfumeDTO } from "../models/processing/PerfumeDTO";
 import { WarehouseDTO } from "../models/storage/WarehouseDTO";
 import { StoragePackageDTO } from "../models/storage/StoragePackageDTO";
 import PackagingTable from "../components/packaging/PackageTable";
+import { saveLocalPackagesToStorage } from "../helpers/SaveLocalPackagesToStorage";
+import { loadLocalPackagesFromStorage } from "../helpers/LoadLocalPackagesFromStorage";
+import { Message } from "../types/Message";
 
 const GATEWAY_ROOT = (import.meta.env.VITE_GATEWAY_URL ?? "http://localhost:4000");
-const LOCAL_KEY = "localPackages_v1";
 
 const authHeaders = (): HeadersInit => {
   const token = localStorage.getItem("accessToken");
@@ -16,31 +18,6 @@ const authHeaders = (): HeadersInit => {
   return headers;
 };
 
-function loadLocalPackagesFromStorage(): StoragePackageDTO[] {
-  try {
-    const raw = localStorage.getItem(LOCAL_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed;
-  } catch (e) {
-    console.warn("Failed to parse localPackages from localStorage", e);
-    return [];
-  }
-}
-
-function saveLocalPackagesToStorage(pkgs: StoragePackageDTO[]) {
-  try {
-    localStorage.setItem(LOCAL_KEY, JSON.stringify(pkgs));
-  } catch (e) {
-    console.warn("Failed to save localPackages to localStorage", e);
-  }
-}
-
-type Message = {
-  type: "success" | "error" | "info";
-  text: string;
-};
 
 const MessageBanner: React.FC<{ msg: Message; onClose: () => void }> = ({ msg, onClose }) => {
   const bg = msg.type === "success" ? "#ecfccb" : msg.type === "error" ? "#fee2e2" : "#eff6ff";

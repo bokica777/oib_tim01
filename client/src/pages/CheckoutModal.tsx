@@ -1,12 +1,12 @@
 import React from "react";
-import CartSidebar from "../components/sales/CartView"; 
-import { OrderItemDTO } from "../models/sales/OrderItemDTO";
+import CartSidebar from "../components/sales/CartView";
 import { PaymentType } from "../types/PaymentType";
+import { CartItem } from "../models/sales/CartItem";
 
 type Props = {
   open: boolean;
   onClose: () => void;
-  cart: OrderItemDTO[];
+  cart: CartItem[];
   totalPrice: number;
   customerName: string;
   setCustomerName: (v: string) => void;
@@ -137,27 +137,26 @@ const CheckoutModal: React.FC<Props> = ({
                 <div style={{ fontWeight: 700 }}>{totalPrice.toLocaleString()} RSD</div>
               </div>
 
-             <button
-  onClick={onConfirm}
-  disabled={loading || cart.length === 0}
-  style={{
-            width: "100%",
-            flex: 1,
-            background: loading
-            ? "linear-gradient(135deg, rgba(52,211,153,0.5), rgba(16,185,129,0.5))"
-            : "linear-gradient(135deg, #34d399, #10b981)",
-            color: "white",
-            border: "none",
-            borderRadius: 4,
-            padding: "12px 0",
-            fontSize: 15,
-            cursor: loading || cart.length === 0 ? "not-allowed" : "pointer",
-  }}
-  aria-label="Završi kupovinu"
->
-  {loading ? "Slanje..." : "Završi kupovinu"}
-</button>
-
+              <button
+                onClick={onConfirm}
+                disabled={loading || cart.length === 0}
+                style={{
+                  width: "100%",
+                  flex: 1,
+                  background: loading
+                    ? "linear-gradient(135deg, rgba(52,211,153,0.5), rgba(16,185,129,0.5))"
+                    : "linear-gradient(135deg, #34d399, #10b981)",
+                  color: "white",
+                  border: "none",
+                  borderRadius: 4,
+                  padding: "12px 0",
+                  fontSize: 15,
+                  cursor: loading || cart.length === 0 ? "not-allowed" : "pointer",
+                }}
+                aria-label="Završi kupovinu"
+              >
+                {loading ? "Slanje..." : "Završi kupovinu"}
+              </button>
 
               <button
                 onClick={onClose}

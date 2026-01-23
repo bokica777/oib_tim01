@@ -20,14 +20,14 @@ const statusStyle = (status: string) => ({
     status === "SENT"
       ? "rgba(59,130,246,0.15)"
       : status === "STORED"
-      ? "rgba(34,197,94,0.18)"
-      : "rgba(251,191,36,0.25)",
+        ? "rgba(34,197,94,0.18)"
+        : "rgba(251,191,36,0.25)",
   color:
     status === "SENT"
       ? "#1e3a8a"
       : status === "STORED"
-      ? "#065f46"
-      : "#92400e",
+        ? "#065f46"
+        : "#92400e",
 });
 
 const PackagingTable: React.FC<Props> = ({

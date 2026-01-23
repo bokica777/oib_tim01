@@ -6,7 +6,7 @@ import auditAPI from "../audit/AuditApi";
 import { AuditRecord } from "../audit/AuditApi";
 import { IProcessingAPI } from "./IProcessingAPI";
 
-export class ProcessingAPI implements IProcessingAPI{
+export class ProcessingAPI implements IProcessingAPI {
   private client: AxiosInstance;
 
   constructor() {

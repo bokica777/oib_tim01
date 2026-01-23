@@ -1,78 +1,125 @@
-import React, { useState } from "react";
-import { PerfumeDTO } from "../../models/sales/PerfumeDTO";
+import React, { useMemo, useState } from "react";
+import { Variant } from "../../models/sales/Variant";
 
 type Props = {
-  product: PerfumeDTO;
-  onAdd: (qty: number) => void;
+  product: {
+    id: number | string;
+    name: string;
+    netVolumeMl?: number;
+    price?: number;
+    stock?: number;
+    variants?: Variant[];
+  };
+  onAdd: (qty: number, volume: number) => void;
 };
 
 const ProductCard: React.FC<Props> = ({ product, onAdd }) => {
+  const variants = product.variants && product.variants.length > 0
+    ? product.variants.slice().sort((a, b) => a.volume - b.volume)
+    : [{ volume: product.netVolumeMl ?? 150, id: product.id, price: product.price, stock: product.stock }];
+
+  const defaultVolume = variants.some(v => v.volume === 250) ? 250 : variants[0].volume;
+
   const [qty, setQty] = useState<number>(1);
-  const safePrice = typeof product.price === "number" ? product.price : 0;
+  const [volume, setVolume] = useState<number>(defaultVolume);
+
+  const selectedVariant = useMemo(() => variants.find(v => Number(v.volume) === Number(volume)) ?? variants[0], [variants, volume]);
+
+  const unitPricePerMl = useMemo(() => {
+    if (selectedVariant && typeof selectedVariant.price === "number" && typeof selectedVariant.volume === "number") {
+      return selectedVariant.price / selectedVariant.volume;
+    }
+    if (typeof product.price === "number" && typeof product.netVolumeMl === "number" && product.netVolumeMl > 0) {
+      return product.price / product.netVolumeMl;
+    }
+    return 50;
+  }, [selectedVariant, product]);
+
+  const computedPrice = Math.round(unitPricePerMl * Number(volume));
 
   return (
     <div
       style={{
-        border: "1px solid rgba(255,255,255,0.3)",
-        background: "rgba(255,255,255,0.05)",
-        backdropFilter: "blur(8px)",
-        boxShadow: "0 8px 20px rgba(0,0,0,0.1)",
+        border: "1px solid rgba(255,255,255,0.12)",
+        background: "linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01))",
+        backdropFilter: "blur(6px)",
+        boxShadow: "0 8px 20px rgba(0,0,0,0.08)",
         borderRadius: 12,
         padding: 16,
-        minWidth: 390,
-        transition: "transform 0.2s, box-shadow 0.2s",
+        minWidth: 320,
+        transition: "transform 0.18s, box-shadow 0.18s",
+        color: "#fff",
+        display: "flex",
+        flexDirection: "column",
+        gap: 12,
       }}
       onMouseEnter={e => {
         (e.currentTarget as HTMLDivElement).style.transform = "translateY(-4px)";
-        (e.currentTarget as HTMLDivElement).style.boxShadow = "0 12px 24px rgba(0,0,0,0.15)";
+        (e.currentTarget as HTMLDivElement).style.boxShadow = "0 14px 30px rgba(0,0,0,0.16)";
       }}
       onMouseLeave={e => {
         (e.currentTarget as HTMLDivElement).style.transform = "translateY(0)";
-        (e.currentTarget as HTMLDivElement).style.boxShadow = "0 8px 20px rgba(0,0,0,0.1)";
+        (e.currentTarget as HTMLDivElement).style.boxShadow = "0 8px 20px rgba(0,0,0,0.08)";
       }}
     >
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-        <div>
-          <div style={{ fontWeight: 700, color: "#fff" }}>{product.name}</div>
-          {product.netVolumeMl && (
-            <div style={{ fontSize: 12, opacity: 0.8, color: "#fff", marginTop: 2 }}>
-              {product.netVolumeMl} ml
-            </div>
-          )}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontWeight: 700, fontSize: 16 }}>{product.name}</div>
         </div>
+
         <div style={{ textAlign: "right" }}>
-          <div style={{ color: "#10b981", fontWeight: 700, fontSize: 16 }}>
-            {safePrice.toLocaleString()} РСД
-          </div>
-          <div style={{ fontSize: 12, opacity: 0.8, color: "#fff" }}>
-            Na stanju: {product.stock ?? 0}
+          <div style={{ color: "#10b981", fontWeight: 700, fontSize: 18 }}>{computedPrice.toLocaleString()} </div>
+          <div style={{ fontSize: 12, opacity: 0.75, marginTop: 4 }}>
+            <em style={{ opacity: 0.85 }}>Izabrana zapremina: {volume} ml</em>
           </div>
         </div>
       </div>
 
-      <div style={{ marginTop: 12, display: "flex", gap: 6, alignItems: "center" }}>
-        <input
-          type="number"
-          min={1}
-          max={product.stock ?? 9999}
-          value={qty}
-          onChange={(e) => setQty(Math.max(1, Number(e.target.value) || 1))}
-          style={{ width: 60, padding: 4, borderRadius: 4, border: "1px solid rgba(0,0,0,0.12)" }}
-        />
+      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <label style={{ display: "flex", flexDirection: "column", fontSize: 12 }}>
+          Zapremina
+          <select
+            aria-label="Izaberi zapreminu"
+            value={volume}
+            onChange={(e) => setVolume(Number(e.target.value))}
+            style={{width: 80, marginTop: 6, padding: 8, borderRadius: 8, border: "1px solid rgba(0,0,0,0.08)" }}
+          >
+            {variants.map(v => (
+              <option key={String(v.volume)} value={v.volume}>
+                {v.volume} ml
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label style={{ display: "flex", flexDirection: "column", fontSize: 12 }}>
+          Količina
+          <input
+            type="number"
+            min={1}
+            value={qty}
+            onChange={(e) => setQty(Math.max(1, Number(e.target.value) || 1))}
+            style={{  marginTop: 6, padding: 8, borderRadius: 8, border: "1px solid rgba(0,0,0,0.08)" }}
+          />
+        </label>
+
+        <div style={{ flex: 1 }} />
+
         <button
+          onClick={() => onAdd(qty, volume)}
+          aria-label={`Dodaj ${product.name} ${volume}ml u korpu`}
           style={{
-            flex: 1,
-            background: "linear-gradient(135deg, #34d399, #10b981)",
-            color: "white",
+            padding: "10px 14px",
+            borderRadius: 8,
             border: "none",
-            borderRadius: 4,
-            padding: "6px 0",
+            background: "linear-gradient(135deg, #34d399, #10b981)",
+            color: "#fff",
+            cursor: "pointer",
+            fontWeight: 700,
+            minWidth: 140,
           }}
-          onClick={() => onAdd(qty)}
-          disabled={(product.stock ?? 0) <= 0}
-          aria-label={`Dodaj ${product.name} u korpu`}
         >
-          Dodaj u korpu
+          Dodaj ({computedPrice.toLocaleString()} RSD)
         </button>
       </div>
     </div>
