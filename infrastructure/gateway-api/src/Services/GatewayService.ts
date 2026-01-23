@@ -554,7 +554,7 @@ export class GatewayService implements IGatewayService {
 
   // ================= ANALYTICS & RECEIPTS =================
   async getTopPerfumes(query: Record<string, any>, headers: Record<string, string>): Promise<any> {
-    if (!this.analyticsClient) throw new Error("ANALYTICS_URL not configured");
+    if (!this.analyticsClient) throw new Error("ANALYSIS_URL not configured");
     try {
       const q = new URLSearchParams();
       Object.entries(query ?? {}).forEach(([k, v]) => {
@@ -568,7 +568,7 @@ export class GatewayService implements IGatewayService {
   }
 
   async createReceipt(dto: any, headers: Record<string, string>): Promise<any> {
-    if (!this.analyticsClient) throw new Error("ANALYTICS_URL not configured");
+    if (!this.analyticsClient) throw new Error("ANALYSIS_URL not configured");
     try {
       const resp = await this.analyticsClient.post("/receipts", dto, { headers });
       return resp.data;
@@ -578,7 +578,7 @@ export class GatewayService implements IGatewayService {
   }
 
   async listReceipts(headers: Record<string, string>): Promise<any[]> {
-    if (!this.analyticsClient) throw new Error("ANALYTICS_URL not configured");
+    if (!this.analyticsClient) throw new Error("ANALYSIS_URL not configured");
     try {
       const resp = await this.analyticsClient.get("/receipts", { headers });
       return resp.data;
@@ -588,7 +588,7 @@ export class GatewayService implements IGatewayService {
   }
 
   async getDailyRevenue(date: string, headers: Record<string, string>): Promise<any> {
-    if (!this.analyticsClient) throw new Error("ANALYTICS_URL not configured");
+    if (!this.analyticsClient) throw new Error("ANALYSIS_URL not configured");
     try {
       const resp = await this.analyticsClient.get(`/receipts/daily?date=${encodeURIComponent(date)}`, { headers });
       return resp.data;
@@ -598,7 +598,7 @@ export class GatewayService implements IGatewayService {
   }
 
   async getSalesByProduct(headers: Record<string, string>): Promise<any[]> {
-    if (!this.analyticsClient) throw new Error("ANALYTICS_URL not configured");
+    if (!this.analyticsClient) throw new Error("ANALYSIS_URL not configured");
     try {
       const resp = await this.analyticsClient.get("/receipts/sales-by-product", { headers });
       return resp.data;
@@ -608,7 +608,7 @@ export class GatewayService implements IGatewayService {
   }
 
   async getTop10Revenue(query: Record<string, any>, headers: Record<string, string>): Promise<any> {
-    if (!this.analyticsClient) throw new Error("ANALYTICS_URL not configured");
+    if (!this.analyticsClient) throw new Error("ANALYSIS_URL not configured");
     try {
       const q = new URLSearchParams();
       Object.entries(query ?? {}).forEach(([k, v]) => {
@@ -622,7 +622,7 @@ export class GatewayService implements IGatewayService {
   }
 
   async getSalesSummary(query: Record<string, any>, headers: Record<string, string>): Promise<any> {
-    if (!this.analyticsClient) throw new Error("ANALYTICS_URL not configured");
+    if (!this.analyticsClient) throw new Error("ANALYSIS_URL not configured");
     try {
       const q = new URLSearchParams();
       Object.entries(query ?? {}).forEach(([k, v]) => {
@@ -636,7 +636,7 @@ export class GatewayService implements IGatewayService {
   }
 
   async getSalesTrend(query: Record<string, any>, headers: Record<string, string>): Promise<any> {
-    if (!this.analyticsClient) throw new Error("ANALYTICS_URL not configured");
+    if (!this.analyticsClient) throw new Error("ANALYSIS_URL not configured");
     try {
       const q = new URLSearchParams();
       Object.entries(query ?? {}).forEach(([k, v]) => {
@@ -650,7 +650,7 @@ export class GatewayService implements IGatewayService {
   }
 
   async getReports(query: Record<string, any>, headers: Record<string, string>): Promise<any> {
-    if (!this.analyticsClient) throw new Error("ANALYTICS_URL not configured");
+    if (!this.analyticsClient) throw new Error("ANALYSIS_URL not configured");
     try {
       const q = new URLSearchParams();
       Object.entries(query ?? {}).forEach(([k, v]) => {
@@ -664,7 +664,7 @@ export class GatewayService implements IGatewayService {
   }
 
   async downloadReportPdf(id: number, headers: Record<string, string>): Promise<Buffer> {
-    if (!this.analyticsClient) throw new Error("ANALYTICS_URL not configured");
+    if (!this.analyticsClient) throw new Error("ANALYSIS_URL not configured");
     try {
       const resp = await this.analyticsClient.get(`/analysis/reports/${id}/pdf`, {
         headers,
