@@ -51,6 +51,14 @@ export class GatewayController {
     this.router.get("/processing/perfumes", authenticate, this.listPerfumes.bind(this));
     this.router.get("/processing/perfumes/:id", authenticate, this.getPerfumeById.bind(this));
     this.router.post("/processing/perfumes/request", authenticate, this.requestPerfumes.bind(this));
+    this.router.get("/processing/catalog", authenticate, this.listPerfumes.bind(this));
+
+    this.router.get("/perfumes/all", authenticate, this.listPerfumes.bind(this));
+    this.router.get("/perfumes", authenticate, this.listPerfumes.bind(this));
+    this.router.get("/perfumes/:id", authenticate, this.getPerfumeById.bind(this));
+
+    this.router.get("/catalog/perfumes", authenticate, this.listPerfumes.bind(this));
+    
 
     // ================= STORAGE =================
     this.router.post("/storage/store", authenticate, validateDTO(StorePackageDTO), this.storePackage.bind(this));
@@ -385,6 +393,10 @@ export class GatewayController {
 
   private async getPerfumeById(req: Request, res: Response) {
     const headers = buildInternalHeaders(req);
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id)) {
+      return res.status(400).json({ message: "Invalid perfume id" });
+    }
     const p = await this.gatewayService.getPerfumeById(
       Number(req.params.id),
       headers
