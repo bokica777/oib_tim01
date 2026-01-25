@@ -460,49 +460,77 @@ export class GatewayController {
   }
 
   private async createOrder(req: Request, res: Response) {
-    try {
-      const headers = buildInternalHeaders(req);
-      const body = req.body || {};
+  try {
+    const headers = buildInternalHeaders(req);
+    const body = req.body || {};
 
-      // Validacija da items sadrže cenu
-      if (!Array.isArray(body.items) || body.items.length === 0) {
-        return res.status(400).json({ message: "Items array is required" });
-      }
-
-      for (const item of body.items) {
-        if (!item.price || typeof item.price !== 'number') {
-          return res.status(400).json({
-            message: `Item perfumeId ${item.perfumeId} is missing price. Ensure price is fetched from backend.`
-          });
-        }
-      }
-
-      if (!body.totalPrice || typeof body.totalPrice !== 'number') {
-        return res.status(400).json({ message: "Total price is required" });
-      }
-
-      const sanitized = {
-        customerName: String(body.customerName || ""),
-        deliveryAddress: String(body.deliveryAddress || ""),
-        items: body.items.map((it: any) => ({
-          perfumeId: Number(it.perfumeId),
-          price: Number(it.price),  // Cena iz backend-a
-          quantity: Number(it.quantity ?? 1),
-          name: it.name  // Opciono
-        })),
-        paymentType: String(body.paymentType || "GOTOVINA"),
-        totalPrice: Number(body.totalPrice)
-      };
-
-      const order = await this.gatewayService.createOrder(sanitized, headers);
-      res.status(201).json(order);
-    } catch (err: any) {
-      console.error("Gateway createOrder error:", err);
-      res.status(err?.status ?? 500).json({
-        message: err?.message ?? "Failed to create order"
-      });
+    // Validacija da items sadrže cenu
+    if (!Array.isArray(body.items) || body.items.length === 0) {
+      return res.status(400).json({ message: "Items array is required" });
     }
+
+    for (const item of body.items) {
+      if (!item.price || typeof item.price !== "number") {
+        return res.status(400).json({
+          message: `Item perfumeId ${item.perfumeId} is missing price. Ensure price is fetched from backend.`,
+        });
+      }
+    }
+
+    if (!body.totalPrice || typeof body.totalPrice !== "number") {
+      return res.status(400).json({ message: "Total price is required" });
+    }
+
+    // 1) Sanitize order payload ka Sales microservice-u
+    const sanitized = {
+      customerName: String(body.customerName || ""),
+      deliveryAddress: String(body.deliveryAddress || ""),
+      items: body.items.map((it: any) => ({
+        perfumeId: Number(it.perfumeId),
+        price: Number(it.price),
+        quantity: Number(it.quantity ?? 1),
+        name: it.name
+      })),
+      paymentType: String(body.paymentType || "GOTOVINA"),
+      totalPrice: Number(body.totalPrice),
+    };
+
+    // 2) Kreiraj order u Sales servisu
+    const order = await this.gatewayService.createOrder(sanitized, headers);
+
+    // 3) AUTOMATSKI upis u Analysis (Receipt) - ne rušimo prodaju ako failuje
+    const receiptDto = {
+      tipProdaje: "MALOPRODAJA",
+      nacinPlacanja: sanitized.paymentType as "GOTOVINA" | "RACUN" | "KARTICA",
+      stavke: sanitized.items.map((it: any) => ({
+        parfemId: Number(it.perfumeId),
+        nazivParfema: String(it.name || `Perfume ${it.perfumeId}`),
+        kolicina: Number(it.quantity ?? 1),
+        jedinicnaCena: Number(it.price ?? 0),
+      })),
+    };
+
+    try {
+      // createReceipt ide na analysis-microservice: POST /receipts
+      await this.gatewayService.createReceipt(receiptDto, headers);
+    } catch (e: any) {
+      console.warn(
+        "[Gateway] Receipt creation failed (order created OK):",
+        e?.message ?? e
+      );
+      // namerno NE bacamo error, prodaja mora da prođe
+    }
+
+    // 4) Vrati order klijentu
+    res.status(201).json(order);
+  } catch (err: any) {
+    console.error("Gateway createOrder error:", err);
+    res.status(err?.status ?? 500).json({
+      message: err?.message ?? "Failed to create order",
+    });
   }
+}
+
 
   private async getOrderById(req: Request, res: Response) {
     const headers = buildInternalHeaders(req);
