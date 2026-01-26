@@ -12,10 +12,11 @@ import { useAuth } from "../hooks/useAuthHook";
 
 import { KpiCard } from "../components/analysis/KpiCard";
 import { PeriodPicker, type PeriodUI } from "../components/analysis/PeriodPicker";
-import { MiniLineChart } from "../components/analysis/MiniLineChart";
-import { BarMini } from "../components/analysis/BarMini";
+import { SalesLineChart } from "../components/analysis/SalesLineChart";
+import { SalesBarChart } from "../components/analysis/SalesBarChart";
 import { Top10RevenueTable } from "../components/analysis/Top10RevenueTable";
 import { ReportsTable } from "../components/analysis/ReportsTable";
+import { createSalesReport } from "../api/analysis/analysisSalesApi";
 
 function toISODate(d: Date) {
   return d.toISOString().slice(0, 10);
@@ -123,7 +124,7 @@ export default function AnalysisSalesPage() {
     const date = new Date(p.t);
     return {
       ts: date.getTime(),
-      label: date.toLocaleDateString("sr-RS"),
+      label: date.toLocaleDateString("sr-RS", { weekday: "short", day: "2-digit", month: "2-digit" }),
       qty: toNumber(p.kolicina),
       revenue: toNumber(p.prihod),
     };
@@ -131,10 +132,9 @@ export default function AnalysisSalesPage() {
   .sort((a: any, b: any) => a.ts - b.ts);
   const totalSoldAll = trendChart.reduce((acc, x) => acc + x.qty, 0);
   const avgDailySold = trendChart.length > 0 ? totalSoldAll / trendChart.length : 0;
-  const bestDay = trendChart.reduce(
-  (best, x) => (x.qty > best.qty ? x : best),
-  trendChart[0]
-);
+  const bestDay = trendChart.length
+  ? trendChart.reduce((best, x) => (x.qty > best.qty ? x : best), trendChart[0])
+  : null;
 
   async function onDownloadPdf(id: number) {
     try {
@@ -150,6 +150,11 @@ export default function AnalysisSalesPage() {
     }
   }
 
+  async function onExportPdf() {
+  const rep = await createSalesReport({ groupBy: period, from, to }, accessToken);
+  await onDownloadPdf(rep.id);
+  }
+
   return (
     <div style={{ padding: 16 }}>
       <PeriodPicker
@@ -160,6 +165,7 @@ export default function AnalysisSalesPage() {
         loading={loading}
         onChange={setPeriod}
         onRefresh={load}
+        onExportPdf={onExportPdf}
       />
 
       {err ? (
@@ -186,16 +192,17 @@ export default function AnalysisSalesPage() {
 
       {/* Charts */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
-        <MiniLineChart
+        <SalesLineChart
           title="Broj prodatih parfema po danima"
-          points={trendChart.map(x => x.qty)}
-          labels={trendChart.map(x => x.label)}
-          formatY={(v) => intFmt.format(v)}
-        />    
-        <BarMini
-          title="Prihod po danima"
-          rows={trendChart.map(x => ({ label: x.label, value: x.revenue }))}
-          formatValue={(v) => money.format(v)}
+          labels={trendChart.map((x) => x.label)}
+          values={trendChart.map((x) => x.qty)}
+          yStep={10}
+        />
+
+        <SalesBarChart
+          title="Prihod po danima (RSD)"
+          labels={trendChart.map((x) => x.label)}
+          values={trendChart.map((x) => x.revenue)}
         />
       </div>
 

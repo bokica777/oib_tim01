@@ -10,7 +10,8 @@ export const PeriodPicker: React.FC<{
   loading: boolean;
   onChange: (p: PeriodUI) => void;
   onRefresh: () => void;
-}> = ({ title, period, from, to, loading, onChange, onRefresh }) => {
+  onExportPdf?: () => void;
+}> = ({ title, period, from, to, loading, onChange, onRefresh, onExportPdf }) => {
   return (
     <div
       style={{
@@ -39,6 +40,10 @@ export const PeriodPicker: React.FC<{
 
         <button onClick={onRefresh} disabled={loading}>
           {loading ? "Učitavam..." : "Osveži"}
+        </button>
+
+        <button disabled={loading} onClick={onExportPdf}>
+        Export PDF
         </button>
       </div>
     </div>

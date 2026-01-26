@@ -12,11 +12,11 @@ export function buildInternalHeaders(req: Request): Record<string, string> {
   };
 
   const id = req.user?.id;
-  const role = req.user?.role;
+  const roleRaw = req.user?.role;
   const username = req.user?.username;
 
   if (id !== undefined && id !== null) headers["x-user-id"] = String(id);
-  if (role) headers["x-user-role"] = String(role);
+  if (roleRaw) headers["x-user-role"] = String(roleRaw).replace(/^ROLE_/i, "").toUpperCase();
   if (username) headers["x-user-name"] = String(username);
 
   if (req.headers && req.headers.authorization) {

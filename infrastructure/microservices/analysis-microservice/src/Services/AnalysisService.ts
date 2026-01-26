@@ -92,22 +92,20 @@ export class AnalysisService implements IAnalysisService {
   );
 }
 
-  public async getSalesTrend(query: SalesTrendQuery): Promise<AnalysisReport> {
+public async getSalesTrend(query: SalesTrendQuery): Promise<AnalysisReport> {
   const from = query.from;
   const to = query.to;
   const granularity = query.granularity ?? "day";
 
-  const qb = this.receiptRepository
-  .createQueryBuilder("r")
-  .leftJoin("r.stavke", "i");
+  const qb = this.receiptRepository.createQueryBuilder("r")
+    .leftJoin("r.stavke", "i"); // <-- BITNO
 
   if (from) qb.andWhere("DATE(r.datumVreme) >= :from", { from });
   if (to) qb.andWhere("DATE(r.datumVreme) <= :to", { to });
 
-  // reset select
-  qb.select("SUM(r.ukupanIznos)", "prihod")
-  .addSelect("COUNT(DISTINCT r.id)", "brojRacuna")
-  .addSelect("COALESCE(SUM(i.kolicina), 0)", "kolicina");
+  qb.select("COALESCE(SUM(i.ukupno), 0)", "prihod")         
+    .addSelect("COUNT(DISTINCT r.id)", "brojRacuna")          
+    .addSelect("COALESCE(SUM(i.kolicina), 0)", "kolicina");     
 
   if (granularity === "month") {
     qb.addSelect("DATE_FORMAT(r.datumVreme, '%Y-%m')", "t")
@@ -192,4 +190,75 @@ export class AnalysisService implements IAnalysisService {
     report.rezultat = rezultat;
     return await this.reportRepository.save(report);
   }
+
+  public async createSalesReport(dto: { groupBy: string; from: string; to: string }) {
+  const { from, to, groupBy } = dto;
+
+  // 1) SUMMARY
+  const summaryQb = this.receiptRepository
+    .createQueryBuilder("r")
+    .select("SUM(r.ukupanIznos)", "prihod")
+    .addSelect("COUNT(r.id)", "brojRacuna");
+
+  if (from) summaryQb.andWhere("DATE(r.datumVreme) >= :from", { from });
+  if (to) summaryQb.andWhere("DATE(r.datumVreme) <= :to", { to });
+
+  const summaryRow = await summaryQb.getRawOne();
+
+  // 2) TREND (po danima)
+  const trendQb = this.receiptRepository
+    .createQueryBuilder("r")
+    .leftJoin("r.stavke", "i")
+    .select("DATE(r.datumVreme)", "t")
+    .addSelect("SUM(i.kolicina)", "kolicina")
+    .addSelect("SUM(i.ukupno)", "prihod")
+    .groupBy("t")
+    .orderBy("t", "ASC");
+
+  if (from) trendQb.andWhere("DATE(r.datumVreme) >= :from", { from });
+  if (to) trendQb.andWhere("DATE(r.datumVreme) <= :to", { to });
+
+  const trendRows = await trendQb.getRawMany();
+
+  // 3) TOP10
+  const top10Qb = this.receiptRepository
+    .createQueryBuilder("r")
+    .leftJoin("r.stavke", "i")
+    .select("i.nazivParfema", "naziv")
+    .addSelect("SUM(i.kolicina)", "kolicina")
+    .addSelect("SUM(i.ukupno)", "prihod")
+    .groupBy("i.nazivParfema")
+    .orderBy("prihod", "DESC")
+    .limit(10);
+
+  if (from) top10Qb.andWhere("DATE(r.datumVreme) >= :from", { from });
+  if (to) top10Qb.andWhere("DATE(r.datumVreme) <= :to", { to });
+
+  const top10 = await top10Qb.getRawMany();
+
+  // KPI iz trend-a
+  const totalSoldAll = trendRows.reduce((acc: number, x: any) => acc + Number(x.kolicina || 0), 0);
+  const avgDailySold = trendRows.length ? totalSoldAll / trendRows.length : 0;
+
+  const best = trendRows.reduce(
+    (b: any, x: any) => (Number(x.kolicina || 0) > Number(b.kolicina || 0) ? x : b),
+    trendRows[0] ?? null
+  );
+
+  const payload = {
+    meta: { groupBy, from, to, createdAt: new Date().toISOString() },
+    kpis: {
+      totalRevenue: Number(summaryRow?.prihod ?? 0),
+      totalReceipts: Number(summaryRow?.brojRacuna ?? 0),
+      totalSoldAll,
+      avgDailySold,
+      bestDay: best ? { date: best.t, qty: Number(best.kolicina ?? 0) } : null,
+    },
+    trend: trendRows,
+    top10,
+  };
+
+  return await this.saveReport("SALES_ANALYSIS_REPORT", { from, to, groupBy }, payload);
+  }
+
 }

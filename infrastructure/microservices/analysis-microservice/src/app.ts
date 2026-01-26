@@ -62,7 +62,11 @@ const receiptsController = new ReceiptsController(receiptService);
 const analysisController = new AnalysisController(analysisService);
 
 // Registering routes
-app.use("/api/v1/receipts", requireRole(["ADMIN"]), receiptsController.getRouter());
+app.use(
+  "/api/v1/receipts",
+  requireRole(["ADMIN", "SELLER", "SALES_MANAGER"]),
+  receiptsController.getRouter()
+);
 app.use("/api/v1/analysis",
   (req, _res, next) => {
     console.log("[ANALYSIS CHAIN HIT]", req.method, req.originalUrl);

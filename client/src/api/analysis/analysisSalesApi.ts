@@ -67,3 +67,21 @@ export async function downloadReportPdf(id: number, token?: string): Promise<Blo
   if (!res.ok) throw new Error("Greška pri preuzimanju PDF-a");
   return res.blob();
 }
+
+export async function createSalesReport(dto: any, token?: string) {
+  const res = await fetch(`${baseUrl}/analysis/sales-report`, {
+    method: "POST",
+    headers: {
+      ...authHeaders(token),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(dto),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err?.message ?? "Greška pri kreiranju izveštaja");
+  }
+
+  return res.json(); // vraća report sa id
+}
