@@ -78,7 +78,7 @@ export class UsersService implements IUsersService {
       role: user.role,
       firstName: user.firstName,
       lastName: user.lastName,
-      profileImage: user.profileImage!,
+      profileImage: user.profileImage,
     };
   }
 }

@@ -24,6 +24,12 @@ export class GatewayController {
   }
 
   private initializeRoutes(): void {
+    this.router.get("/auth/google", this.oauthGoogleStart.bind(this));
+    this.router.get("/auth/google/callback", this.oauthGoogleCallback.bind(this));
+
+    this.router.get("/auth/facebook", this.oauthFacebookStart.bind(this));
+    this.router.get("/auth/facebook/callback", this.oauthFacebookCallback.bind(this));
+
     // ================= AUTH =================
     this.router.post("/login", this.login.bind(this));
     this.router.post("/register", this.register.bind(this));
@@ -122,6 +128,38 @@ export class GatewayController {
     this.router.get("/audit", this.getAuditLogs.bind(this));
   }
   // Auth handlers
+  private oauthGoogleStart(req: Request, res: Response) {
+    const authBase = process.env.AUTH_SERVICE_API;
+    if (!authBase) return res.status(500).json({ message: "AUTH_SERVICE_API not configured" });
+    return res.redirect(`${authBase}/auth/google`);
+  }
+
+  private oauthGoogleCallback(req: Request, res: Response) {
+    const authBase = process.env.AUTH_SERVICE_API;
+    if (!authBase) return res.status(500).json({ message: "AUTH_SERVICE_API not configured" });
+
+    const qs = req.originalUrl.includes("?") ? req.originalUrl.split("?")[1] : "";
+    const target = qs ? `${authBase}/auth/google/callback?${qs}` : `${authBase}/auth/google/callback`;
+
+    return res.redirect(target);
+  }
+
+  private oauthFacebookStart(req: Request, res: Response) {
+    const authBase = process.env.AUTH_SERVICE_API;
+    if (!authBase) return res.status(500).json({ message: "AUTH_SERVICE_API not configured" });
+    return res.redirect(`${authBase}/auth/facebook`);
+  }
+
+  private oauthFacebookCallback(req: Request, res: Response) {
+    const authBase = process.env.AUTH_SERVICE_API;
+    if (!authBase) return res.status(500).json({ message: "AUTH_SERVICE_API not configured" });
+
+    const qs = req.originalUrl.includes("?") ? req.originalUrl.split("?")[1] : "";
+    const target = qs ? `${authBase}/auth/facebook/callback?${qs}` : `${authBase}/auth/facebook/callback`;
+
+    return res.redirect(target);
+  }
+  
   private async login(req: Request, res: Response): Promise<void> {
     const data: LoginUserDTO = req.body;
     try {

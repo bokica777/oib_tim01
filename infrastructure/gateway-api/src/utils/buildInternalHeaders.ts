@@ -21,7 +21,7 @@ export function buildInternalHeaders(req: Request): Record<string, string> {
 
   if (req.headers && req.headers.authorization) {
     const auth = String(req.headers.authorization);
-    headers["authorization"] = auth;
+    headers["Authorization"] = auth;
   }
 
   return headers;
