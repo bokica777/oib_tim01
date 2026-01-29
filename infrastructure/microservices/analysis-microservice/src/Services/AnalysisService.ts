@@ -183,6 +183,10 @@ public async getSalesTrend(query: SalesTrendQuery): Promise<AnalysisReport> {
   return await this.reportRepository.findOne({ where: { id } });
   }
 
+   async getReportPdf(id: number): Promise<Buffer> {
+    throw new Error("Not implemented here");
+  }
+
   private async saveReport(tipIzvestaja: string, parametri: any, rezultat: any) {
     const report = new AnalysisReport();
     report.tipIzvestaja = tipIzvestaja;
@@ -192,7 +196,9 @@ public async getSalesTrend(query: SalesTrendQuery): Promise<AnalysisReport> {
   }
 
   public async createSalesReport(dto: { groupBy: string; from: string; to: string }) {
-  const { from, to, groupBy } = dto;
+  const from = dto?.from ?? null;
+  const to = dto?.to ?? null;
+  const groupBy = dto?.groupBy ?? "day";
 
   // 1) SUMMARY
   const summaryQb = this.receiptRepository
@@ -205,11 +211,15 @@ public async getSalesTrend(query: SalesTrendQuery): Promise<AnalysisReport> {
 
   const summaryRow = await summaryQb.getRawOne();
 
-  // 2) TREND (po danima)
+  // 2) TREND (groupBy)
+  let groupExpr = "DATE(r.datumVreme)";
+  if (groupBy === "month") groupExpr = "DATE_FORMAT(r.datumVreme, '%Y-%m')";
+  if (groupBy === "year") groupExpr = "YEAR(r.datumVreme)";
+
   const trendQb = this.receiptRepository
     .createQueryBuilder("r")
     .leftJoin("r.stavke", "i")
-    .select("DATE(r.datumVreme)", "t")
+    .select(groupExpr, "t")
     .addSelect("SUM(i.kolicina)", "kolicina")
     .addSelect("SUM(i.ukupno)", "prihod")
     .groupBy("t")
@@ -218,7 +228,14 @@ public async getSalesTrend(query: SalesTrendQuery): Promise<AnalysisReport> {
   if (from) trendQb.andWhere("DATE(r.datumVreme) >= :from", { from });
   if (to) trendQb.andWhere("DATE(r.datumVreme) <= :to", { to });
 
-  const trendRows = await trendQb.getRawMany();
+  const trendRowsRaw = await trendQb.getRawMany();
+
+  // ✅ normalizuj tipove (SUM često dođe kao string)
+  const trendRows = (trendRowsRaw ?? []).map((x: any) => ({
+    t: x.t,
+    kolicina: Number(x.kolicina ?? 0),
+    prihod: Number(x.prihod ?? 0),
+  }));
 
   // 3) TOP10
   const top10Qb = this.receiptRepository
@@ -234,16 +251,22 @@ public async getSalesTrend(query: SalesTrendQuery): Promise<AnalysisReport> {
   if (from) top10Qb.andWhere("DATE(r.datumVreme) >= :from", { from });
   if (to) top10Qb.andWhere("DATE(r.datumVreme) <= :to", { to });
 
-  const top10 = await top10Qb.getRawMany();
+  const top10Raw = await top10Qb.getRawMany();
+
+  const top10 = (top10Raw ?? []).map((x: any) => ({
+    naziv: x.naziv,
+    kolicina: Number(x.kolicina ?? 0),
+    prihod: Number(x.prihod ?? 0),
+  }));
 
   // KPI iz trend-a
-  const totalSoldAll = trendRows.reduce((acc: number, x: any) => acc + Number(x.kolicina || 0), 0);
+  const totalSoldAll = trendRows.reduce((acc, x) => acc + x.kolicina, 0);
   const avgDailySold = trendRows.length ? totalSoldAll / trendRows.length : 0;
 
-  const best = trendRows.reduce(
-    (b: any, x: any) => (Number(x.kolicina || 0) > Number(b.kolicina || 0) ? x : b),
-    trendRows[0] ?? null
-  );
+  const best = trendRows.reduce((b: any, x: any) => {
+    if (!b) return x;
+    return x.kolicina > b.kolicina ? x : b;
+  }, null);
 
   const payload = {
     meta: { groupBy, from, to, createdAt: new Date().toISOString() },
@@ -258,7 +281,11 @@ public async getSalesTrend(query: SalesTrendQuery): Promise<AnalysisReport> {
     top10,
   };
 
+  // vraća AnalysisReport entitet sa id
   return await this.saveReport("SALES_ANALYSIS_REPORT", { from, to, groupBy }, payload);
-  }
+}
+
+
+  
 
 }

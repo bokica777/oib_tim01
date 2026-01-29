@@ -309,6 +309,13 @@ export class GatewayService implements IGatewayService {
     }
   }
 
+  async getProcessingPerfumeById(id: number, headers: Record<string, string>): Promise<any> {
+    if (!this.processingClient) throw new Error("PROCESSING_URL not configured");
+    const resp = await this.processingClient.get(`/perfumes/${id}`, { headers });
+    return resp.data;
+  }
+
+
   // ================= STORAGE =================
 
   async listWarehouses(headers: Record<string, string>): Promise<any[]> {
@@ -675,6 +682,17 @@ export class GatewayService implements IGatewayService {
       handleAxiosError(err);
     }
   }
+
+  async createSalesReport(dto: any, headers: Record<string, string>): Promise<any> {
+    if (!this.analyticsClient) throw new Error("ANALYSIS_URL not configured");
+    try {
+      const resp = await this.analyticsClient.post(`/analysis/sales-report`, dto, { headers });
+      return resp.data;
+    } catch (err) {
+      handleAxiosError(err);
+    }
+  }
+
 
 
   // ================= GENERIC AUDIT HELPER =================

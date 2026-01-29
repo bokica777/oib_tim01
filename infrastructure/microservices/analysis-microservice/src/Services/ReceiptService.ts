@@ -24,7 +24,8 @@ export class ReceiptService implements IReceiptService {
     receipt.stavke = dto.stavke.map((itemDto) => {
       const item = new ReceiptItem();
       item.parfemId = itemDto.parfemId;
-      item.nazivParfema = itemDto.nazivParfema;
+      item.nazivParfema = String(itemDto.nazivParfema ?? "").trim();
+      if (!item.nazivParfema) item.nazivParfema = `Perfume ${itemDto.parfemId}`;
       item.kolicina = itemDto.kolicina;
       item.jedinicnaCena = itemDto.jedinicnaCena;
       item.ukupno = itemDto.kolicina * itemDto.jedinicnaCena;

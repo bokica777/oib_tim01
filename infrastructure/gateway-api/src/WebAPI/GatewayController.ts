@@ -19,6 +19,7 @@ export class GatewayController {
   private readonly router: Router;
 
   constructor(private readonly gatewayService: IGatewayService) {
+     console.log("✅ [GATEWAY] GatewayController LOADED");
     this.router = Router();
     this.initializeRoutes();
   }
@@ -78,6 +79,7 @@ export class GatewayController {
       authenticate,
       authorize("seller", "sales_manager"),
       validateDTO(CreateOrderDTO),
+      
       this.createOrder.bind(this)
     );
 
@@ -117,9 +119,17 @@ export class GatewayController {
 
     this.router.get("/analysis/reports", authenticate, this.getReports.bind(this));
     this.router.get("/analysis/reports/:id/pdf", authenticate, this.downloadReportPdf.bind(this));
+
+    this.router.post("/analysis/sales-report", authenticate, this.createSalesReport.bind(this));
     // ================= AUDIT =================
     this.router.post("/audit", authenticateOrGatewayKey, this.createAudit.bind(this));
     this.router.get("/audit", this.getAuditLogs.bind(this));
+
+    console.log("✅ [GATEWAY] ROUTES REGISTERED:", 
+  this.router.stack
+    .filter((l: any) => l.route)
+    .map((l: any) => `${Object.keys(l.route.methods)[0].toUpperCase()} ${l.route.path}`)
+  );
   }
   // Auth handlers
   private async login(req: Request, res: Response): Promise<void> {
@@ -464,24 +474,25 @@ export class GatewayController {
     const headers = buildInternalHeaders(req);
     const body = req.body || {};
 
-    // Validacija da items sadrže cenu
+    // Validacija items
     if (!Array.isArray(body.items) || body.items.length === 0) {
       return res.status(400).json({ message: "Items array is required" });
     }
 
     for (const item of body.items) {
-      if (!item.price || typeof item.price !== "number") {
+      if (typeof item.price !== "number" || !Number.isFinite(item.price)) {
         return res.status(400).json({
-          message: `Item perfumeId ${item.perfumeId} is missing price. Ensure price is fetched from backend.`,
+          message: `Item perfumeId ${item.perfumeId} is missing/invalid price. Ensure price is fetched from backend.`,
         });
       }
     }
 
-    if (!body.totalPrice || typeof body.totalPrice !== "number") {
+    // totalPrice validacija (možeš i auto-računati ako želiš)
+    if (typeof body.totalPrice !== "number" || !Number.isFinite(body.totalPrice)) {
       return res.status(400).json({ message: "Total price is required" });
     }
 
-    // 1) Sanitize order payload ka Sales microservice-u
+    // 1) Sanitize payload ka Sales microservice-u
     const sanitized = {
       customerName: String(body.customerName || ""),
       deliveryAddress: String(body.deliveryAddress || ""),
@@ -489,7 +500,8 @@ export class GatewayController {
         perfumeId: Number(it.perfumeId),
         price: Number(it.price),
         quantity: Number(it.quantity ?? 1),
-        name: it.name
+        // front ne šalje name — ostavljamo prazno, ne oslanjamo se na ovo
+        name: typeof it.name === "string" ? it.name : undefined,
       })),
       paymentType: String(body.paymentType || "GOTOVINA"),
       totalPrice: Number(body.totalPrice),
@@ -499,25 +511,64 @@ export class GatewayController {
     const order = await this.gatewayService.createOrder(sanitized, headers);
 
     // 3) AUTOMATSKI upis u Analysis (Receipt) - ne rušimo prodaju ako failuje
+
+    // Normalizacija naziva (da 150ml i 250ml budu isto ime ako se ikad provuče u tekstu)
+    const normalizePerfumeName = (name: string) => {
+      return String(name ?? "")
+        .replace(/\(?\s*\d+\s*ml\s*\)?/gi, "") // skida "150ml", "150 ml", "(150 ml)"
+        .replace(/\s+/g, " ")
+        .trim();
+    };
+
+    // cache po perfumeId (da ne zove processing više puta u istoj porudžbini)
+    const nameCache = new Map<number, string>();
+
+    const getNameByPerfumeId = async (perfumeId: number): Promise<string> => {
+      if (nameCache.has(perfumeId)) return nameCache.get(perfumeId)!;
+
+      try {
+        // moraš imati ovu metodu u GatewayService:
+        // getProcessingPerfumeById(id, headers) -> GET /perfumes/:id na processing
+        const p = await this.gatewayService.getProcessingPerfumeById(perfumeId, headers);
+        const name = normalizePerfumeName(String(p?.name ?? `Perfume ${perfumeId}`));
+        nameCache.set(perfumeId, name);
+        return name;
+      } catch (e) {
+        const fallback = `Perfume ${perfumeId}`;
+        nameCache.set(perfumeId, fallback);
+        return fallback;
+      }
+    };
+
+    // ✅ KLJUČ: ovde mora await Promise.all (da ne šalješ Promise u DTO)
+    const stavke = await Promise.all(
+      sanitized.items.map(async (it: any) => {
+        const perfumeId = Number(it.perfumeId);
+        const nazivParfema = await getNameByPerfumeId(perfumeId);
+
+        return {
+          parfemId: perfumeId,
+          nazivParfema, // ✅ samo ime (bez ml)
+          kolicina: Number(it.quantity ?? 1),
+          jedinicnaCena: Number(it.price ?? 0),
+        };
+      })
+    );
+
     const receiptDto = {
       tipProdaje: "MALOPRODAJA",
       nacinPlacanja: sanitized.paymentType as "GOTOVINA" | "RACUN" | "KARTICA",
-      stavke: sanitized.items.map((it: any) => ({
-        parfemId: Number(it.perfumeId),
-        nazivParfema: String(it.name || `Perfume ${it.perfumeId}`),
-        kolicina: Number(it.quantity ?? 1),
-        jedinicnaCena: Number(it.price ?? 0),
-      })),
+      stavke,
     };
 
+    // debug log (sada je niz stringova, ne Promise)
+    console.log("[GATEWAY] receiptDto.stavke =", stavke.map(s => s.nazivParfema));
+
     try {
-      // createReceipt ide na analysis-microservice: POST /receipts
+      // POST /receipts ka analysis microservice-u
       await this.gatewayService.createReceipt(receiptDto, headers);
     } catch (e: any) {
-      console.warn(
-        "[Gateway] Receipt creation failed (order created OK):",
-        e?.message ?? e
-      );
+      console.warn("[Gateway] Receipt creation failed (order created OK):", e?.message ?? e);
       // namerno NE bacamo error, prodaja mora da prođe
     }
 
@@ -530,6 +581,7 @@ export class GatewayController {
     });
   }
 }
+
 
 
   private async getOrderById(req: Request, res: Response) {
@@ -632,6 +684,7 @@ export class GatewayController {
   }
 
   private async downloadReportPdf(req: Request, res: Response) {
+  try {
     const headers = buildInternalHeaders(req);
     const id = Number(req.params.id);
 
@@ -640,6 +693,19 @@ export class GatewayController {
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `attachment; filename="izvestaj-${id}.pdf"`);
     res.send(fileBuffer);
+  } catch (err: any) {
+    return res.status(500).json({
+      message: "Gateway PDF download failed",
+      error: err?.message ?? String(err),
+    });
+  }
+}
+
+
+  private async createSalesReport(req: Request, res: Response) {
+    const headers = buildInternalHeaders(req); // ✅ KLJUČNO
+    const result = await this.gatewayService.createSalesReport(req.body, headers);
+    res.status(201).json(result);
   }
 
   public getRouter(): Router {
