@@ -17,14 +17,17 @@ export class UsersController {
 
   private initializeRoutes(): void {
     this.router.get("/users", this.getAllUsers.bind(this));
+
+    this.router.get("/users/search", this.searchUsers.bind(this));
+    this.router.get("/users/me", this.getCurrentUser.bind(this));
+
     this.router.get("/users/:id", this.getUserById.bind(this));
 
     this.router.post("/users", this.createUser.bind(this));
     this.router.put("/users/:id", this.updateUser.bind(this));
     this.router.delete("/users/:id", this.deleteUser.bind(this));
-
-    this.router.get("/users/search", this.searchUsers.bind(this));
   }
+
 
   private async getAllUsers(req: Request, res: Response): Promise<void> {
     try {
@@ -99,6 +102,30 @@ export class UsersController {
     } catch (err) {
       this.logger.log((err as Error).message);
       res.status(400).json({ message: (err as Error).message });
+    }
+  }
+  
+  private async getCurrentUser(req: Request, res: Response): Promise<void> {
+    try {
+      const idHeader = req.header("x-user-id");
+
+      if (!idHeader) {
+        res.status(401).json({ message: "x-user-id header missing" });
+        return;
+      }
+
+      const id = Number(idHeader);
+      if (Number.isNaN(id)) {
+        res.status(400).json({ message: "Invalid x-user-id" });
+        return;
+      }
+
+      this.logger.log(`Fetching current user with ID ${id}`);
+      const user = await this.usersService.getUserById(id);
+      res.status(200).json(user);
+    } catch (err) {
+      this.logger.log((err as Error).message);
+      res.status(500).json({ message: (err as Error).message });
     }
   }
 

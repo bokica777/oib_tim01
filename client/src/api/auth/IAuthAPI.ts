@@ -5,4 +5,7 @@ import { AuthResponseType } from "../../types/AuthResponseType";
 export interface IAuthAPI {
   login(data: LoginUserDTO): Promise<AuthResponseType>;
   register(data: RegistrationUserDTO): Promise<AuthResponseType>;
+
+  getGoogleLoginUrl(): string;
+  getFacebookLoginUrl(): string;
 }

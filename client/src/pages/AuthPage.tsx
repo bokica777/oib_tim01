@@ -10,6 +10,14 @@ type AuthPageProps = {
 export const AuthPage: React.FC<AuthPageProps> = ({ authAPI }) => {
   const [activeTab, setActiveTab] = useState<"login" | "register">("login");
 
+  const onGoogle = () => {
+    window.location.href = authAPI.getGoogleLoginUrl();
+  };
+
+  const onFacebook = () => {
+    window.location.href = authAPI.getFacebookLoginUrl();
+  };
+
   return (
     <div
       className="overlay-blur-none"
@@ -22,7 +30,6 @@ export const AuthPage: React.FC<AuthPageProps> = ({ authAPI }) => {
         gap: "24px",
       }}
     >
-      {/* ================= LEFT: AUTH WINDOW ================= */}
       <div className="window" style={{ width: "500px", maxWidth: "90%" }}>
         <div className="titlebar">
           <div className="titlebar-icon">
@@ -32,24 +39,15 @@ export const AuthPage: React.FC<AuthPageProps> = ({ authAPI }) => {
         </div>
 
         <div className="window-content" style={{ padding: 0 }}>
-          {/* Tabs */}
-          <div
-            className="flex"
-            style={{ borderBottom: "1px solid var(--win11-divider)" }}
-          >
+          <div className="flex" style={{ borderBottom: "1px solid var(--win11-divider)" }}>
             <button
-              className={`flex-1 ${
-                activeTab === "login" ? "btn-accent" : "btn-ghost"
-              }`}
+              className={`flex-1 ${activeTab === "login" ? "btn-accent" : "btn-ghost"}`}
               style={{
                 borderRadius: 0,
                 height: "48px",
                 fontSize: "14px",
                 fontWeight: 600,
-                borderBottom:
-                  activeTab === "login"
-                    ? "2px solid var(--win11-accent)"
-                    : "none",
+                borderBottom: activeTab === "login" ? "2px solid var(--win11-accent)" : "none",
               }}
               onClick={() => setActiveTab("login")}
             >
@@ -57,18 +55,13 @@ export const AuthPage: React.FC<AuthPageProps> = ({ authAPI }) => {
             </button>
 
             <button
-              className={`flex-1 ${
-                activeTab === "register" ? "btn-accent" : "btn-ghost"
-              }`}
+              className={`flex-1 ${activeTab === "register" ? "btn-accent" : "btn-ghost"}`}
               style={{
                 borderRadius: 0,
                 height: "48px",
                 fontSize: "14px",
                 fontWeight: 600,
-                borderBottom:
-                  activeTab === "register"
-                    ? "2px solid var(--win11-accent)"
-                    : "none",
+                borderBottom: activeTab === "register" ? "2px solid var(--win11-accent)" : "none",
               }}
               onClick={() => setActiveTab("register")}
             >
@@ -76,36 +69,103 @@ export const AuthPage: React.FC<AuthPageProps> = ({ authAPI }) => {
             </button>
           </div>
 
-          {/* Form content */}
-          <div
-            style={{
-              padding: "24px",
-              maxHeight: "70vh",
-              overflowY: "auto",
-            }}
-          >
+          <div style={{ padding: "24px", maxHeight: "70vh", overflowY: "auto" }}>
             {activeTab === "login" ? (
-              <LoginForm authAPI={authAPI} />
+              <>
+                {/* ===== LOGIN FORM FIRST ===== */}
+                <LoginForm authAPI={authAPI} />
+
+                {/* OR LINE */}
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    margin: "16px 0",
+                    opacity: 0.6,
+                  }}
+                >
+                  <div style={{ flex: 1, height: 1, background: "var(--win11-divider)" }} />
+                  <span style={{ fontSize: 12 }}>or</span>
+                  <div style={{ flex: 1, height: 1, background: "var(--win11-divider)" }} />
+                </div>
+
+                {/* ===== OAUTH BUTTONS BELOW ===== */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+
+                  {/* GOOGLE */}
+                  <button
+                    type="button"
+                    onClick={() => (window.location.href = authAPI.getGoogleLoginUrl())}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 10,
+                      width: "100%",
+                      padding: "10px",
+                      borderRadius: 6,
+                      border: "1px solid #dadce0",
+                      background: "#fff",
+                      color: "#3c4043",
+                      fontWeight: 500,
+                      cursor: "pointer",
+                    }}
+                  >
+                    <img
+                      src="https://developers.google.com/identity/images/g-logo.png"
+                      width="18"
+                      height="18"
+                      alt="Google"
+                    />
+                    Sign in with Google
+                  </button>
+
+                  {/* FACEBOOK */}
+                  <button
+                    type="button"
+                    onClick={() => (window.location.href = authAPI.getFacebookLoginUrl())}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 10,
+                      width: "100%",
+                      padding: "10px",
+                      borderRadius: 6,
+                      border: "1px solid #1877f2",
+                      background: "#1877f2",
+                      color: "#fff",
+                      fontWeight: 500,
+                      cursor: "pointer",
+                    }}
+                  >
+                    <img
+                      src="https://www.facebook.com/images/fb_icon_325x325.png"
+                      width="18"
+                      height="18"
+                      alt="Facebook"
+                      style={{ background: "#fff", borderRadius: "50%" }}
+                    />
+                    Continue with Facebook
+                  </button>
+                </div>
+              </>
             ) : (
               <RegisterForm authAPI={authAPI} />
             )}
+
+
           </div>
         </div>
       </div>
 
-      {/* ================= INFO  ================= */}
-      <div
-        className="window"
-        style={{ width: "360px", padding: "16px", fontSize: "13px" }}
-      >
+      <div className="window" style={{ width: "360px", padding: "16px", fontSize: "13px" }}>
         <div className="titlebar">
           <span className="titlebar-title">Informacije o sistemu</span>
         </div>
 
-        <div
-          className="window-content"
-          style={{ display: "flex", flexDirection: "column", gap: "12px" }}
-        >
+        <div className="window-content" style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
           <InfoBox
             title="Autentifikacija"
             color="#dbeafe"
@@ -156,7 +216,6 @@ export const AuthPage: React.FC<AuthPageProps> = ({ authAPI }) => {
     </div>
   );
 };
-
 
 type InfoBoxProps = {
   title: string;

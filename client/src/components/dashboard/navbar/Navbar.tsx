@@ -16,7 +16,7 @@ export const DashboardNavbar: React.FC<DashboardNavbarProps> = ({ userAPI }) => 
 
   useEffect(() => {
     const fetchUser = async () => {
-      if (authUser?.id) {
+      if (authUser?.id && token) {
         try {
           const userData = await userAPI.getCurrentUser();
           setUser(userData);

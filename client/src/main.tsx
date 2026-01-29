@@ -1,4 +1,4 @@
-import React from "react";
+/*import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
@@ -16,5 +16,26 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
         </div>
       </AuthProvider>
     </BrowserRouter>
+  </React.StrictMode>
+);
+*/
+import React from "react";
+import ReactDOM from "react-dom/client";
+import App from "./App.tsx";
+import "./index.css";
+import { TitleBar } from "../electron/window_frame/WindowFrame.tsx";
+import { HashRouter } from "react-router-dom";
+import { AuthProvider } from "./contexts/AuthContext.tsx";
+
+ReactDOM.createRoot(document.getElementById("root")!).render(
+  <React.StrictMode>
+    <HashRouter>
+      <AuthProvider>
+        <TitleBar />
+        <div style={{ paddingTop: 0 }}>
+          <App />
+        </div>
+      </AuthProvider>
+    </HashRouter>
   </React.StrictMode>
 );

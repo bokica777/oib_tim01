@@ -6,9 +6,14 @@ import { AuthResponseType } from "../../types/AuthResponseType";
 
 export class AuthAPI implements IAuthAPI {
   private readonly axiosInstance: AxiosInstance;
+  private readonly baseUrl: string;
 
   constructor() {
-    this.axiosInstance = axios.create({baseURL: import.meta.env.VITE_GATEWAY_URL, headers: { "Content-Type": "application/json" }});
+    this.baseUrl = import.meta.env.VITE_GATEWAY_URL;
+    this.axiosInstance = axios.create({
+      baseURL: this.baseUrl,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 
   async login(data: LoginUserDTO): Promise<AuthResponseType> {
@@ -18,4 +23,13 @@ export class AuthAPI implements IAuthAPI {
   async register(data: RegistrationUserDTO): Promise<AuthResponseType> {
     return (await this.axiosInstance.post("/register", data)).data;
   }
+
+  getGoogleLoginUrl(): string {
+    return `${import.meta.env.VITE_GATEWAY_URL}/auth/google`;
+  }
+
+  getFacebookLoginUrl(): string {
+    return `${import.meta.env.VITE_GATEWAY_URL}/auth/facebook`;
+  }
+
 }

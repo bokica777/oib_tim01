@@ -9,6 +9,7 @@ import { StoragePage } from "./pages/StoragePage";
 import { DashboardNavbar } from "./components/dashboard/navbar/Navbar";
 import SalesPage from "./pages/SalesPage";
 import PerformancePage from "./pages/PerformancePage";
+import OAuthSuccessPage from "./components/auth/OAuthSuccessPage";
 
 
 const auth_api: IAuthAPI = new AuthAPI();
@@ -29,6 +30,7 @@ function App() {
           <Route path="/storage" element={<StoragePage />} />
           <Route path="/sales" element={<SalesPage />} />
           <Route path="/performance" element={<PerformancePage />} />
+          <Route path="/oauth/success" element={<OAuthSuccessPage />} />
           <Route path="*" element={<AuthPage authAPI={auth_api} />} />
         </Routes>
       </div>

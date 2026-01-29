@@ -1,7 +1,11 @@
-import { ReactNode, useState, useEffect, createContext } from "react";
+import { ReactNode, useState, useEffect, createContext, useCallback, useMemo } from "react";
 import { decodeJWT } from "../helpers/decode_jwt";
 import { isTokenExpired } from "../helpers/expiration_jwt_validate";
-import { readValueByKey, removeValueByKey, saveValueByKey } from "../helpers/local_storage";
+import {
+  readValueByKey,
+  removeValueByKey,
+  saveValueByKey,
+} from "../helpers/local_storage";
 import { AuthContextType } from "../types/AuthContextType";
 import { AuthTokenClaimsType } from "../types/AuthTokenClaimsType";
 
@@ -34,7 +38,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setIsLoading(false);
   }, []);
 
-  const login = (newToken: string) => {
+  const login = useCallback((newToken: string) => {
     const claims = decodeJWT(newToken);
 
     if (claims && !isTokenExpired(newToken)) {
@@ -44,24 +48,29 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     } else {
       console.error("Invalid or expired token");
     }
-  };
+  }, []);
 
-  const logout = () => {
+  const logout = useCallback(() => {
     setToken(null);
     setUser(null);
     removeValueByKey("accessToken");
-  };
+  }, []);
 
-  const isAuthenticated = !!user && !!token;
+  const isAuthenticated = useMemo(() => {
+    return !!user && !!token;
+  }, [user, token]);
 
-  const value: AuthContextType = {
-    user,
-    token,
-    login,
-    logout,
-    isAuthenticated,
-    isLoading,
-  };
+  const value: AuthContextType = useMemo(
+    () => ({
+      user,
+      token,
+      login,
+      logout,
+      isAuthenticated,
+      isLoading,
+    }),
+    [user, token, login, logout, isAuthenticated, isLoading]
+  );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
