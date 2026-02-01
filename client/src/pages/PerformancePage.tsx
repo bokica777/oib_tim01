@@ -77,7 +77,13 @@ export default function PerformancePage() {
     loadReports();
   }, []);
 
-  const lastN = useMemo(() => reports.slice(0, 10).reverse(), [reports]);
+  const algo = selected?.algorithmName ?? null;
+
+  const lastN = useMemo(() => {
+    const filtered = algo ? reports.filter(r => r.algorithmName === algo) : reports;
+    return filtered.slice(0, 10).reverse();
+  }, [reports, algo]);
+
   const timeSeries = useMemo(() => lastN.map((r) => r.executionTime), [lastN]);
   const successSeries = useMemo(() => lastN.map((r) => r.successRate), [lastN]);
   const resourceSeries = useMemo(() => lastN.map((r) => r.resourceUsage), [lastN]);
@@ -177,9 +183,10 @@ export default function PerformancePage() {
 
           {selected ? (
             <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
-              <button type="button" disabled={loading} onClick={() => refreshSelected(selected.id)}>
-                Osveži detalje
+              <button type="button" disabled={loading} onClick={loadReports}>
+                Osveži listu
               </button>
+
               <button type="button" disabled={loading} onClick={() => onPdf(selected.id)}>
                 Preuzmi PDF
               </button>

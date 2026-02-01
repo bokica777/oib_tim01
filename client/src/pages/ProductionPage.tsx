@@ -70,7 +70,6 @@ export const ProductionPage: React.FC = () => {
         backgroundColor: "var(--win11-bg)",
       }}
     >
-      {/* Lokalni CSS da izgleda kao na slici */}
       <style>{`
         .prod-menubar button {
           background: transparent;
@@ -170,13 +169,11 @@ export const ProductionPage: React.FC = () => {
         .prod-muted { opacity: 0.75; }
       `}</style>
 
-      {/* Glavni prozor */}
       <div className="window" style={{ height: "100%", position: "relative" }}>
         <div className="titlebar">
           <span className="titlebar-title">Parfimerija O&apos;Sinel De Or - Proizvodnja i prerada</span>
         </div>
 
-        {/* Gornji meni (kao na slici) */}
         <div className="window-content" style={{ padding: 10, height: "calc(100vh - 160px)", overflowY: "auto" }}>
 
           <div className="prod-menubar" style={{ display: "flex", gap: 6, padding: "6px 10px" }}>
@@ -231,7 +228,6 @@ export const ProductionPage: React.FC = () => {
 
           </div>
 
-          {/* “Servis proizvodnje / servis prerade” (kao drugi red tabova) */}
           <div className="prod-subtabs">
             <button
               className={activeSubTab === "servisProizvodnje" ? "active" : ""}
@@ -281,7 +277,6 @@ export const ProductionPage: React.FC = () => {
 
         </div>
 
-        {/* Donji status bar (kao na slici) */}
         <div className="prod-statusbar">
           <div className="prod-muted">
             Korisnik: <strong>{role}</strong> &nbsp; | &nbsp; Status: <strong>Povezan</strong>

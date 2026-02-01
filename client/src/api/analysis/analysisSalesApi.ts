@@ -83,5 +83,5 @@ export async function createSalesReport(dto: any, token?: string) {
     throw new Error(err?.message ?? "Greška pri kreiranju izveštaja");
   }
 
-  return res.json(); // vraća report sa id
+  return res.json();
 }

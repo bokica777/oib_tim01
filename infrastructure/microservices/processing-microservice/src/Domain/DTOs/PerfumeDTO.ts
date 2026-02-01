@@ -1,5 +1,5 @@
 import { IsOptional, IsString, IsNumber, Min, Max, IsEnum, IsArray, IsDateString } from "class-validator";
-import { PerfumeType } from "../enums/PerfumeType"; 
+import { PerfumeType } from "../enums/PerfumeType";
 import { PerfumeStatus } from "../enums/PerfumeStatus";
 
 export class PerfumeDTO {

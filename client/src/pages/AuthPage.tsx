@@ -33,7 +33,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ authAPI }) => {
       <div className="window" style={{ width: "500px", maxWidth: "90%" }}>
         <div className="titlebar">
           <div className="titlebar-icon">
-            <img src="/icon.png" width="20" height="20" />
+            <img src="/icon.png" width="20" height="20" alt="App icon" />
           </div>
           <span className="titlebar-title">Authentication</span>
         </div>
@@ -50,6 +50,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ authAPI }) => {
                 borderBottom: activeTab === "login" ? "2px solid var(--win11-accent)" : "none",
               }}
               onClick={() => setActiveTab("login")}
+              type="button"
             >
               Login
             </button>
@@ -64,6 +65,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ authAPI }) => {
                 borderBottom: activeTab === "register" ? "2px solid var(--win11-accent)" : "none",
               }}
               onClick={() => setActiveTab("register")}
+              type="button"
             >
               Register
             </button>
@@ -72,10 +74,8 @@ export const AuthPage: React.FC<AuthPageProps> = ({ authAPI }) => {
           <div style={{ padding: "24px", maxHeight: "70vh", overflowY: "auto" }}>
             {activeTab === "login" ? (
               <>
-                {/* ===== LOGIN FORM FIRST ===== */}
                 <LoginForm authAPI={authAPI} />
 
-                {/* OR LINE */}
                 <div
                   style={{
                     display: "flex",
@@ -90,13 +90,10 @@ export const AuthPage: React.FC<AuthPageProps> = ({ authAPI }) => {
                   <div style={{ flex: 1, height: 1, background: "var(--win11-divider)" }} />
                 </div>
 
-                {/* ===== OAUTH BUTTONS BELOW ===== */}
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-
-                  {/* GOOGLE */}
                   <button
                     type="button"
-                    onClick={() => (window.location.href = authAPI.getGoogleLoginUrl())}
+                    onClick={onGoogle}
                     style={{
                       display: "flex",
                       alignItems: "center",
@@ -121,10 +118,9 @@ export const AuthPage: React.FC<AuthPageProps> = ({ authAPI }) => {
                     Sign in with Google
                   </button>
 
-                  {/* FACEBOOK */}
                   <button
                     type="button"
-                    onClick={() => (window.location.href = authAPI.getFacebookLoginUrl())}
+                    onClick={onFacebook}
                     style={{
                       display: "flex",
                       alignItems: "center",
@@ -154,8 +150,6 @@ export const AuthPage: React.FC<AuthPageProps> = ({ authAPI }) => {
             ) : (
               <RegisterForm authAPI={authAPI} />
             )}
-
-
           </div>
         </div>
       </div>

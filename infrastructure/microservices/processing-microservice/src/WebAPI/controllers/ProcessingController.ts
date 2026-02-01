@@ -21,7 +21,7 @@ export class ProcessingController {
 
   private initializeRoutes() {
     this.router.post("/process", validateDTO(ProcessRequestDTO), this.processPerfume.bind(this));
-    this.router.get("/perfumes", this.getPerfumes.bind(this)); 
+    this.router.get("/perfumes", this.getPerfumes.bind(this));
     this.router.get("/perfumes/:id", this.getPerfume.bind(this));
     this.router.post("/perfumes/request", this.requestPerfumes.bind(this));
   }

@@ -1,6 +1,8 @@
 import { Router, Request, Response } from "express";
 import { IAnalysisService } from "../../Domain/services/IAnalysisService";
 import { PdfReportFormatter } from "../../Services/PdfReportFormatter";
+import { generateSalesAnalysisReportPdf } from "../../Services/SalesAnalysisReportPDF";
+import PDFDocument from "pdfkit";
 
 export class AnalysisController {
   private router: Router;
@@ -28,6 +30,7 @@ export class AnalysisController {
 
     // kreiranje PDF izveštaja (sales report)
     this.router.post("/sales-report", this.createSalesReport.bind(this));
+    
   }
 
   private async getTopPerfumes(req: Request, res: Response) {
@@ -119,52 +122,178 @@ export class AnalysisController {
    * ✅ PDF download endpoint
    * Frontend očekuje Blob => ovde mora da bude application/pdf + Buffer
    */
-  private async getReportPdf(req: Request, res: Response) {
-    try {
-      const id = Number(req.params.id);
-      if (!Number.isFinite(id)) return res.status(400).json({ message: "Neispravan id." });
+private async getReportPdf(req: Request, res: Response) {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id)) return res.status(400).json({ message: "Neispravan id." });
 
-      const rep = await this.analysisService.getReportById(id);
-      if (!rep) return res.status(404).json({ message: "Izveštaj nije pronađen." });
+    const rep: any = await this.analysisService.getReportById(id);
+    if (!rep) return res.status(404).json({ message: "Izveštaj nije pronađen." });
 
-      // PdfReportFormatter može vratiti Buffer ili nešto što sadrži buffer.
-      const out: any = PdfReportFormatter.toPdfDocument(rep);
-
-      let buffer: any = out;
-
-      // ako formatter vraća { buffer: ... } ili { data: ... }
-      if (out?.buffer) buffer = out.buffer;
-      if (out?.data) buffer = out.data;
-
-      // ako je base64 string
-      if (typeof buffer === "string") {
-        buffer = Buffer.from(buffer, "base64");
-      }
-
-      if (!Buffer.isBuffer(buffer)) {
-        return res.status(500).json({ message: "PDF formatter nije vratio validan Buffer." });
-      }
-
-      res.setHeader("Content-Type", "application/pdf");
-      res.setHeader("Content-Disposition", `attachment; filename="analysis-report-${id}.pdf"`);
-
-      return res.status(200).send(buffer);
-    } catch (err) {
-      console.error("[AnalysisController] getReportPdf error:", err);
-      return res.status(500).json({ message: "Greška prilikom pripreme PDF formata." });
+    // Ako JSON polja stignu kao string
+    if (typeof rep.parametri === "string") {
+      try { rep.parametri = JSON.parse(rep.parametri); } catch {}
     }
+    if (typeof rep.rezultat === "string") {
+      try { rep.rezultat = JSON.parse(rep.rezultat); } catch {}
+    }
+
+    // ---------- PDF helpers ----------
+    const safeText = (v: any): string => {
+      if (v === null || v === undefined) return "N/A";
+      const s = String(v).trim();
+      return s.length ? s : "N/A";
+    };
+
+    const fmtInt = (v: any): string => {
+      const n = Number(v);
+      if (!Number.isFinite(n)) return "0";
+      return String(Math.round(n));
+    };
+
+    const fmtNumber = (v: any, digits = 2): string => {
+      const n = Number(v);
+      if (!Number.isFinite(n)) return "0";
+      return n.toFixed(digits);
+    };
+
+    const fmtCurrency = (v: any): string => {
+      const n = Number(v);
+      if (!Number.isFinite(n)) return "0.00";
+      return n.toFixed(2);
+    };
+
+    const pageBreakIfNeeded = (doc: any, minSpace = 80) => {
+      // A4 height ~842, margin 50 => bottom around 792
+      if (doc.y > 792 - minSpace) doc.addPage();
+    };
+
+    const rezultat = rep.rezultat ?? {};
+    const meta = rezultat.meta ?? {};
+    const kpis = rezultat.kpis ?? {};
+    const trend = Array.isArray(rezultat.trend) ? rezultat.trend : [];
+    const top10 = Array.isArray(rezultat.top10) ? rezultat.top10 : [];
+
+    // ---------- Generate PDF (like performance microservice) ----------
+    const pdfBuffer: Buffer = await new Promise((resolve, reject) => {
+      try {
+        const doc = new PDFDocument({ size: "A4", margin: 50 });
+        const buffers: Buffer[] = [];
+
+        doc.on("data", (chunk: Buffer) => buffers.push(chunk));
+        doc.on("end", () => resolve(Buffer.concat(buffers)));
+        doc.on("error", reject);
+
+        const createdAt = rep.datumKreiranja ? new Date(rep.datumKreiranja) : null;
+        const createdAtStr = createdAt ? createdAt.toLocaleString() : "N/A";
+
+        // Header
+        doc.fontSize(20).text("Sales Analysis Report", { align: "center" });
+        doc.moveDown(0.4);
+        doc.fontSize(10).text("Parfimerija O'Sinel De Or", { align: "center" });
+        doc.moveDown(1.2);
+
+        // Details
+        doc.fontSize(12).text("Report Details", { underline: true });
+        doc.moveDown(0.6);
+        doc.fontSize(11).text(`Report ID: ${safeText(rep.id)}`);
+        doc.text(`Type: ${safeText(rep.tipIzvestaja)}`);
+        doc.text(`Created at: ${createdAtStr}`);
+        doc.text(
+          `Period: from ${safeText(meta.from)} to ${safeText(meta.to)} (groupBy: ${safeText(meta.groupBy)})`
+        );
+        doc.moveDown(1.2);
+
+        // KPIs
+        doc.fontSize(12).text("KPIs", { underline: true });
+        doc.moveDown(0.6);
+        doc.fontSize(11).text(`Total revenue: ${fmtCurrency(kpis.totalRevenue)}`);
+        doc.text(`Total receipts: ${fmtInt(kpis.totalReceipts)}`);
+        doc.text(`Total sold (all): ${fmtInt(kpis.totalSoldAll)}`);
+        doc.text(`Avg daily sold: ${fmtNumber(kpis.avgDailySold, 2)}`);
+
+        const bestDay = kpis.bestDay;
+        if (bestDay) doc.text(`Best day: ${safeText(bestDay.date)} (qty: ${fmtInt(bestDay.qty)})`);
+        else doc.text("Best day: N/A");
+
+        doc.moveDown(1.2);
+
+        // Trend table
+        doc.fontSize(12).text("Trend", { underline: true });
+        doc.moveDown(0.6);
+
+        doc.fontSize(10);
+        doc.text("Period", 50, doc.y, { continued: true });
+        doc.text("Qty", 260, doc.y, { continued: true });
+        doc.text("Revenue", 330, doc.y);
+        doc.moveDown(0.3);
+
+        for (const row of trend) {
+          pageBreakIfNeeded(doc, 60);
+          doc.text(safeText(row.t), 50, doc.y, { continued: true });
+          doc.text(fmtInt(row.kolicina), 260, doc.y, { continued: true });
+          doc.text(fmtCurrency(row.prihod), 330, doc.y);
+        }
+
+        doc.moveDown(1.2);
+
+        // Top10 table
+        doc.fontSize(12).text("Top 10 by Revenue", { underline: true });
+        doc.moveDown(0.6);
+
+        doc.fontSize(10);
+        doc.text("Perfume", 50, doc.y, { continued: true });
+        doc.text("Qty", 300, doc.y, { continued: true });
+        doc.text("Revenue", 380, doc.y);
+        doc.moveDown(0.3);
+
+        for (const row of top10) {
+          pageBreakIfNeeded(doc, 60);
+          doc.text(safeText(row.naziv), 50, doc.y, { continued: true });
+          doc.text(fmtInt(row.kolicina), 300, doc.y, { continued: true });
+          doc.text(fmtCurrency(row.prihod), 380, doc.y);
+        }
+
+        doc.moveDown(1.4);
+        doc.fontSize(9).text("Generated by Analysis Microservice", { align: "center" });
+
+        doc.end();
+      } catch (e) {
+        reject(e);
+      }
+    });
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="analysis-report-${id}.pdf"`);
+    return res.status(200).send(pdfBuffer);
+  } catch (err: any) {
+    console.error("[AnalysisController] getReportPdf error:", err);
+    return res.status(500).json({
+      message: "Greška prilikom pripreme PDF formata.",
+      error: err?.message ?? String(err),
+    });
   }
+}
+
+
 
   /**
    * ✅ Kreira novi Sales report (snima u bazu)
    * FIX: koristi this.analysisService umesto this.service
    */
-  private async createSalesReport(req: Request, res: Response) {
+  async createSalesReport(req: Request, res: Response) {
     try {
-      const created = await (this.analysisService as any).createSalesReport(req.body);
+      const dto = req.body;
+
+      // Kreira + snimi report u bazi i vrati ga (sa id)
+      const created = await this.analysisService.createSalesReport(dto);
+
       return res.status(201).json(created);
     } catch (err: any) {
-      return res.status(400).json({ message: err?.message ?? "Failed to create report" });
+      return res.status(500).json({
+        message: "Failed to create sales report",
+        error: err?.message ?? String(err),
+      });
     }
   }
 }

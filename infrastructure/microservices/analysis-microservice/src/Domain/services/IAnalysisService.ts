@@ -47,5 +47,9 @@ export interface IAnalysisService {
 
   listReports(query: ListReportsQuery): Promise<AnalysisReport[]>;
   getReportById(id: number): Promise<AnalysisReport | null>;
+
+  getReportPdf(id: number): Promise<Buffer>;
+
+  createSalesReport(dto: any): Promise<any>;
 }
 

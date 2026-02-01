@@ -64,7 +64,7 @@ export default function AnalysisSalesPage() {
   const [top10RevenueReport, setTop10RevenueReport] = useState<any>(null);
   const [reportsList, setReportsList] = useState<any[]>([]);
 
-  
+
 
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -98,43 +98,38 @@ export default function AnalysisSalesPage() {
 
   useEffect(() => {
     load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [period, from, to]);
 
-  // KPI: sales-summary
   const summaryRow = summaryReport?.rezultat?.[0];
   const totalRevenue = summaryRow ? toNumber(summaryRow.prihod) : 0;
-
-  // TOP10
   const top10Obj = top10RevenueReport?.rezultat;
   const top10List = Array.isArray(top10Obj?.top10) ? top10Obj.top10 : [];
   const totalRevenueTop10 = toNumber(top10Obj?.totalRevenueTop10);
 
 
   type TrendPoint = {
-  ts: number;
-  label: string;
-  qty: number;
-  revenue: number;
+    ts: number;
+    label: string;
+    qty: number;
+    revenue: number;
   };
-  // Trend chart data (sort by ts)
   const trendRows = Array.isArray(trendReport?.rezultat) ? trendReport.rezultat : [];
   const trendChart: TrendPoint[] = trendRows
-  .map((p: any): TrendPoint => {
-    const date = new Date(p.t);
-    return {
-      ts: date.getTime(),
-      label: date.toLocaleDateString("sr-RS", { weekday: "short", day: "2-digit", month: "2-digit" }),
-      qty: toNumber(p.kolicina),
-      revenue: toNumber(p.prihod),
-    };
-  })
-  .sort((a: any, b: any) => a.ts - b.ts);
+    .map((p: any): TrendPoint => {
+      const date = new Date(p.t);
+      return {
+        ts: date.getTime(),
+        label: date.toLocaleDateString("sr-RS", { weekday: "short", day: "2-digit", month: "2-digit" }),
+        qty: toNumber(p.kolicina),
+        revenue: toNumber(p.prihod),
+      };
+    })
+    .sort((a: any, b: any) => a.ts - b.ts);
   const totalSoldAll = trendChart.reduce((acc, x) => acc + x.qty, 0);
   const avgDailySold = trendChart.length > 0 ? totalSoldAll / trendChart.length : 0;
   const bestDay = trendChart.length
-  ? trendChart.reduce((best, x) => (x.qty > best.qty ? x : best), trendChart[0])
-  : null;
+    ? trendChart.reduce((best, x) => (x.qty > best.qty ? x : best), trendChart[0])
+    : null;
 
   async function onDownloadPdf(id: number) {
     try {
@@ -151,9 +146,10 @@ export default function AnalysisSalesPage() {
   }
 
   async function onExportPdf() {
-  const rep = await createSalesReport({ groupBy: period, from, to }, accessToken);
-  await onDownloadPdf(rep.id);
+    const rep = await createSalesReport({ groupBy: period, from, to }, accessToken);
+    await onDownloadPdf(rep.id);
   }
+
 
   return (
     <div style={{ padding: 16 }}>
@@ -182,7 +178,6 @@ export default function AnalysisSalesPage() {
         </div>
       ) : null}
 
-      {/* KPI */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 10, marginBottom: 12 }}>
         <KpiCard title="Ukupan prihod" value={money.format(totalRevenue)} suffix="RSD" hint="Ukupno u periodu" />
         <KpiCard title="Prodatih parfema" value={intFmt.format(totalSoldAll)} hint="Svi parfemi (ukupno)" />
@@ -190,7 +185,6 @@ export default function AnalysisSalesPage() {
         <KpiCard title="Najbolji dan" value={bestDay ? bestDay.label : "-"} hint={bestDay ? `${intFmt.format(bestDay.qty)} parfema` : ""} />
       </div>
 
-      {/* Charts */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
         <SalesLineChart
           title="Broj prodatih parfema po danima"
@@ -206,7 +200,6 @@ export default function AnalysisSalesPage() {
         />
       </div>
 
-      {/* Top10 + Reports */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
         <Top10RevenueTable title="Najprodavaniji parfemi (Top 10)" rows={top10List} totalRevenueTop10={totalRevenueTop10} />
         <ReportsTable reports={reportsList} onPdf={onDownloadPdf} />

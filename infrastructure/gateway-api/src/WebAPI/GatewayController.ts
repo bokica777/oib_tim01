@@ -11,7 +11,6 @@ import { CreateOrderDTO } from "../Domain/DTOs/sales/CreateOrderDTO";
 import { SendRequestDTO } from "../Domain/DTOs/storage/SendRequestDTO";
 import { StorePackageDTO } from "../Domain/DTOs/storage/StorePackageDTO";
 import { RunSimulationDTO } from "../Domain/DTOs/performance-analysis/RunSimulationDTO";
-import { CreateAuditLogDTO } from "../Domain/DTOs/event-log/CreateAuditLog";
 import { CreateReceiptDTO } from "../Domain/DTOs/analysis/CreateReceiptDTO";
 import { authenticateOrGatewayKey } from "../Middlewares/authentification/authenticateOrGatewayKey";
 
@@ -19,6 +18,7 @@ export class GatewayController {
   private readonly router: Router;
 
   constructor(private readonly gatewayService: IGatewayService) {
+    console.log("✅ [GATEWAY] GatewayController LOADED");
     this.router = Router();
     this.initializeRoutes();
   }
@@ -35,12 +35,7 @@ export class GatewayController {
     this.router.post("/register", this.register.bind(this));
 
     // ================= USERS =================
-    this.router.get(
-      "/users",
-      authenticate,
-      authorize("admin"),
-      this.getAllUsers.bind(this)
-    );
+    this.router.get("/users", authenticate, authorize("admin"), this.getAllUsers.bind(this));
     this.router.get("/users/me", authenticate, this.getCurrentUser.bind(this));
     this.router.get("/users/:id", authenticate, this.getUserById.bind(this));
 
@@ -53,7 +48,12 @@ export class GatewayController {
     this.router.get("/production/logs", authenticate, this.getProductionLogs.bind(this));
 
     // ================= PROCESSING =================
-    this.router.post("/processing/process", authenticate, validateDTO(ProcessRequestDTO), this.processPerfume.bind(this));
+    this.router.post(
+      "/processing/process",
+      authenticate,
+      validateDTO(ProcessRequestDTO),
+      this.processPerfume.bind(this)
+    );
     this.router.get("/processing/perfumes", authenticate, this.listPerfumes.bind(this));
     this.router.get("/processing/perfumes/:id", authenticate, this.getPerfumeById.bind(this));
     this.router.post("/processing/perfumes/request", authenticate, this.requestPerfumes.bind(this));
@@ -64,7 +64,6 @@ export class GatewayController {
     this.router.get("/perfumes/:id", authenticate, this.getPerfumeById.bind(this));
 
     this.router.get("/catalog/perfumes", authenticate, this.listPerfumes.bind(this));
-    
 
     // ================= STORAGE =================
     this.router.post("/storage/store", authenticate, validateDTO(StorePackageDTO), this.storePackage.bind(this));
@@ -76,9 +75,6 @@ export class GatewayController {
     this.router.post("/packaging/pack", authenticate, this.requestPackaging.bind(this));
 
     // ================= SALES =================
-    this.router.post("/sales/order", authenticate, validateDTO(CreateOrderDTO), this.createOrder.bind(this));
-    this.router.get("/sales/order/:id", authenticate, this.getOrderById.bind(this));
-    this.router.get("/sales/orders", authenticate, this.listOrders.bind(this));
     this.router.post(
       "/sales/order",
       authenticate,
@@ -109,10 +105,26 @@ export class GatewayController {
     );
 
     // ================= PERFORMANCE =================
-    this.router.post("/performance/simulate", authenticate, authorize("admin"), validateDTO(RunSimulationDTO), this.runSimulation.bind(this));
+    this.router.post(
+      "/performance/simulate",
+      authenticate,
+      authorize("admin"),
+      validateDTO(RunSimulationDTO),
+      this.runSimulation.bind(this)
+    );
     this.router.get("/performance/reports", authenticate, authorize("admin"), this.listPerformanceReports.bind(this));
-    this.router.get("/performance/reports/:id", authenticate, authorize("admin"), this.getPerformanceReportById.bind(this));
-    this.router.get("/performance/reports/:id/pdf", authenticate, authorize("admin"), this.getPerformanceReportPdf.bind(this));
+    this.router.get(
+      "/performance/reports/:id",
+      authenticate,
+      authorize("admin"),
+      this.getPerformanceReportById.bind(this)
+    );
+    this.router.get(
+      "/performance/reports/:id/pdf",
+      authenticate,
+      authorize("admin"),
+      this.getPerformanceReportPdf.bind(this)
+    );
 
     // ================= ANALYTICS =================
     this.router.get("/analysis/top-perfumes", authenticate, this.getTopPerfumes.bind(this));
@@ -123,11 +135,21 @@ export class GatewayController {
 
     this.router.get("/analysis/reports", authenticate, this.getReports.bind(this));
     this.router.get("/analysis/reports/:id/pdf", authenticate, this.downloadReportPdf.bind(this));
+
+    this.router.post("/analysis/sales-report", authenticate, this.createSalesReport.bind(this));
+
     // ================= AUDIT =================
     this.router.post("/audit", authenticateOrGatewayKey, this.createAudit.bind(this));
     this.router.get("/audit", this.getAuditLogs.bind(this));
+
+    console.log(
+      "✅ [GATEWAY] ROUTES REGISTERED:",
+      this.router.stack
+        .filter((l: any) => l.route)
+        .map((l: any) => `${Object.keys(l.route.methods)[0].toUpperCase()} ${l.route.path}`)
+    );
   }
-  // Auth handlers
+
   private oauthGoogleStart(req: Request, res: Response) {
     const authBase = process.env.AUTH_SERVICE_API;
     if (!authBase) return res.status(500).json({ message: "AUTH_SERVICE_API not configured" });
@@ -159,12 +181,14 @@ export class GatewayController {
 
     return res.redirect(target);
   }
-  
+
   private async login(req: Request, res: Response): Promise<void> {
     const data: LoginUserDTO = req.body;
+
     try {
       const result: any = await this.gatewayService.login(data);
       const returnedToken = result?.token ?? result?.accessToken;
+
       if (returnedToken) {
         try {
           const decoded: any = require("jsonwebtoken").decode(returnedToken) ?? {};
@@ -177,12 +201,16 @@ export class GatewayController {
           const secret = process.env.JWT_SECRET ?? "";
           const expiresIn = process.env.JWT_EXPIRES_IN ?? "30m";
           const jwt = require("jsonwebtoken");
-          const token = jwt.sign(
-            { id: claims.id, username: claims.username, role: claims.role },
-            secret,
-            { expiresIn }
-          );
-          res.status(200).json({ success: true, token, message: result.message ?? "OK", userData: { id: claims.id, username: claims.username, role: claims.role } });
+          const token = jwt.sign({ id: claims.id, username: claims.username, role: claims.role }, secret, {
+            expiresIn,
+          });
+
+          res.status(200).json({
+            success: true,
+            token,
+            message: result.message ?? "OK",
+            userData: { id: claims.id, username: claims.username, role: claims.role },
+          });
           return;
         } catch (e) {
           console.warn("[GatewayController] failed to re-sign token, falling back to original token", e);
@@ -217,12 +245,11 @@ export class GatewayController {
   }
 
   private async register(req: Request, res: Response) {
-    const result = await this.gatewayService.register(req.body);
+    const result = await this.gatewayService.register(req.body as RegistrationUserDTO);
     res.json(result);
   }
 
   // ================= USERS =================
-
   private async getAllUsers(req: Request, res: Response) {
     try {
       const users = await this.gatewayService.getAllUsers();
@@ -231,6 +258,7 @@ export class GatewayController {
       res.status(err?.status ?? 500).json({ message: err.message });
     }
   }
+
   private async getUserById(req: Request, res: Response) {
     try {
       const idParam = req.params.id;
@@ -285,7 +313,7 @@ export class GatewayController {
   private async getAuditLogs(req: Request, res: Response) {
     try {
       const source = req.query.source ? String(req.query.source) : undefined;
-      const headers = buildInternalHeaders(req); // 👈 KLJUČNO
+      const headers = buildInternalHeaders(req);
 
       const data = await this.gatewayService.getAudits(source, headers);
       res.status(200).json(data);
@@ -293,10 +321,11 @@ export class GatewayController {
       res.status(500).json({ message: err.message });
     }
   }
+
   private async createAudit(req: Request, res: Response) {
     try {
       const forwarded = req.headers.authorization ?? undefined;
-      const data = await this.gatewayService.createAudit(req.body, forwarded);
+      const data = await this.gatewayService.createAudit(req.body, forwarded as string | undefined);
       res.status(201).json(data);
     } catch (err: any) {
       res.status(500).json({ message: err.message });
@@ -313,12 +342,7 @@ export class GatewayController {
 
   private async plantNew(req: Request, res: Response) {
     const headers = buildInternalHeaders(req);
-
-    const result = await this.gatewayService.plantNew(
-      req.body,
-      headers
-    );
-
+    const result = await this.gatewayService.plantNew(req.body, headers);
     res.status(201).json(result);
   }
 
@@ -328,12 +352,7 @@ export class GatewayController {
 
     const f = Number.isFinite(Number(factor)) ? Number(factor) : 65;
 
-    const result = await this.gatewayService.plantAndScale(
-      sourceStrength,
-      f,
-      headers
-    );
-
+    const result = await this.gatewayService.plantAndScale(sourceStrength, f, headers);
     res.status(201).json(result);
   }
 
@@ -342,17 +361,10 @@ export class GatewayController {
       const headers = buildInternalHeaders(req);
       const { commonName, count } = req.body;
 
-      const result = await this.gatewayService.harvestMany(
-        commonName,
-        count,
-        headers
-      );
-
+      const result = await this.gatewayService.harvestMany(commonName, count, headers);
       res.json(result);
     } catch (err: any) {
-      res.status(err.status ?? 500).json({
-        message: err.message ?? "Harvest failed",
-      });
+      res.status(err.status ?? 500).json({ message: err.message ?? "Harvest failed" });
     }
   }
 
@@ -361,20 +373,12 @@ export class GatewayController {
       const headers = buildInternalHeaders(req);
       const { commonName, count } = req.body;
 
-      const result = await this.gatewayService.harvestMany(
-        commonName,
-        count,
-        headers
-      );
-
+      const result = await this.gatewayService.harvestMany(commonName, count, headers);
       res.json(result);
     } catch (err: any) {
-      res.status(err.status ?? 500).json({
-        message: err.message ?? "Harvest failed",
-      });
+      res.status(err.status ?? 500).json({ message: err.message ?? "Harvest failed" });
     }
   }
-
 
   private async adjustStrength(req: Request, res: Response) {
     try {
@@ -386,35 +390,22 @@ export class GatewayController {
         return res.status(400).json({ message: "Invalid value" });
       }
 
-      const result = await this.gatewayService.adjustStrength(
-        plantId,
-        value,
-        headers
-      );
-
+      const result = await this.gatewayService.adjustStrength(plantId, value, headers);
       res.json(result);
     } catch (err: any) {
-      res.status(err.status ?? 500).json({
-        message: err.message ?? "Failed to adjust strength",
-      });
+      res.status(err.status ?? 500).json({ message: err.message ?? "Failed to adjust strength" });
     }
   }
 
-  // ================= PRODUCTION LOGS =================
   private async getProductionLogs(req: Request, res: Response) {
     try {
       const headers = buildInternalHeaders(req);
-      const forwardedToken = req.headers.authorization as string | undefined;
-      const auditPromise = this.gatewayService.getAudits("production", headers);
-      const auditLogs = await auditPromise;
-
+      const auditLogs = await this.gatewayService.getAudits("production", headers);
       res.status(200).json(auditLogs);
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
   }
-
-
 
   // ================= PROCESSING =================
   private async processPerfume(req: Request, res: Response) {
@@ -435,20 +426,13 @@ export class GatewayController {
     if (!Number.isFinite(id)) {
       return res.status(400).json({ message: "Invalid perfume id" });
     }
-    const p = await this.gatewayService.getPerfumeById(
-      Number(req.params.id),
-      headers
-    );
+    const p = await this.gatewayService.getPerfumeById(id, headers);
     res.json(p);
   }
 
   private async requestPerfumes(req: Request, res: Response) {
     const headers = buildInternalHeaders(req);
-    const result = await this.gatewayService.requestPerfumes(
-      req.body.name,
-      req.body.count,
-      headers
-    );
+    const result = await this.gatewayService.requestPerfumes(req.body.name, req.body.count, headers);
     res.json(result);
   }
 
@@ -461,11 +445,7 @@ export class GatewayController {
 
   private async sendPackages(req: Request, res: Response) {
     const headers = buildInternalHeaders(req);
-    const result = await this.gatewayService.sendPackages(
-      req.user?.role,
-      req.body.count,
-      headers
-    );
+    const result = await this.gatewayService.sendPackages(req.user?.role, req.body.count, headers);
     res.json(result);
   }
 
@@ -482,13 +462,9 @@ export class GatewayController {
       res.status(200).json(data);
     } catch (err: any) {
       console.error("Gateway listWarehouses error:", err);
-      res.status(err?.status ?? 500).json({
-        message: err?.message ?? "Failed to fetch warehouses",
-      });
+      res.status(err?.status ?? 500).json({ message: err?.message ?? "Failed to fetch warehouses" });
     }
   }
-
-
 
   // ================= PACKAGING =================
   private async requestPackaging(req: Request, res: Response) {
@@ -497,85 +473,105 @@ export class GatewayController {
     res.status(204).send();
   }
 
+  // ================= SALES =================
   private async createOrder(req: Request, res: Response) {
-  try {
-    const headers = buildInternalHeaders(req);
-    const body = req.body || {};
-
-    // Validacija da items sadrže cenu
-    if (!Array.isArray(body.items) || body.items.length === 0) {
-      return res.status(400).json({ message: "Items array is required" });
-    }
-
-    for (const item of body.items) {
-      if (!item.price || typeof item.price !== "number") {
-        return res.status(400).json({
-          message: `Item perfumeId ${item.perfumeId} is missing price. Ensure price is fetched from backend.`,
-        });
-      }
-    }
-
-    if (!body.totalPrice || typeof body.totalPrice !== "number") {
-      return res.status(400).json({ message: "Total price is required" });
-    }
-
-    // 1) Sanitize order payload ka Sales microservice-u
-    const sanitized = {
-      customerName: String(body.customerName || ""),
-      deliveryAddress: String(body.deliveryAddress || ""),
-      items: body.items.map((it: any) => ({
-        perfumeId: Number(it.perfumeId),
-        price: Number(it.price),
-        quantity: Number(it.quantity ?? 1),
-        name: it.name
-      })),
-      paymentType: String(body.paymentType || "GOTOVINA"),
-      totalPrice: Number(body.totalPrice),
-    };
-
-    // 2) Kreiraj order u Sales servisu
-    const order = await this.gatewayService.createOrder(sanitized, headers);
-
-    // 3) AUTOMATSKI upis u Analysis (Receipt) - ne rušimo prodaju ako failuje
-    const receiptDto = {
-      tipProdaje: "MALOPRODAJA",
-      nacinPlacanja: sanitized.paymentType as "GOTOVINA" | "RACUN" | "KARTICA",
-      stavke: sanitized.items.map((it: any) => ({
-        parfemId: Number(it.perfumeId),
-        nazivParfema: String(it.name || `Perfume ${it.perfumeId}`),
-        kolicina: Number(it.quantity ?? 1),
-        jedinicnaCena: Number(it.price ?? 0),
-      })),
-    };
-
     try {
-      // createReceipt ide na analysis-microservice: POST /receipts
-      await this.gatewayService.createReceipt(receiptDto, headers);
-    } catch (e: any) {
-      console.warn(
-        "[Gateway] Receipt creation failed (order created OK):",
-        e?.message ?? e
+      const headers = buildInternalHeaders(req);
+      const body = req.body || {};
+
+      if (!Array.isArray(body.items) || body.items.length === 0) {
+        return res.status(400).json({ message: "Items array is required" });
+      }
+
+      for (const item of body.items) {
+        if (typeof item.price !== "number" || !Number.isFinite(item.price)) {
+          return res.status(400).json({
+            message: `Item perfumeId ${item.perfumeId} is missing/invalid price. Ensure price is fetched from backend.`,
+          });
+        }
+      }
+
+      if (typeof body.totalPrice !== "number" || !Number.isFinite(body.totalPrice)) {
+        return res.status(400).json({ message: "Total price is required" });
+      }
+
+      const sanitized = {
+        customerName: String(body.customerName || ""),
+        deliveryAddress: String(body.deliveryAddress || ""),
+        items: body.items.map((it: any) => ({
+          perfumeId: Number(it.perfumeId),
+          price: Number(it.price),
+          quantity: Number(it.quantity ?? 1),
+          name: typeof it.name === "string" ? it.name : undefined,
+        })),
+        paymentType: String(body.paymentType || "GOTOVINA"),
+        totalPrice: Number(body.totalPrice),
+      };
+
+      const order = await this.gatewayService.createOrder(sanitized, headers);
+
+      const normalizePerfumeName = (name: string) => {
+        return String(name ?? "")
+          .replace(/\(?\s*\d+\s*ml\s*\)?/gi, "")
+          .replace(/\s+/g, " ")
+          .trim();
+      };
+
+      const nameCache = new Map<number, string>();
+
+      const getNameByPerfumeId = async (perfumeId: number): Promise<string> => {
+        if (nameCache.has(perfumeId)) return nameCache.get(perfumeId)!;
+
+        try {
+          const p = await this.gatewayService.getProcessingPerfumeById(perfumeId, headers);
+          const name = normalizePerfumeName(String(p?.name ?? `Perfume ${perfumeId}`));
+          nameCache.set(perfumeId, name);
+          return name;
+        } catch (e) {
+          const fallback = `Perfume ${perfumeId}`;
+          nameCache.set(perfumeId, fallback);
+          return fallback;
+        }
+      };
+
+      const stavke = await Promise.all(
+        sanitized.items.map(async (it: any) => {
+          const perfumeId = Number(it.perfumeId);
+          const nazivParfema = await getNameByPerfumeId(perfumeId);
+
+          return {
+            parfemId: perfumeId,
+            nazivParfema,
+            kolicina: Number(it.quantity ?? 1),
+            jedinicnaCena: Number(it.price ?? 0),
+          };
+        })
       );
-      // namerno NE bacamo error, prodaja mora da prođe
+
+      const receiptDto = {
+        tipProdaje: "MALOPRODAJA",
+        nacinPlacanja: sanitized.paymentType as "GOTOVINA" | "RACUN" | "KARTICA",
+        stavke,
+      };
+
+      console.log("[GATEWAY] receiptDto.stavke =", stavke.map((s) => s.nazivParfema));
+
+      try {
+        await this.gatewayService.createReceipt(receiptDto, headers);
+      } catch (e: any) {
+        console.warn("[Gateway] Receipt creation failed (order created OK):", e?.message ?? e);
+      }
+
+      res.status(201).json(order);
+    } catch (err: any) {
+      console.error("Gateway createOrder error:", err);
+      res.status(err?.status ?? 500).json({ message: err?.message ?? "Failed to create order" });
     }
-
-    // 4) Vrati order klijentu
-    res.status(201).json(order);
-  } catch (err: any) {
-    console.error("Gateway createOrder error:", err);
-    res.status(err?.status ?? 500).json({
-      message: err?.message ?? "Failed to create order",
-    });
   }
-}
-
 
   private async getOrderById(req: Request, res: Response) {
     const headers = buildInternalHeaders(req);
-    const order = await this.gatewayService.getOrderById(
-      Number(req.params.id),
-      headers
-    );
+    const order = await this.gatewayService.getOrderById(Number(req.params.id), headers);
     res.json(order);
   }
 
@@ -584,6 +580,7 @@ export class GatewayController {
     const list = await this.gatewayService.listOrders(headers);
     res.json(list);
   }
+
   private async listSalePackages(req: Request, res: Response) {
     try {
       const headers = buildInternalHeaders(req);
@@ -591,22 +588,17 @@ export class GatewayController {
       res.json(packages);
     } catch (err: any) {
       console.error("Error fetching sale packages:", err);
-      res.status(err?.status ?? 500).json({
-        message: err?.message ?? "Failed to fetch sale packages",
-      });
+      res.status(err?.status ?? 500).json({ message: err?.message ?? "Failed to fetch sale packages" });
     }
   }
-
 
   // ================= PERFORMANCE =================
   private async runSimulation(req: Request, res: Response) {
     const headers = buildInternalHeaders(req);
-    const result = await this.gatewayService.runSimulation(
-      req.body.algorithmName,
-      headers
-    );
+    const result = await this.gatewayService.runSimulation(req.body.algorithmName, headers);
     res.status(201).json(result);
   }
+
   private async listPerformanceReports(req: Request, res: Response) {
     const headers = buildInternalHeaders(req);
     const result = await this.gatewayService.listPerformanceReports(headers);
@@ -646,11 +638,13 @@ export class GatewayController {
     const result = await this.gatewayService.createReceipt(req.body, headers);
     res.status(201).json(result);
   }
+
   private async getTop10Revenue(req: Request, res: Response) {
     const headers = buildInternalHeaders(req);
     const result = await this.gatewayService.getTop10Revenue(req.query, headers);
     res.json(result);
   }
+
   private async getSalesSummary(req: Request, res: Response) {
     const headers = buildInternalHeaders(req);
     const result = await this.gatewayService.getSalesSummary(req.query, headers);
@@ -670,14 +664,27 @@ export class GatewayController {
   }
 
   private async downloadReportPdf(req: Request, res: Response) {
+    try {
+      const headers = buildInternalHeaders(req);
+      const id = Number(req.params.id);
+
+      const fileBuffer = await this.gatewayService.downloadReportPdf(id, headers);
+
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `attachment; filename="izvestaj-${id}.pdf"`);
+      res.send(fileBuffer);
+    } catch (err: any) {
+      return res.status(500).json({
+        message: "Gateway PDF download failed",
+        error: err?.message ?? String(err),
+      });
+    }
+  }
+
+  private async createSalesReport(req: Request, res: Response) {
     const headers = buildInternalHeaders(req);
-    const id = Number(req.params.id);
-
-    const fileBuffer = await this.gatewayService.downloadReportPdf(id, headers);
-
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `attachment; filename="izvestaj-${id}.pdf"`);
-    res.send(fileBuffer);
+    const result = await this.gatewayService.createSalesReport(req.body, headers);
+    res.status(201).json(result);
   }
 
   public getRouter(): Router {

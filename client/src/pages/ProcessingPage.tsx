@@ -143,10 +143,9 @@ export const ProcessingPage: React.FC = () => {
       }}
     >
       <div style={{ width: "100%", height: "100%" }}>
-        {/* Message banner (isto kao na SalesPage) */}
+
         {message && <MessageBanner msg={message} onClose={() => setMessage(null)} />}
 
-        {/* three-column grid: left (form), center (table), right (details) */}
         <div
           style={{
             display: "grid",
@@ -156,7 +155,6 @@ export const ProcessingPage: React.FC = () => {
             alignItems: "stretch",
           }}
         >
-          {/* Left column - form card */}
           <div style={{ display: "flex", flexDirection: "column", minHeight: 0 }}>
             <div
               style={{
@@ -187,7 +185,6 @@ export const ProcessingPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Center column - table card (srednja zauzima više mesta) */}
           <div style={{ display: "flex", flexDirection: "column", minHeight: 0 }}>
             <div
               style={{
@@ -218,7 +215,6 @@ export const ProcessingPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Right column - details card (kompaktnije) */}
           <div style={{ display: "flex", flexDirection: "column", minHeight: 0 }}>
             <div
               style={{

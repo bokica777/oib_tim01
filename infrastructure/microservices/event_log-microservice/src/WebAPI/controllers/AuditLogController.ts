@@ -1,4 +1,3 @@
-// src/WebAPI/controllers/AuditLogController.ts
 import { Router, Request, Response } from "express";
 import { IAuditLogService } from "../../Domain/services/IAuditLogService";
 import { CreateAuditLogDTO } from "../../Domain/DTOs/CreateAuditLogDTO";

@@ -1,4 +1,3 @@
-// src/Middlewares/authentification/authenticateOrGatewayKey.ts
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 
@@ -7,15 +6,12 @@ export const authenticateOrGatewayKey = (req: Request, res: Response, next: Next
   const expected = process.env.GATEWAY_SECRET ?? "";
 
   if (gatewayKey && expected && gatewayKey === expected) {
-    // allow internal call; set req.user from forwarded x-user-* headers if present
     const id = Number(req.headers["x-user-id"] as string | undefined) || undefined;
     const role = (req.headers["x-user-role"] as string | undefined) || undefined;
     const username = (req.headers["x-user-name"] as string | undefined) || undefined;
     (req as any).user = { id, role, username };
     return next();
   }
-
-  // fallback: normal JWT auth
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     return res.status(401).json({ message: "Token missing" });

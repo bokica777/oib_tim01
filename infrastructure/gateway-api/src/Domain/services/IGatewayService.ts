@@ -40,6 +40,7 @@ export interface IGatewayService {
   listPerfumes(headers: Record<string, string>): Promise<any[]>;
   getPerfumeById(id: number, headers: Record<string, string>): Promise<any>;
   requestPerfumes(name: string, count: number, headers: Record<string, string>): Promise<any[]>;
+  getProcessingPerfumeById(id: number, headers: Record<string, string>): Promise<any>;
 
   // ================= STORAGE =================
   storePackage(dto: any, headers: Record<string, string>): Promise<any>;
@@ -84,6 +85,7 @@ createAudit(data: any, forwardedHeaders?: string | Record<string,string>): Promi
   getSalesTrend(query: Record<string, any>, internalHeaders: Record<string, string>): Promise<any>;
   getReports(query: Record<string, any>, internalHeaders: Record<string, string>): Promise<any>;
   downloadReportPdf(id: number, internalHeaders: Record<string, string>): Promise<Buffer>;
+  createSalesReport(dto: any, internalHeaders: Record<string, string>): Promise<any>;
 
   // ================= GENERIC AUDIT =================
   logAudit(message: string, type?: string, source?: string, meta?: any): Promise<boolean>;

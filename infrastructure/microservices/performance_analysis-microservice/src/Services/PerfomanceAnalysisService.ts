@@ -1,6 +1,7 @@
 import { Repository } from "typeorm";
 import { PerformanceReport } from "../Domain/models/PerformanceReport";
 import { IPerformanceAnalysisService } from "../Domain/services/IPerformanceAnalysisService";
+import { randomInt } from "crypto";
 
 export class PerformanceAnalysisService implements IPerformanceAnalysisService {
     private readonly repo: Repository<PerformanceReport>;
@@ -10,16 +11,14 @@ export class PerformanceAnalysisService implements IPerformanceAnalysisService {
     }
 
     async runSimulation(algorithmName: string): Promise<PerformanceReport> {
-        const seed = this.hashString(algorithmName);
-
-        const executionTime = 100 + (seed % 1900);
-        const successRate = 80 + (seed % 20);
-        const resourceUsage = 20 + (seed % 70);
+        const executionTime = randomInt(100, 2001);
+        const successRate = randomInt(80, 101);
+        const resourceUsage = randomInt(20, 91);
 
         const summary = `Simulacija algoritma ${algorithmName} završena.
             Vreme izvršavanja: ${executionTime} ms.
             Stopa uspeha: ${successRate}%.
-            Iskorišcenje resursa: ${resourceUsage}%.`;
+            Iskorišćenje resursa: ${resourceUsage}%.`;
 
         const report = this.repo.create({
             algorithmName,
