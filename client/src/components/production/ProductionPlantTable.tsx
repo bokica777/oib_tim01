@@ -29,19 +29,20 @@ export const ProductionPlantTable: React.FC = () => {
     try {
       setLoading(true);
 
-      const data: Plant[] = await plantAPI.getPlants(token, 100);
+      const data: Plant[] = await plantAPI.getPlants(token, 1000);
+
       const map = new Map<string, PlantRow>();
 
-      data.forEach(p => {
+      data.forEach((p) => {
         const key = `${p.commonName}_${p.status}`;
 
         if (!map.has(key)) {
           map.set(key, {
-            id: p.id,
+            id: p.id, 
             naziv: p.commonName,
             latinski: p.latinName,
             jacina: p.aromaticOilStrength,
-            kolicina: 1,
+            kolicina: 1, 
             stanje: p.status,
           });
         } else {
@@ -57,35 +58,27 @@ export const ProductionPlantTable: React.FC = () => {
     }
   };
 
+
+
   useEffect(() => {
     loadPlants();
   }, []);
 
- 
-  const plantNew = async () => {
-    try {
-      setActionLoading(true);
+ const plantNew = async () => {
+  try {
+    setActionLoading(true);
 
-      const plants = [
-        { commonName: "Lavanda", latinName: "Lavandula angustifolia", countryOfOrigin: "Francuska" },
-        { commonName: "Ruža", latinName: "Rosa damascena", countryOfOrigin: "Bugarska" },
-        { commonName: "Jasmin", latinName: "Jasminum grandiflorum", countryOfOrigin: "Indija" },
-        { commonName: "Bergamot", latinName: "Citrus bergamia", countryOfOrigin: "Italija" },
-        { commonName: "Ylang-Ylang", latinName: "Cananga odorata", countryOfOrigin: "Indonezija" },
-        { commonName: "Sandalovina", latinName: "Santalum album", countryOfOrigin: "Australija" },
-      ];
+    await plantAPI.plantNew({}, token); // ✅ 1 klik = 1 sadnja
 
-      for (const plant of plants) {
-        await plantAPI.plantNew(plant, token);
-      }
+    await loadPlants();
+  } catch (err) {
+    console.error("Greška pri sađenju biljaka", err);
+  } finally {
+    setActionLoading(false);
+  }
+};
 
-      await loadPlants();
-    } catch (err) {
-      console.error("Greška pri sađenju biljaka", err);
-    } finally {
-      setActionLoading(false);
-    }
-  };
+
 
   const harvest = async () => {
     if (!selectedRow) {
