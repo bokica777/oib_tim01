@@ -16,13 +16,12 @@ export const Db = new DataSource({
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
 
-  // ako ti pravi problem SSL, izbaci skroz ovu liniju
   ssl:
     process.env.DB_SSL_MODE === "REQUIRED"
       ? { rejectUnauthorized: false }
       : false,
 
-  synchronize: true, // u dev-u: automatski pravi tabele
+  synchronize: true,
   logging: false,
 
   entities: [Receipt, ReceiptItem, AnalysisReport],

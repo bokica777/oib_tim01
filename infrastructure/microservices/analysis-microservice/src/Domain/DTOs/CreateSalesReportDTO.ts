@@ -5,8 +5,8 @@ export class CreateSalesReportDTO {
   groupBy!: "week" | "month" | "year";
 
   @IsString()
-  from!: string; // YYYY-MM-DD
+  from!: string; 
 
   @IsString()
-  to!: string; // YYYY-MM-DD
+  to!: string;
 }

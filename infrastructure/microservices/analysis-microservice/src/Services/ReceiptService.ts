@@ -1,4 +1,3 @@
-// src/Services/ReceiptService.ts
 import { Repository } from "typeorm";
 import { Receipt, SaleType, PaymentType } from "../Domain/models/Receipt";
 import { ReceiptItem } from "../Domain/models/ReceiptItem";
@@ -13,14 +12,13 @@ export class ReceiptService implements IReceiptService {
   }
 
   public async createReceipt(dto: CreateReceiptDto): Promise<Receipt> {
-    // 1) Napravi novi Receipt entitet
+
     const receipt = new Receipt();
 
     receipt.brojRacuna = this.generateReceiptNumber();
     receipt.tipProdaje = dto.tipProdaje as SaleType;
     receipt.nacinPlacanja = dto.nacinPlacanja as PaymentType; 
 
-    // 2) Mapiraj stavke iz DTO-a u ReceiptItem entitete
     receipt.stavke = dto.stavke.map((itemDto) => {
       const item = new ReceiptItem();
       item.parfemId = itemDto.parfemId;
@@ -32,25 +30,22 @@ export class ReceiptService implements IReceiptService {
       return item;
     });
 
-    // 3) Izračunaj ukupan iznos računa
     receipt.ukupanIznos = receipt.stavke.reduce(
       (sum, stavka) => sum + Number(stavka.ukupno),
       0
     );
 
-    // 4) Sačuvaj u bazi (kroz TypeORM, cascade će sačuvati i stavke)
     const saved = await this.receiptRepository.save(receipt);
 
     return saved;
   }
 
-  // vrlo prost broj računa, možeš kasnije ulepsšati
   private generateReceiptNumber(): string {
     const now = new Date();
     const y = now.getFullYear();
     const m = String(now.getMonth() + 1).padStart(2, "0");
     const d = String(now.getDate()).padStart(2, "0");
-    const t = String(now.getTime()).slice(-6); // zadnjih 6 cifara timestampa
+    const t = String(now.getTime()).slice(-6);
     return `FR-${y}${m}${d}-${t}`;
   }
 

@@ -17,25 +17,18 @@ export class AnalysisService implements IAnalysisService {
     const from = query.from;
     const to = query.to;
 
-    // Base query: ReceiptItem + join Receipt (zbog datuma)
     const qb = this.receiptItemRepository
       .createQueryBuilder("s")
       .leftJoin("s.racun", "r");
 
-    // Filter po datumu (opciono)
-    // Napomena: koristi DATE(r.datumVreme) da radi sa "YYYY-MM-DD"
     if (from) qb.andWhere("DATE(r.datumVreme) >= :from", { from });
     if (to) qb.andWhere("DATE(r.datumVreme) <= :to", { to });
 
-    // Grupisanje po parfemu (naziv + id)
-    qb.select("s.parfemId", "parfemId")
-      .addSelect("s.nazivParfema", "nazivParfema")
+    qb.select("s.nazivParfema", "nazivParfema")
       .addSelect("SUM(s.kolicina)", "kolicina")
       .addSelect("SUM(s.ukupno)", "prihod")
-      .groupBy("s.parfemId")
-      .addGroupBy("s.nazivParfema");
+      .groupBy("s.nazivParfema");
 
-    // Sort
     if (type === "quantity") {
       qb.orderBy("kolicina", "DESC");
     } else {
@@ -46,7 +39,6 @@ export class AnalysisService implements IAnalysisService {
 
     const rows = await qb.getRawMany();
 
-    // Napravi izvestaj koji cuvamo u bazi
     const report = new AnalysisReport();
     report.tipIzvestaja = "TOP_PERFUMES";
     report.parametri = { limit, type, from: from ?? null, to: to ?? null };
@@ -98,7 +90,7 @@ public async getSalesTrend(query: SalesTrendQuery): Promise<AnalysisReport> {
   const granularity = query.granularity ?? "day";
 
   const qb = this.receiptRepository.createQueryBuilder("r")
-    .leftJoin("r.stavke", "i"); // <-- BITNO
+    .leftJoin("r.stavke", "i"); 
 
   if (from) qb.andWhere("DATE(r.datumVreme) >= :from", { from });
   if (to) qb.andWhere("DATE(r.datumVreme) <= :to", { to });
@@ -142,12 +134,10 @@ public async getSalesTrend(query: SalesTrendQuery): Promise<AnalysisReport> {
   if (to) qb.andWhere("DATE(r.datumVreme) <= :to", { to });
 
   const top10 = await qb
-    .select("s.parfemId", "parfemId")
-    .addSelect("s.nazivParfema", "nazivParfema")
+    .select("s.nazivParfema", "nazivParfema")
     .addSelect("SUM(s.kolicina)", "kolicina")
     .addSelect("SUM(s.ukupno)", "prihod")
-    .groupBy("s.parfemId")
-    .addGroupBy("s.nazivParfema")
+    .groupBy("s.nazivParfema")
     .orderBy("kolicina", "DESC")
     .limit(10)
     .getRawMany();
@@ -200,7 +190,6 @@ public async getSalesTrend(query: SalesTrendQuery): Promise<AnalysisReport> {
   const to = dto?.to ?? null;
   const groupBy = dto?.groupBy ?? "day";
 
-  // 1) SUMMARY
   const summaryQb = this.receiptRepository
     .createQueryBuilder("r")
     .select("SUM(r.ukupanIznos)", "prihod")
@@ -211,7 +200,6 @@ public async getSalesTrend(query: SalesTrendQuery): Promise<AnalysisReport> {
 
   const summaryRow = await summaryQb.getRawOne();
 
-  // 2) TREND (groupBy)
   let groupExpr = "DATE(r.datumVreme)";
   if (groupBy === "month") groupExpr = "DATE_FORMAT(r.datumVreme, '%Y-%m')";
   if (groupBy === "year") groupExpr = "YEAR(r.datumVreme)";
@@ -230,14 +218,12 @@ public async getSalesTrend(query: SalesTrendQuery): Promise<AnalysisReport> {
 
   const trendRowsRaw = await trendQb.getRawMany();
 
-  // ✅ normalizuj tipove (SUM često dođe kao string)
   const trendRows = (trendRowsRaw ?? []).map((x: any) => ({
     t: x.t,
     kolicina: Number(x.kolicina ?? 0),
     prihod: Number(x.prihod ?? 0),
   }));
 
-  // 3) TOP10
   const top10Qb = this.receiptRepository
     .createQueryBuilder("r")
     .leftJoin("r.stavke", "i")
@@ -259,7 +245,6 @@ public async getSalesTrend(query: SalesTrendQuery): Promise<AnalysisReport> {
     prihod: Number(x.prihod ?? 0),
   }));
 
-  // KPI iz trend-a
   const totalSoldAll = trendRows.reduce((acc, x) => acc + x.kolicina, 0);
   const avgDailySold = trendRows.length ? totalSoldAll / trendRows.length : 0;
 
@@ -281,7 +266,6 @@ public async getSalesTrend(query: SalesTrendQuery): Promise<AnalysisReport> {
     top10,
   };
 
-  // vraća AnalysisReport entitet sa id
   return await this.saveReport("SALES_ANALYSIS_REPORT", { from, to, groupBy }, payload);
 }
 

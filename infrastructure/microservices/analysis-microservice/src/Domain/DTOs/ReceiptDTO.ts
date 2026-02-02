@@ -1,7 +1,5 @@
-// src/Domain/dtos/ReceiptDtos.ts
 import { PaymentType, SaleType } from "../models/Receipt";
 
-// Jedna stavka koju klijent šalje
 export interface CreateReceiptItemDto {
   parfemId: number;
   nazivParfema: string;
@@ -11,7 +9,7 @@ export interface CreateReceiptItemDto {
 
 // Ceo račun koji se kreira
 export interface CreateReceiptDto {
-  tipProdaje: SaleType;      // "MALOPRODAJA" ili "VELEPRODAJA"
-  nacinPlacanja: PaymentType; // "GOTOVINA" | "RACUN" | "KARTICA"
+  tipProdaje: SaleType;    
+  nacinPlacanja: PaymentType; 
   stavke: CreateReceiptItemDto[];
 }
