@@ -31,7 +31,9 @@ export interface IGatewayService {
   adjustStrength(
     plantId: number,
     value: number,
-    headers: Record<string, string>
+    headers: Record<string, string>,
+    commonName?: string,
+    mode?: "inc" | "scale"
   ): Promise<any>;
   getProductionLogs(headers: Record<string, string>): Promise<any[]>;
 

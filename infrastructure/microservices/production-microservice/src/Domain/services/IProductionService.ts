@@ -2,7 +2,7 @@ import { PlantDTO } from "../DTOs/PlantDTO";
 
 export interface IProductionService {
   plantNew(seedData?: Partial<PlantDTO>): Promise<PlantDTO>;
-  adjustAromaticStrength(
+ adjustAromaticStrength(
   plantId: number,
   value: number,
   mode?: "inc" | "scale",

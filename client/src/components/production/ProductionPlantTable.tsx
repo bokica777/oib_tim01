@@ -41,13 +41,12 @@ export const ProductionPlantTable: React.FC = () => {
 
     const data: Plant[] = await plantAPI.getPlants(token, 10000);
 
-    // broji samo PLANTED (jer ti tabela prikazuje stanje)
     const plantedCount = new Map<string, number>();
     const plantedStrengthSum = new Map<string, number>();
     const plantedStrengthCnt = new Map<string, number>();
 
     for (const p of data) {
-      if (p.status !== "PLANTED") continue; // prikazujemo posađene količine
+      if (p.status !== "PLANTED") continue; 
       plantedCount.set(p.commonName, (plantedCount.get(p.commonName) ?? 0) + 1);
       plantedStrengthSum.set(p.commonName, (plantedStrengthSum.get(p.commonName) ?? 0) + (p.aromaticOilStrength ?? 0));
       plantedStrengthCnt.set(p.commonName, (plantedStrengthCnt.get(p.commonName) ?? 0) + 1);
@@ -59,7 +58,7 @@ export const ProductionPlantTable: React.FC = () => {
       const avgStrength = cnt ? plantedStrengthSum.get(c.commonName)! / cnt : 0;
 
       return {
-        id: 0, // agregatni red (nije prava biljka)
+        id: 0, 
         naziv: c.commonName,
         latinski: c.latinName,
         jacina: Number(avgStrength.toFixed(2)),
@@ -76,9 +75,6 @@ export const ProductionPlantTable: React.FC = () => {
   }
 };
 
-
-
-
   useEffect(() => {
     loadPlants();
   }, []);
@@ -92,7 +88,6 @@ export const ProductionPlantTable: React.FC = () => {
   try {
     setActionLoading(true);
 
-    // nađi je u katalogu da uzmeš origin
     const cat = CATALOG.find(c => c.commonName === selectedRow.naziv);
     if (!cat) {
       alert("Nepoznata biljka u katalogu.");
@@ -115,9 +110,6 @@ export const ProductionPlantTable: React.FC = () => {
     setActionLoading(false);
   }
 };
-
-
-
 
   const harvest = async () => {
     if (!selectedRow) {
@@ -211,7 +203,6 @@ const adjustStrength = async () => {
       </div>
 
       <div className="window-content">
-        {/* ACTION BUTTONS */}
         <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
           <button className="btn btn-accent" onClick={plantNew} disabled={actionLoading}>
             + Zasadi biljku

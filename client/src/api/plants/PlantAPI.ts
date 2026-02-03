@@ -78,6 +78,4 @@ async adjustStrength(
   return res.data;
 }
 
-
-
 }

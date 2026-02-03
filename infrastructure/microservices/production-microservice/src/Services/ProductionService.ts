@@ -21,7 +21,7 @@ export class ProductionService implements IProductionService {
   async plantNew(seedData?: Partial<PlantDTO>): Promise<PlantDTO> {
   const strength =
     seedData?.aromaticOilStrength ??
-    Number((Math.random() * 4 + 1).toFixed(2)); // 1.00 - 5.00
+    Number((Math.random() * 4 + 1).toFixed(2)); 
 
   const plant = this.plantRepo.create({
     commonName: seedData?.commonName ?? "Unknown Plant",
@@ -45,8 +45,8 @@ export class ProductionService implements IProductionService {
   mode: "inc" | "scale" = "inc",
   commonName?: string
 ): Promise<PlantDTO> {
+  const clamp = (x: number) => Math.min(5.0, Math.max(1.0, x));
 
-  // ✅ BULK: id=0 znači "po vrsti"
   if (plantId === 0) {
     if (!commonName) throw new Error("commonName is required for bulk adjust");
 
@@ -67,19 +67,18 @@ export class ProductionService implements IProductionService {
         plant.aromaticOilStrength = Number((plant.aromaticOilStrength * factor).toFixed(2));
       }
 
-      // (opciono) clamp 1.0–5.0 ako želiš striktno po zadatku:
-      // plant.aromaticOilStrength = Math.min(5.0, Math.max(1.0, plant.aromaticOilStrength));
+      plant.aromaticOilStrength = clamp(plant.aromaticOilStrength);
     }
 
     await this.plantRepo.save(plants);
 
-    this.addLog(`Promijenjena jačina za ${plants.length} biljaka vrste "${commonName}" (${mode}, ${value}%)`);
+    this.addLog(
+      `Promijenjena jačina za ${plants.length} biljaka vrste "${commonName}" (${mode}, ${value}%)`
+    );
 
-    // vrati bilo koju (npr. prvu) da ne lomi frontend tipove
     return toDTO(plants[0]);
   }
 
-  // ---- postojeća logika za SINGLE (id != 0) ----
   const plant = await this.plantRepo.findOne({ where: { id: plantId } });
   if (!plant) throw new Error("Plant not found");
 
@@ -95,12 +94,20 @@ export class ProductionService implements IProductionService {
     plant.aromaticOilStrength = Number((plant.aromaticOilStrength * factor).toFixed(2));
   }
 
+  plant.aromaticOilStrength = clamp(plant.aromaticOilStrength);
+
   const saved = await this.plantRepo.save(plant);
 
-  this.addLog(`Promijenjena jačina biljke "${saved.commonName}" (${before} → ${saved.aromaticOilStrength})`);
+  this.addLog(
+    `Promijenjena jačina biljke "${saved.commonName}" (${before} → ${saved.aromaticOilStrength})`
+  );
+
   if (saved.aromaticOilStrength > 4.0) {
-    this.addLog(`⚠️ Upozorenje: jačina biljke "${saved.commonName}" prešla dozvoljenu granicu (4.00)`);
+    this.addLog(
+      `⚠️ Upozorenje: jačina biljke "${saved.commonName}" prešla dozvoljenu granicu (4.00)`
+    );
   }
+
   return toDTO(saved);
 }
 

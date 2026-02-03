@@ -381,21 +381,34 @@ export class GatewayController {
   }
 
   private async adjustStrength(req: Request, res: Response) {
-    try {
-      const headers = buildInternalHeaders(req);
-      const plantId = Number(req.params.id);
-      const { value } = req.body;
+  try {
+    const headers = buildInternalHeaders(req);
+    const plantId = Number(req.params.id);
 
-      if (!Number.isFinite(value)) {
-        return res.status(400).json({ message: "Invalid value" });
-      }
+    const { value, commonName, mode } = req.body;
 
-      const result = await this.gatewayService.adjustStrength(plantId, value, headers);
-      res.json(result);
-    } catch (err: any) {
-      res.status(err.status ?? 500).json({ message: err.message ?? "Failed to adjust strength" });
+    if (!Number.isFinite(plantId)) {
+      return res.status(400).json({ message: "Invalid plant id" });
     }
+
+    if (!Number.isFinite(value)) {
+      return res.status(400).json({ message: "Invalid value" });
+    }
+
+    const result = await this.gatewayService.adjustStrength(
+      plantId,
+      value,
+      headers,
+      commonName,
+      mode === "scale" ? "scale" : "inc"
+    );
+
+    res.json(result);
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ message: err.message ?? "Failed to adjust strength" });
   }
+}
+
 
   private async getProductionLogs(req: Request, res: Response) {
     try {
