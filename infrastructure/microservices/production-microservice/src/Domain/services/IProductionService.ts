@@ -3,10 +3,11 @@ import { PlantDTO } from "../DTOs/PlantDTO";
 export interface IProductionService {
   plantNew(seedData?: Partial<PlantDTO>): Promise<PlantDTO>;
   adjustAromaticStrength(
-    plantId: number,
-    value: number,
-    mode?: "inc" | "scale"
-  ): Promise<PlantDTO>;
+  plantId: number,
+  value: number,
+  mode?: "inc" | "scale",
+  commonName?: string
+): Promise<PlantDTO>;
   harvestMany(
     commonName: string,
     count: number

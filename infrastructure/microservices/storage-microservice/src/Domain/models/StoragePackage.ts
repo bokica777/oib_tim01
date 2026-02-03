@@ -7,7 +7,7 @@ export class StoragePackage {
   id!: number;
 
   @Column({ type: "varchar", length: 150 })
-  name!: string; 
+  name!: string;
 
   @Column({ type: "varchar", length: 250 })
   senderAddress!: string;
@@ -15,8 +15,8 @@ export class StoragePackage {
   @Column({ type: "int" })
   warehouseId!: number;
 
-  @Column({ type: "int", nullable: true })
-  perfumeId?: number;
+  @Column({ type: "simple-json" })
+  perfumeIds!: number[];
 
   @Column({ type: "enum", enum: PackageStatus, default: PackageStatus.PACKED })
   status!: PackageStatus;
@@ -25,5 +25,5 @@ export class StoragePackage {
   createdAt!: Date;
 
   @Column({ type: "varchar", length: 64, nullable: true, unique: true })
-  serialNumber?: string; 
+  serialNumber?: string;
 }

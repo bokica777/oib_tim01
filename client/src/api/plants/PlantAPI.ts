@@ -66,14 +66,18 @@ export class PlantAPI implements IPlantAPI {
 async adjustStrength(
   plantId: number,
   value: number,
-  token: string
+  token: string,
+  commonName?: string,
+  mode: "inc" | "scale" = "inc"
 ): Promise<Plant> {
   const res = await this.axiosInstance.put(
     `/production/adjust/${plantId}`,
-    { value },
+    { value, commonName, mode },
     { headers: this.getAuthHeaders(token) }
   );
   return res.data;
 }
+
+
 
 }
