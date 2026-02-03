@@ -3,7 +3,7 @@ export type PdfBlockType = "title" | "subtitle" | "paragraph" | "table" | "metri
 export interface PdfMeta {
   reportId: number;
   reportType: string;
-  createdAt: string;      // ISO
+  createdAt: string;     
   createdBy?: string | null;
   period?: { from?: string | null; to?: string | null };
   params?: any;
@@ -15,8 +15,8 @@ export interface PdfMetric {
 }
 
 export interface PdfTableColumn {
-  key: string;     // key in row object
-  label: string;   // header label
+  key: string;   
+  label: string;  
 }
 
 export interface PdfTableBlock {

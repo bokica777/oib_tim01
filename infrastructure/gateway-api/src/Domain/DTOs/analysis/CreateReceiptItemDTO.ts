@@ -8,6 +8,10 @@ export class CreateReceiptItemDTO {
   nazivParfema!: string;
 
   @IsInt()
+  @Min(0)
+  zapreminaMl!: number;
+
+  @IsInt()
   @Min(1)
   kolicina!: number;
 

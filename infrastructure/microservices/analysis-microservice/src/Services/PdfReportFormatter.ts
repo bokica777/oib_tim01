@@ -13,13 +13,11 @@ export class PdfReportFormatter {
 
     const blocks: PdfBlock[] = [];
 
-    // Header
     blocks.push({ type: "title", text: "Izveštaj analize" });
     blocks.push({ type: "subtitle", text: `Tip: ${type}` });
     blocks.push({ type: "paragraph", text: `Kreirano: ${iso((report as any).datumKreiranja)}` });
     blocks.push({ type: "spacer" });
 
-    // Type-specific blocks
     if (type === "TOP_PERFUMES") {
       blocks.push({ type: "subtitle", text: "Top parfemi" });
 
@@ -58,7 +56,6 @@ export class PdfReportFormatter {
         ],
       });
 
-      // rows: [{ period?, prihod, brojRacuna }]
       blocks.push({
         type: "table",
         title: "Rezultat",
@@ -134,7 +131,6 @@ export class PdfReportFormatter {
     }
 
     else {
-      // Generic fallback
       blocks.push({ type: "subtitle", text: "Generički izveštaj" });
       blocks.push({ type: "paragraph", text: "Format nije specijalizovan; prikaz sirovih podataka ispod." });
       blocks.push({

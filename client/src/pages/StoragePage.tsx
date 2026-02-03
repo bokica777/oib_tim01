@@ -87,61 +87,14 @@ export const StoragePage: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      const pkgs = await storageAPI.listPackages();
-      setPackaging(pkgs || []);
-      try {
-        if (typeof storageAPI.listWarehouses === "function") {
-          const whFromApi = await storageAPI.listWarehouses();
-          const mapped = (whFromApi || []).map((w: any) => ({
-            id: String(w.id ?? ""),
-            name: w.name ?? `Skladište ${w.id ?? ""}`,
-            location: w.location ?? w.address ?? undefined,
-            capacity: Number(w.capacity ?? w.capacityTotal ?? 0),
-            capacityUsed: Number(w.usedCapacity ?? w.capacityUsed ?? 0),
-          })) as WarehouseDTO[];
-          setWarehouses(mapped);
-          return;
-        }
-        throw new Error("listWarehouses not available");
-      } catch (err) {
-        console.warn("listWarehouses failed, falling back to derive from packages", err);
-      }
 
-      const map = new Map<string, WarehouseDTO>();
-      const DEFAULT_CAPACITY = 100;
+      const [pkgs, whs] = await Promise.all([
+        storageAPI.listPackages(),
+        storageAPI.listWarehouses(),
+      ]);
 
-      (pkgs || []).forEach((p: any) => {
-        const wid = p.warehouseId ?? p.warehouse?.id ?? null;
-        if (!wid && p.warehouse?.id == null) return;
-        const id = String(wid ?? p.warehouse?.id);
-        if (!map.has(id)) {
-          const name = p.warehouseName ?? p.warehouse?.name ?? `Skladište ${id}`;
-          const location = p.warehouse?.location ?? undefined;
-          map.set(id, {
-            id,
-            name,
-            location,
-            capacity: DEFAULT_CAPACITY,
-            capacityUsed: 0,
-          } as WarehouseDTO);
-        }
-      });
-
-      const counts: Record<string, number> = {};
-      (pkgs || []).forEach((p: any) => {
-        const wid = String(p.warehouseId ?? p.warehouse?.id ?? "");
-        if (!wid) return;
-        const status = (p.status ?? "STORED").toString().toUpperCase();
-        if (status === "SENT") return;
-        const qty = Number(p.count ?? p.quantity ?? 1) || 1;
-        counts[wid] = (counts[wid] ?? 0) + qty;
-      });
-
-      for (const [id, w] of map.entries()) {
-        (w as any).capacityUsed = counts[id] ?? 0;
-      }
-
-      setWarehouses(Array.from(map.values()));
+      setPackaging(pkgs ?? []);
+      setWarehouses(whs ?? []);
     } catch (e: any) {
       console.error(e);
       setError(e?.message || "Greška pri učitavanju.");
@@ -149,6 +102,7 @@ export const StoragePage: React.FC = () => {
       setLoading(false);
     }
   };
+
 
   const handleSend = async () => {
     if (!center) {
@@ -195,17 +149,15 @@ export const StoragePage: React.FC = () => {
     });
   }, [packaging, selectedWarehouse]);
 
-  const totalCount = packaging.reduce(
-    (s, p) => s + (Number((p as any).count ?? (p as any).quantity ?? 0) || 0),
-    0
-  );
+  const totalCount = packaging.reduce((s, p) => s + (Number(p.count ?? 0) || 0), 0);
+
 
   const selectedWarehouseObj = warehouses.find((w) => w.id === selectedWarehouse) ?? null;
   const displayTitle = selectedWarehouseObj ? `Ambalaža — ${selectedWarehouseObj.name}` : "Ambalaža — Sva skladišta";
   const displaySubtitle = selectedWarehouseObj
     ? `${selectedWarehouseObj.capacityUsed} / ${selectedWarehouseObj.capacity} (${Math.round(
-        (selectedWarehouseObj.capacity > 0 ? (selectedWarehouseObj.capacityUsed / selectedWarehouseObj.capacity) * 100 : 0)
-      )}% )`
+      (selectedWarehouseObj.capacity > 0 ? (selectedWarehouseObj.capacityUsed / selectedWarehouseObj.capacity) * 100 : 0)
+    )}% )`
     : `${totalCount} artikala u sistemu`;
 
   if (loading) return <div style={{ padding: 20 }}>Učitavanje skladišta…</div>;
@@ -216,19 +168,19 @@ export const StoragePage: React.FC = () => {
       style={{ padding: 12, height: "calc(100vh - 60px)", boxSizing: "border-box" }}
     >
       {message && (
-  <div
-    style={{
-      position: "fixed",
-      top: 16,
-      left: "50%",
-      transform: "translateX(-50%)",
-      zIndex: 1000,
-      width: "min(520px, calc(100% - 32px))",
-    }}
-  >
-    <MessageBanner msg={message} onClose={() => setMessage(null)} />
-  </div>
-)}
+        <div
+          style={{
+            position: "fixed",
+            top: 16,
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 1000,
+            width: "min(520px, calc(100% - 32px))",
+          }}
+        >
+          <MessageBanner msg={message} onClose={() => setMessage(null)} />
+        </div>
+      )}
 
 
       <style>{`

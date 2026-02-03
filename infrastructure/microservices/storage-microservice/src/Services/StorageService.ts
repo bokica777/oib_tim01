@@ -11,28 +11,24 @@ export class StorageService {
     private readonly pkgRepo: Repository<StoragePackage>,
     private readonly distributiveCenter: IStorageCenter,
     private readonly warehouseCenter: IStorageCenter
-  ) {}
+  ) { }
 
-  async storePackage(data: Partial<StoragePackage>): Promise<StoragePackage> {
-    if (!data.warehouseId) {
-      throw new Error("warehouseId is required");
-    }
+  async storePackage(data: { name: string; senderAddress: string; warehouseId: number; perfumeIds: number[] }): Promise<StoragePackage> {
+    if (!data.warehouseId) throw new Error("warehouseId is required");
 
     const warehouseRepo = Db.getRepository(Warehouse);
     const warehouse = await warehouseRepo.findOneBy({ id: data.warehouseId });
-    if (!warehouse) {
-      throw new Error("Skladište ne postoji");
-    }
+    if (!warehouse) throw new Error("Skladište ne postoji");
 
     if (warehouse.usedCapacity >= warehouse.capacity) {
       throw new Error("Skladište je puno");
     }
 
     const p = this.pkgRepo.create({
-      name : data.name,
-      senderAddress : data.senderAddress,
-      warehouseId : data.warehouseId,
-      perfumeId : data.perfumeId,
+      name: data.name,
+      senderAddress: data.senderAddress,
+      warehouseId: data.warehouseId,
+      perfumeIds: Array.isArray(data.perfumeIds) ? data.perfumeIds : [],
       status: PackageStatus.PACKED,
     });
 
@@ -41,8 +37,7 @@ export class StorageService {
     saved.serialNumber = `PKG-2025-${saved.id}`;
     await this.pkgRepo.save(saved);
 
-    warehouse.usedCapacity += 1;
-    await warehouseRepo.save(warehouse);
+    await warehouseRepo.increment({ id: warehouse.id }, "usedCapacity", 1);
 
     return saved;
   }
@@ -51,15 +46,34 @@ export class StorageService {
     role: string | undefined,
     count: number
   ): Promise<StoragePackage[]> {
-    if (role === "SALES_MANAGER") {
-      return this.distributiveCenter.send(count);
+    const r = (role ?? "").toLowerCase();
+
+    const sent =
+      r === "sales_manager"
+        ? await this.distributiveCenter.send(count)
+        : await this.warehouseCenter.send(count);
+
+    const warehouseRepo = Db.getRepository(Warehouse);
+    const byWh = new Map<number, number>();
+
+    for (const p of sent) {
+      byWh.set(p.warehouseId, (byWh.get(p.warehouseId) ?? 0) + 1);
     }
-    return this.warehouseCenter.send(count);
+
+    for (const [warehouseId, dec] of byWh) {
+      await warehouseRepo.decrement({ id: warehouseId }, "usedCapacity", dec);
+    }
+
+    return sent;
   }
 
-  async listAvailable(): Promise<StoragePackage[]> {
+  async listAvailable(status?: PackageStatus): Promise<StoragePackage[]> {
+    if (status) {
+      return this.pkgRepo.find({ where: { status }, order: { createdAt: "ASC" } });
+    }
+
     return this.pkgRepo.find({
-      where: { status: In([ PackageStatus.PACKED,PackageStatus.SENT]) },
+      where: { status: In([PackageStatus.PACKED, PackageStatus.SENT]) },
       order: { createdAt: "ASC" },
     });
   }

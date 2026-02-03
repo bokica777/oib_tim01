@@ -34,7 +34,6 @@ function ensureObject(v: any): any {
 }
 
 function pageBreakIfNeeded(doc: typeof PDFDocument, minSpace = 80) {
-  // A4 height ~842, margins 50 => dno oko 792
   if ((doc as any).y > 792 - minSpace) doc.addPage();
 }
 
@@ -62,7 +61,6 @@ export function generateSalesAnalysisReportPdf(reportEntity: any): Promise<Buffe
       const trend: AnyObj[] = Array.isArray(rezultat.trend) ? rezultat.trend : [];
       const top10: AnyObj[] = Array.isArray(rezultat.top10) ? rezultat.top10 : [];
 
-      // Header
       doc.fontSize(20).text("Sales Analysis Report", { align: "center" });
       doc.moveDown(0.4);
       doc.fontSize(10).text("Parfimerija O'Sinel De Or", { align: "center" });
@@ -77,7 +75,6 @@ export function generateSalesAnalysisReportPdf(reportEntity: any): Promise<Buffe
       doc.text(`Period: from ${safeText(meta.from)} to ${safeText(meta.to)} (groupBy: ${safeText(meta.groupBy)})`);
       doc.moveDown(1.2);
 
-      // KPIs
       doc.fontSize(12).text("KPIs", { underline: true });
       doc.moveDown(0.6);
 
@@ -95,11 +92,9 @@ export function generateSalesAnalysisReportPdf(reportEntity: any): Promise<Buffe
 
       doc.moveDown(1.2);
 
-      // Trend table
       doc.fontSize(12).text("Trend", { underline: true });
       doc.moveDown(0.6);
 
-      // Table header
       doc.fontSize(10);
       doc.text("Period", 50, (doc as any).y, { continued: true });
       doc.text("Qty", 250, (doc as any).y, { continued: true });
@@ -115,7 +110,6 @@ export function generateSalesAnalysisReportPdf(reportEntity: any): Promise<Buffe
 
       doc.moveDown(1.2);
 
-      // Top10 table
       doc.fontSize(12).text("Top 10 by Revenue", { underline: true });
       doc.moveDown(0.6);
 

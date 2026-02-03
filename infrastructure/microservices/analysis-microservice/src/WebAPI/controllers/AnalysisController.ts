@@ -17,20 +17,17 @@ export class AnalysisController {
   }
 
   private initializeRoutes(): void {
-    // GET /api/v1/analysis/top-perfumes?limit=10&from=YYYY-MM-DD&to=YYYY-MM-DD&type=quantity|revenue
     this.router.get("/top-perfumes", this.getTopPerfumes.bind(this));
     this.router.get("/sales-summary", this.getSalesSummary.bind(this));
     this.router.get("/sales-trend", this.getSalesTrend.bind(this));
     this.router.get("/top10-revenue", this.getTop10Revenue.bind(this));
 
-    // pregled izvestaja
+
     this.router.get("/reports", this.listReports.bind(this));
     this.router.get("/reports/:id", this.getReportById.bind(this));
     this.router.get("/reports/:id/pdf", this.getReportPdf.bind(this));
 
-    // kreiranje PDF izveštaja (sales report)
     this.router.post("/sales-report", this.createSalesReport.bind(this));
-    
   }
 
   private async getTopPerfumes(req: Request, res: Response) {
@@ -118,10 +115,6 @@ export class AnalysisController {
     }
   }
 
-  /**
-   * ✅ PDF download endpoint
-   * Frontend očekuje Blob => ovde mora da bude application/pdf + Buffer
-   */
 private async getReportPdf(req: Request, res: Response) {
   try {
     const id = Number(req.params.id);
@@ -130,7 +123,6 @@ private async getReportPdf(req: Request, res: Response) {
     const rep: any = await this.analysisService.getReportById(id);
     if (!rep) return res.status(404).json({ message: "Izveštaj nije pronađen." });
 
-    // Ako JSON polja stignu kao string
     if (typeof rep.parametri === "string") {
       try { rep.parametri = JSON.parse(rep.parametri); } catch {}
     }
@@ -138,7 +130,6 @@ private async getReportPdf(req: Request, res: Response) {
       try { rep.rezultat = JSON.parse(rep.rezultat); } catch {}
     }
 
-    // ---------- PDF helpers ----------
     const safeText = (v: any): string => {
       if (v === null || v === undefined) return "N/A";
       const s = String(v).trim();
@@ -164,7 +155,6 @@ private async getReportPdf(req: Request, res: Response) {
     };
 
     const pageBreakIfNeeded = (doc: any, minSpace = 80) => {
-      // A4 height ~842, margin 50 => bottom around 792
       if (doc.y > 792 - minSpace) doc.addPage();
     };
 
@@ -174,7 +164,6 @@ private async getReportPdf(req: Request, res: Response) {
     const trend = Array.isArray(rezultat.trend) ? rezultat.trend : [];
     const top10 = Array.isArray(rezultat.top10) ? rezultat.top10 : [];
 
-    // ---------- Generate PDF (like performance microservice) ----------
     const pdfBuffer: Buffer = await new Promise((resolve, reject) => {
       try {
         const doc = new PDFDocument({ size: "A4", margin: 50 });
@@ -187,13 +176,11 @@ private async getReportPdf(req: Request, res: Response) {
         const createdAt = rep.datumKreiranja ? new Date(rep.datumKreiranja) : null;
         const createdAtStr = createdAt ? createdAt.toLocaleString() : "N/A";
 
-        // Header
         doc.fontSize(20).text("Sales Analysis Report", { align: "center" });
         doc.moveDown(0.4);
         doc.fontSize(10).text("Parfimerija O'Sinel De Or", { align: "center" });
         doc.moveDown(1.2);
 
-        // Details
         doc.fontSize(12).text("Report Details", { underline: true });
         doc.moveDown(0.6);
         doc.fontSize(11).text(`Report ID: ${safeText(rep.id)}`);
@@ -204,7 +191,6 @@ private async getReportPdf(req: Request, res: Response) {
         );
         doc.moveDown(1.2);
 
-        // KPIs
         doc.fontSize(12).text("KPIs", { underline: true });
         doc.moveDown(0.6);
         doc.fontSize(11).text(`Total revenue: ${fmtCurrency(kpis.totalRevenue)}`);
@@ -218,7 +204,6 @@ private async getReportPdf(req: Request, res: Response) {
 
         doc.moveDown(1.2);
 
-        // Trend table
         doc.fontSize(12).text("Trend", { underline: true });
         doc.moveDown(0.6);
 
@@ -237,7 +222,6 @@ private async getReportPdf(req: Request, res: Response) {
 
         doc.moveDown(1.2);
 
-        // Top10 table
         doc.fontSize(12).text("Top 10 by Revenue", { underline: true });
         doc.moveDown(0.6);
 
@@ -277,15 +261,10 @@ private async getReportPdf(req: Request, res: Response) {
 
 
 
-  /**
-   * ✅ Kreira novi Sales report (snima u bazu)
-   * FIX: koristi this.analysisService umesto this.service
-   */
   async createSalesReport(req: Request, res: Response) {
     try {
       const dto = req.body;
 
-      // Kreira + snimi report u bazi i vrati ga (sa id)
       const created = await this.analysisService.createSalesReport(dto);
 
       return res.status(201).json(created);

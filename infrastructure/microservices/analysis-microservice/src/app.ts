@@ -22,7 +22,6 @@ dotenv.config({ quiet: true });
 const app = express();
 
 
-// CORS iz .env
 const corsOrigin = process.env.CORS_ORIGIN ?? "*";
 const corsMethods =
   process.env.CORS_METHODS?.split(",").map((m) => m.trim()) ??
@@ -37,15 +36,11 @@ app.use(
 
 app.use(express.json());
 
-// ❌ Više ne zovemo initialize_database() ovde
-// DB se inicijalizuje u index.ts preko Db.initialize()
-
-// ORM Repositories
 const receiptRepository: Repository<Receipt> = Db.getRepository(Receipt);
 const receiptItemRepository = Db.getRepository(ReceiptItem);
 const reportRepository = Db.getRepository(AnalysisReport);
 
-// Services
+
 const receiptService: IReceiptService = new ReceiptService(
   receiptRepository
 );
@@ -57,11 +52,10 @@ const analysisService: IAnalysisService = new AnalysisService(
 
 
 
-// WebAPI controllers
 const receiptsController = new ReceiptsController(receiptService);
 const analysisController = new AnalysisController(analysisService);
 
-// Registering routes
+
 app.use(
   "/api/v1/receipts",
   requireRole(["ADMIN", "SELLER", "SALES_MANAGER"]),

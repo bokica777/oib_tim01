@@ -18,9 +18,7 @@ export class ReceiptsController {
   }
 
   private initializeRoutes() {
-    // POST /api/v1/receipts
     this.router.post("/", this.createReceipt.bind(this));
-    // GET /api/v1/receipts
     this.router.get("/", this.getAll.bind(this));
     this.router.get("/daily", this.getDaily.bind(this));
     this.router.get("/sales-by-product", this.getSalesByProduct.bind(this));

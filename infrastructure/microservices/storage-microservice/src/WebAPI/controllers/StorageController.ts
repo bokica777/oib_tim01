@@ -2,14 +2,14 @@ import { Router, Request, Response } from "express";
 import { StorageService } from "../../Services/StorageService";
 import { Db } from "../../Database/DbConnectionPool";
 import { StoragePackage } from "../../Domain/models/StoragePackage";
-import { Warehouse } from "../../Domain/models/Warehouse"; 
 import { validateDTO } from "../../middleware/ValidationMiddleware";
-import { StorePackageDTO } from "../../Domain/DTOs/StoragePackageDTO"; 
+import { StorePackageDTO } from "../../Domain/DTOs/StoragePackageDTO";
 import { SendRequestDTO } from "../../Domain/DTOs/SendRequestDTO";
 import { LogerService } from "../../Services/LogerService";
 
 import { DistributiveCenter } from "../../Services/DistributiveCenterService";
-import { WarehouseCenter } from "../../Services/WarehouseCenterService"; 
+import { WarehouseCenter } from "../../Services/WarehouseCenterService";
+import { PackageStatus } from "../../Domain/enums/PackageStatus";
 
 export class StorageController {
   public router: Router;
@@ -66,15 +66,24 @@ export class StorageController {
     }
   }
 
+
+
   private async listAvailable(req: Request, res: Response) {
     try {
-      const list = await this.service.listAvailable();
+      const raw = req.query.status ? String(req.query.status) : undefined;
+
+      const status = raw && Object.values(PackageStatus).includes(raw as PackageStatus)
+        ? (raw as PackageStatus)
+        : undefined;
+
+      const list = await this.service.listAvailable(status);
       res.status(200).json(list);
     } catch (err) {
       await this.logger.log((err as Error).message, "ERROR");
       res.status(500).json({ message: (err as Error).message });
     }
   }
+
 
   private async listWarehouses(req: Request, res: Response) {
     try {

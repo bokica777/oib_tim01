@@ -8,7 +8,6 @@ import CartSidebar from "../components/sales/CartView";
 import CheckoutModal from "./CheckoutModal";
 import { PaymentType } from "../types/PaymentType";
 import { OrderItemDTO } from "../models/sales/OrderItemDTO";
-import { Variant } from "../models/sales/Variant";
 import { CartItem } from "../models/sales/CartItem";
 import { Message } from "../types/Message";
 import { LocalPerfume } from "../models/sales/LocalPerfume";
@@ -31,75 +30,13 @@ const SalesPage: React.FC = () => {
     const loadProducts = async () => {
       try {
         setLoading(true);
-        const list: any[] = await processingAPI.listPerfumes();
+        setError(null);
 
-        const map = new Map<string, LocalPerfume>();
-        for (const p of list || []) {
-          const name = p?.name ?? `Perfume ${p?.id ?? ""}`;
-          const volume = Number(p?.netVolumeMl ?? p?.volume ?? 150);
-          const key = name;
+        const list = await salesAPI.listProducts();
+        setProducts(list);
 
-          const variant: Variant = {
-            volume,
-            id: p?.id,
-            price: typeof p?.price === "number" ? p.price : undefined,
-            stock: typeof p?.stock === "number" ? p.stock : undefined,
-          };
 
-          if (!map.has(key)) {
-            const repPrice = typeof p?.price === "number" ? p.price : (volume * 50);
-            const repVolume = volume;
-            map.set(key, {
-              id: p?.id ?? `${name}-${repVolume}`,
-              name,
-              netVolumeMl: repVolume,
-              price: repPrice,
-              stock: typeof p?.stock === "number" ? p.stock : 0,
-              variants: [variant],
-            });
-          } else {
-            const ex = map.get(key)!;
-            if (!ex.variants.some(v => Number(v.volume) === Number(volume))) {
-              ex.variants.push(variant);
-              ex.stock = (typeof ex.stock === "number" ? ex.stock : 0) + (variant.stock ?? 0);
-            } else {
-              ex.variants = ex.variants.map(v => v.volume === variant.volume ? { ...v, stock: Math.max(v.stock ?? 0, variant.stock ?? 0), id: v.id ?? variant.id, price: v.price ?? variant.price } : v);
-            }
-          }
-        }
-
-        const ensureVariants = Array.from(map.entries()).map(([k, prod]) => {
-          const unitPricePerMl = (() => {
-            const vWithPrice = prod.variants.find(v => typeof v.price === "number" && typeof v.volume === "number" && v.volume > 0);
-            if (vWithPrice) return vWithPrice.price! / vWithPrice.volume;
-            if (typeof prod.price === "number" && typeof prod.netVolumeMl === "number" && prod.netVolumeMl > 0) return prod.price / prod.netVolumeMl;
-            return 50;
-          })();
-
-          const vols = [150, 250];
-          for (const vol of vols) {
-            if (!prod.variants.some(v => Number(v.volume) === vol)) {
-              prod.variants.push({
-                volume: vol,
-                id: undefined,
-                price: Math.round(unitPricePerMl * vol),
-                stock: undefined,
-              });
-            } else {
-              prod.variants = prod.variants.map(v => {
-                if (Number(v.volume) === vol && typeof v.price !== "number") {
-                  return { ...v, price: Math.round(unitPricePerMl * v.volume) };
-                }
-                return v;
-              });
-            }
-          }
-
-          prod.variants = prod.variants.slice().sort((a, b) => a.volume - b.volume);
-          return [k, prod] as [string, LocalPerfume];
-        });
-
-        setProducts(ensureVariants.map(([_, v]) => v));
+        
       } catch (e: any) {
         console.error("loadProducts error", e);
         setError(e?.message ?? "Greška pri učitavanju proizvoda");
@@ -110,6 +47,7 @@ const SalesPage: React.FC = () => {
 
     loadProducts();
   }, []);
+
 
   useEffect(() => {
     if (!message) return;

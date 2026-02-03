@@ -19,6 +19,15 @@ function normalizeUrl(url?: string) {
 function handleAxiosError(err: unknown): never {
   if (axios.isAxiosError(err)) {
     const ax = err as AxiosError<any>;
+
+    console.error("[Gateway] upstream failed", {
+      baseURL: ax.config?.baseURL,
+      url: ax.config?.url,
+      method: ax.config?.method,
+      status: ax.response?.status,
+      data: ax.response?.data,
+    });
+
     const status = ax.response?.status ?? 500;
     const message =
       (ax.response?.data && (ax.response.data.message || ax.response.data.error)) ||
@@ -35,6 +44,7 @@ function handleAxiosError(err: unknown): never {
 
   throw err instanceof Error ? err : new Error("Unknown error");
 }
+
 
 export class GatewayService implements IGatewayService {
   private authClient: AxiosInstance;
@@ -318,6 +328,35 @@ export class GatewayService implements IGatewayService {
 
   // ================= STORAGE =================
 
+private async getStoragePackages(
+  headers: Record<string, string>,
+  status?: "PACKED" | "SENT" | "STORED"
+): Promise<any[]> {
+  if (!this.storageClient) throw new Error("STORAGE_URL not configured");
+
+  const candidates = ["/packages", "/storage/packages"];
+
+  for (const path of candidates) {
+    try {
+      const resp = await this.storageClient.get(path, {
+        headers,
+        timeout: 10000,
+        params: status ? { status } : undefined,
+      });
+
+      return Array.isArray(resp.data) ? resp.data : [];
+    } catch (err: any) {
+      const code = err?.response?.status;
+      if (code === 404) continue;
+      handleAxiosError(err);
+    }
+  }
+
+  const e = new Error("Packages endpoint not found on storage service (tried /packages and /storage/packages)");
+  (e as any).status = 404;
+  throw e;
+}
+
   async listWarehouses(headers: Record<string, string>): Promise<any[]> {
     if (!this.storageClient) throw new Error("STORAGE_URL not configured");
     const candidates = ["/storage/warehouses", "/warehouses"];
@@ -361,14 +400,9 @@ export class GatewayService implements IGatewayService {
   }
 
   async listPackages(headers: Record<string, string>): Promise<any[]> {
-    if (!this.storageClient) throw new Error("STORAGE_URL not configured");
-    try {
-      const resp = await this.storageClient.get("/packages", { headers });
-      return resp.data;
-    } catch (err) {
-      handleAxiosError(err);
-    }
-  }
+  return this.getStoragePackages(headers);
+}
+
 
   // ================= PACKAGING =================
   async requestPackaging(count: number, headers: Record<string, string>): Promise<void> {
@@ -411,59 +445,107 @@ export class GatewayService implements IGatewayService {
     }
   }
 
-  async getSalePackages(headers: Record<string, string>): Promise<any[]> {
-    if (!this.storageClient) throw new Error("STORAGE_URL not configured");
-    if (!this.processingClient) throw new Error("PROCESSING_URL not configured");
+  private normalizePerfumeName(name: string) {
+  return String(name ?? "")
+    .replace(/\(?\s*\d+\s*ml\s*\)?/gi, "") // skida "(150 ml)", "250ml", itd.
+    .replace(/\s+/g, " ")
+    .trim();
+}
 
-    try {
-      const resp = await this.storageClient.get("/packages", { headers, timeout: 10000 });
-      const packages: any[] = resp.data || [];
-      console.log("Statusi paketa:", packages.map(p => p.status));
-      const salePackages = packages.filter(p => ["SENT"].includes(p.status));
+async getSalePackages(headers: Record<string, string>): Promise<any[]> {
+  if (!this.processingClient) throw new Error("PROCESSING_URL not configured");
 
-      const stockMap: Record<number, number> = {};
-      for (const pkg of salePackages) {
-        const pid = Number(pkg.perfumeId);
-        if (!Number.isFinite(pid)) continue;
-        stockMap[pid] = (stockMap[pid] || 0) + 1;
-      }
+  // 1) Uzimamo samo SENT pakete iz storage
+  const packages = await this.getStoragePackages(headers, "SENT");
 
-      const perfumeIds = Array.from(new Set(Object.keys(stockMap).map(k => Number(k))));
-      const perfumePromises = perfumeIds.map(async (id) => {
-        try {
-          const r = await this.processingClient!.get(`/perfumes/${id}`, { headers });
-          const p: any = r.data;
-          return {
-            id: p.id ?? id,
-            name: p.name,
-            type: p.type ?? "",
-            netVolumeMl: p.netVolumeMl ?? 0,
-            serialNumber: p.serialNumber,
-            sourcePlantIds: p.sourcePlantIds,
-            expirationDate: p.expirationDate,
-            status: p.status,
-            stock: stockMap[id] ?? 0,
-            price: p.price ?? 0
-          };
-        } catch (err) {
-          console.warn(`Failed to fetch perfume ${id}`, err);
-          return {
-            id,
-            name: `Perfume ${id}`,
-            type: "",
-            netVolumeMl: 0,
-            stock: stockMap[id] ?? 0,
-            price: 0
-          };
-        }
-      });
-
-      const perfumes = (await Promise.all(perfumePromises)).filter(Boolean);
-      return perfumes;
-    } catch (err) {
-      handleAxiosError(err);
+  // 2) Stock po perfumeId (koliko komada je poslato prodaji)
+  const stockMap: Record<number, number> = {};
+  for (const pkg of packages) {
+    const ids = Array.isArray(pkg.perfumeIds) ? pkg.perfumeIds : [];
+    for (const raw of ids) {
+      const pid = Number(raw);
+      if (!Number.isFinite(pid) || pid <= 0) continue;
+      stockMap[pid] = (stockMap[pid] || 0) + 1;
     }
   }
+
+  const perfumeIds = Object.keys(stockMap).map(Number);
+  if (perfumeIds.length === 0) return [];
+
+  // 3) Fetch detalji iz processing za svaki perfumeId
+  const perfumes = await Promise.all(
+    perfumeIds.map(async (id) => {
+      try {
+        const r = await this.processingClient!.get(`/perfumes/${id}`, { headers });
+        const p: any = r.data;
+
+        return {
+          id: Number(p.id ?? id),
+          name: String(p.name ?? `Perfume ${id}`),
+          netVolumeMl: Number(p.netVolumeMl ?? p.volume ?? 150),
+          price: Number(p.price ?? 0),
+          stock: stockMap[id] ?? 0,
+        };
+      } catch {
+        return {
+          id,
+          name: `Perfume ${id}`,
+          netVolumeMl: 150,
+          price: 0,
+          stock: stockMap[id] ?? 0,
+        };
+      }
+    })
+  );
+
+  // 4) Grupisanje po imenu -> varijante (150/250)
+  type Variant = { perfumeId: number; volumeMl: number; price: number; stock: number };
+  type SaleProduct = { name: string; variants: Variant[]; stockTotal: number };
+
+  const productMap = new Map<string, SaleProduct>();
+
+  for (const p of perfumes) {
+    const baseName = this.normalizePerfumeName(p.name);
+    const vol = Number(p.netVolumeMl ?? 150);
+
+    const ex = productMap.get(baseName) ?? { name: baseName, variants: [], stockTotal: 0 };
+
+    const idx = ex.variants.findIndex(v => Number(v.volumeMl) === vol);
+    if (idx >= 0) {
+      // ako iz nekog razloga imamo više perfumeId sa istim volumenom, saberi stock
+      ex.variants[idx] = {
+        ...ex.variants[idx],
+        stock: (ex.variants[idx].stock ?? 0) + (p.stock ?? 0),
+        // price ostavljamo postojeći ako je već setovan
+        price: ex.variants[idx].price ?? (p.price ?? 0),
+      };
+    } else {
+      ex.variants.push({
+        perfumeId: p.id,
+        volumeMl: vol,
+        price: p.price ?? 0,
+        stock: p.stock ?? 0,
+      });
+    }
+
+    ex.stockTotal += (p.stock ?? 0);
+    productMap.set(baseName, ex);
+  }
+
+  // 5) Sort varijanti (150 pa 250) + sort proizvoda po ukupnom stock-u
+  const result = Array.from(productMap.values()).map(prod => ({
+    ...prod,
+    variants: prod.variants.slice().sort((a, b) => a.volumeMl - b.volumeMl),
+  }));
+
+  result.sort((a, b) => (b.stockTotal ?? 0) - (a.stockTotal ?? 0));
+
+  return result;
+}
+
+
+
+
 
 
 

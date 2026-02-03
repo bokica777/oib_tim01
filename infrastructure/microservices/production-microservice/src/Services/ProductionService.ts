@@ -19,25 +19,38 @@ export class ProductionService implements IProductionService {
   }
 
   async plantNew(seedData?: Partial<PlantDTO>): Promise<PlantDTO> {
-    const strength =
-      seedData?.aromaticOilStrength ??
-      Number((Math.random() * 4 + 1).toFixed(2));
+  const whereCond: any = seedData?.commonName
+    ? {
+        commonName: seedData.commonName,
+        status: In([PlantStatus.HARVESTED, PlantStatus.PROCESSED]),
+      }
+    : {
+        status: In([PlantStatus.HARVESTED, PlantStatus.PROCESSED]),
+      };
 
-    const plant = this.plantRepo.create({
-      commonName: seedData?.commonName ?? "Unknown Plant",
-      latinName: seedData?.latinName ?? "Unknown Latin",
-      countryOfOrigin: seedData?.countryOfOrigin ?? "Unknown",
-      aromaticOilStrength: strength,
-      status: PlantStatus.PLANTED,
-    });
+  const plant = await this.plantRepo.findOne({
+    where: whereCond,
+    order: { id: "ASC" }, 
+  });
 
-    const saved = await this.plantRepo.save(plant);
-    this.addLog(
-      `Zasađena biljka "${saved.commonName}" (jačina: ${saved.aromaticOilStrength})`
-    );
-
-    return toDTO(saved);
+  if (!plant) {
+    throw new Error("Nema slobodnih biljaka za sadnju (sve su već posađene).");
   }
+
+  const strength =
+    seedData?.aromaticOilStrength ??
+    Number((Math.random() * 4 + 1).toFixed(2));
+
+  plant.aromaticOilStrength = strength;
+  plant.status = PlantStatus.PLANTED;
+
+  if (seedData?.latinName) plant.latinName = seedData.latinName;
+  if (seedData?.countryOfOrigin) plant.countryOfOrigin = seedData.countryOfOrigin;
+
+  const saved = await this.plantRepo.save(plant);
+
+  return toDTO(saved);
+}
 
   async adjustAromaticStrength(
     plantId: number,

@@ -438,10 +438,24 @@ export class GatewayController {
 
   // ================= STORAGE =================
   private async storePackage(req: Request, res: Response) {
-    const headers = buildInternalHeaders(req);
-    const result = await this.gatewayService.storePackage(req.body, headers);
-    res.status(201).json(result);
+    try {
+      const headers = buildInternalHeaders(req);
+
+      const body: any = req.body ?? {};
+
+      if (!Array.isArray(body.perfumeIds) && body.perfumeId != null) {
+        const pid = Number(body.perfumeId);
+        body.perfumeIds = Number.isFinite(pid) ? [pid] : [];
+      }
+      delete body.perfumeId;
+
+      const result = await this.gatewayService.storePackage(body, headers);
+      res.status(201).json(result);
+    } catch (err: any) {
+      res.status(err?.status ?? 500).json({ message: err?.message ?? "Error" });
+    }
   }
+
 
   private async sendPackages(req: Request, res: Response) {
     const headers = buildInternalHeaders(req);

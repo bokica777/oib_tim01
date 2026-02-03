@@ -1,5 +1,5 @@
-import { Transform } from "class-transformer";
-import { IsString, IsOptional, IsInt, Min, IsNotEmpty } from "class-validator";
+import { Transform, Type } from "class-transformer";
+import { IsString, IsOptional, IsInt, Min, IsNotEmpty, ArrayNotEmpty, IsArray } from "class-validator";
 
 export class StorePackageDTO {
   @IsString()
@@ -19,12 +19,11 @@ export class StorePackageDTO {
   @Min(1, { message: "warehouseId must be >= 1" })
   warehouseId!: number;
 
-  @Transform(({ value }) => {
-    if (value === null || value === undefined || value === "") return undefined;
-    const n = Number(value);
-    return Number.isFinite(n) ? Math.trunc(n) : undefined;
-  }, { toClassOnly: true })
-  @IsOptional()
-  @IsInt({ message: "perfumeId must be an integer" })
-  perfumeId?: number;
+  @IsArray()
+  @ArrayNotEmpty()
+  @Type(() => Number)
+  @IsInt({ each: true })
+  @Min(1, { each: true })
+  perfumeIds!: number[];
+
 }
