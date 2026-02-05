@@ -7,6 +7,7 @@ import PackagingPage from "./PackagingPage";
 import SalesPage from "./SalesPage";
 import PerformancePage from "./PerformancePage";
 import AnalysisSalesPage from "./AnalysisSalesPage";
+import AdminUsersPage from "./AdminUsersPage";
 
 function getUserRoleFromToken(): string | null {
   const token = localStorage.getItem("accessToken");
@@ -47,7 +48,7 @@ function formatRole(role: string | null): string {
 
 export const ProductionPage: React.FC = () => {
   const [activeTopTab, setActiveTopTab] = useState<
-    "proizvodnja" | "prerada" | "pakovanje" | "skladistenje" | "prodaja" | "analiza_performansi" | "analiza_prodaje"
+    "proizvodnja" | "prerada" | "pakovanje" | "skladistenje" | "prodaja" | "analiza_performansi" | "analiza_prodaje" | "korisnici"
   >("proizvodnja");
 
 
@@ -225,6 +226,14 @@ export const ProductionPage: React.FC = () => {
               </button>
             )}
 
+            {isAdmin && (
+              <button
+                className={activeTopTab === "korisnici" ? "active" : ""}
+                onClick={() => setActiveTopTab("korisnici")}
+              >
+                Korisnici
+              </button>
+            )}
 
           </div>
 
@@ -272,6 +281,9 @@ export const ProductionPage: React.FC = () => {
               <AnalysisSalesPage />
             )}
 
+            {isAdmin && activeTopTab === "korisnici" && (
+              <AdminUsersPage />
+            )}
 
           </div>
 

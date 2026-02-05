@@ -11,10 +11,16 @@ export interface IGatewayService {
   register(data: RegistrationUserDTO): Promise<AuthResponseType>;
 
   // ================= USERS =================
-  getAllUsers(): Promise<UserDTO[]>;
-  getUserById(id: number, headers?: Record<string, string>): Promise<UserDTO>
+  getAllUsers(headers?: Record<string, string>): Promise<UserDTO[]>;
+  getUserById(id: number, headers?: Record<string, string>): Promise<UserDTO>;
 
+  createUser(dto: any, headers?: Record<string, string>): Promise<UserDTO>;
+  updateUser(id: number, dto: any, headers?: Record<string, string>): Promise<UserDTO>;
+  deleteUser(id: number, headers?: Record<string, string>): Promise<void>;
 
+  searchUsers(
+    query: { username?: string; email?: string; role?: string },
+    headers?: Record<string, string>): Promise<UserDTO[]>;
   // ================= PRODUCTION =================
   plantNew(seedData: any, headers: Record<string, string>): Promise<any>;
   getPlants(count: number, headers: Record<string, string>): Promise<any[]>;

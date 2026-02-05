@@ -3,5 +3,8 @@ export interface UserDTO {
   username: string;
   email: string;
   role: string;
+
+  firstName?: string;
+  lastName?: string;
   profileImage?: string;
 }

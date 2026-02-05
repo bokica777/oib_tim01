@@ -37,7 +37,14 @@ export class GatewayController {
     // ================= USERS =================
     this.router.get("/users", authenticate, authorize("admin"), this.getAllUsers.bind(this));
     this.router.get("/users/me", authenticate, this.getCurrentUser.bind(this));
+
+    this.router.get("/users/search", authenticate, authorize("admin"), this.searchUsers.bind(this));
+
     this.router.get("/users/:id", authenticate, this.getUserById.bind(this));
+
+    this.router.post("/users", authenticate, authorize("admin"), this.createUser.bind(this));
+    this.router.put("/users/:id", authenticate, authorize("admin"), this.updateUser.bind(this));
+    this.router.delete("/users/:id", authenticate, authorize("admin"), this.deleteUser.bind(this));
 
     // ================= PRODUCTION =================
     this.router.get("/production/plants", authenticate, this.getPlants.bind(this));
@@ -250,64 +257,109 @@ export class GatewayController {
   }
 
   // ================= USERS =================
-  private async getAllUsers(req: Request, res: Response) {
-    try {
-      const users = await this.gatewayService.getAllUsers();
-      res.status(200).json(users);
-    } catch (err: any) {
-      res.status(err?.status ?? 500).json({ message: err.message });
-    }
+private async getAllUsers(req: Request, res: Response) {
+  try {
+    const headers = buildInternalHeaders(req);
+    const users = await this.gatewayService.getAllUsers(headers);
+    return res.status(200).json(users);
+  } catch (err: any) {
+    return res.status(err?.status ?? 500).json({ message: err?.message ?? "Failed to fetch users" });
   }
+}
 
-  private async getUserById(req: Request, res: Response) {
-    try {
-      const idParam = req.params.id;
-      if (idParam === "me") return this.getCurrentUser(req, res);
+private async getUserById(req: Request, res: Response) {
+  try {
+    const idParam = req.params.id;
+    if (idParam === "me") return this.getCurrentUser(req, res);
 
-      const id = Number(idParam);
-      if (!Number.isFinite(id)) return res.status(400).json({ message: "Invalid id" });
+    const id = Number(idParam);
+    if (!Number.isFinite(id)) return res.status(400).json({ message: "Invalid id" });
 
-      const tokenRole = (req.user?.role ?? "").toString().toLowerCase();
-      const tokenId = req.user?.id;
+    const tokenRole = String(req.user?.role ?? "").toLowerCase();
+    const tokenId = Number(req.user?.id);
 
-      if (tokenRole !== "admin" && tokenId !== id) {
-        return res.status(403).json({ message: "Forbidden" });
-      }
-
-      const headers = buildInternalHeaders(req);
-      const user = await this.gatewayService.getUserById(id, headers);
-      res.status(200).json(user);
-    } catch (err: any) {
-      res.status(err?.status ?? 500).json({ message: err.message });
+    if (tokenRole !== "admin" && tokenId !== id) {
+      return res.status(403).json({ message: "Forbidden" });
     }
+
+    const headers = buildInternalHeaders(req);
+    const user = await this.gatewayService.getUserById(id, headers);
+    return res.status(200).json(user);
+  } catch (err: any) {
+    return res.status(err?.status ?? 500).json({ message: err?.message ?? "Failed to fetch user" });
   }
+}
 
-  private async getCurrentUser(req: Request, res: Response) {
-    console.log("[Gateway] getCurrentUser - req.user:", req.user);
-    console.log("[Gateway] getCurrentUser - incoming auth:", req.headers.authorization);
-    console.log("[Gateway] getCurrentUser - buildInternalHeaders will produce:", buildInternalHeaders(req));
-
-    try {
-      const id = Number(req.user?.id);
-
-      if (!id) {
-        return res.status(400).json({ message: "No user in token" });
-      }
-
-      const headers = {
-        ...buildInternalHeaders(req),
-        ...(req.headers.authorization ? { Authorization: String(req.headers.authorization) } : {}),
-      };
-
-      const user = await this.gatewayService.getUserById(id, headers);
-
-      return res.status(200).json(user);
-    } catch (err: any) {
-      return res
-        .status(err?.response?.status ?? err?.status ?? 500)
-        .json({ message: err?.message ?? "Internal error" });
-    }
+private async createUser(req: Request, res: Response) {
+  try {
+    const headers = buildInternalHeaders(req);
+    const created = await this.gatewayService.createUser(req.body, headers);
+    return res.status(201).json(created);
+  } catch (err: any) {
+    return res.status(err?.status ?? 500).json({ message: err?.message ?? "Create user failed" });
   }
+}
+
+private async updateUser(req: Request, res: Response) {
+  try {
+    const headers = buildInternalHeaders(req);
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id)) return res.status(400).json({ message: "Invalid id" });
+
+    const updated = await this.gatewayService.updateUser(id, req.body, headers);
+    return res.status(200).json(updated);
+  } catch (err: any) {
+    return res.status(err?.status ?? 500).json({ message: err?.message ?? "Update user failed" });
+  }
+}
+
+private async deleteUser(req: Request, res: Response) {
+  try {
+    const headers = buildInternalHeaders(req);
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id)) return res.status(400).json({ message: "Invalid id" });
+
+    await this.gatewayService.deleteUser(id, headers);
+    return res.status(204).send();
+  } catch (err: any) {
+    return res.status(err?.status ?? 500).json({ message: err?.message ?? "Delete user failed" });
+  }
+}
+
+private async searchUsers(req: Request, res: Response) {
+  try {
+    const headers = buildInternalHeaders(req);
+
+    const username = req.query.username ? String(req.query.username) : undefined;
+    const email = req.query.email ? String(req.query.email) : undefined;
+    const role = req.query.role ? String(req.query.role) : undefined;
+
+    const users = await this.gatewayService.searchUsers({ username, email, role }, headers);
+    return res.status(200).json(users);
+  } catch (err: any) {
+    return res.status(err?.status ?? 500).json({ message: err?.message ?? "Search failed" });
+  }
+}
+
+private async getCurrentUser(req: Request, res: Response) {
+  try {
+    const id = Number(req.user?.id);
+    if (!id) return res.status(400).json({ message: "No user in token" });
+
+    // buildInternalHeaders već tipično nosi Authorization, ali ostavljam i ovaj merge jer ti radi
+    const headers = {
+      ...buildInternalHeaders(req),
+      ...(req.headers.authorization ? { Authorization: String(req.headers.authorization) } : {}),
+    };
+
+    const user = await this.gatewayService.getUserById(id, headers);
+    return res.status(200).json(user);
+  } catch (err: any) {
+    return res
+      .status(err?.response?.status ?? err?.status ?? 500)
+      .json({ message: err?.message ?? "Internal error" });
+  }
+}
 
   // ================= AUDIT =================
   private async getAuditLogs(req: Request, res: Response) {

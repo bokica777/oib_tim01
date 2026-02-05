@@ -175,16 +175,42 @@ export class GatewayService implements IGatewayService {
   }
 
   // ================= USERS =================
-  async getAllUsers(): Promise<UserDTO[]> {
-    const response = await this.userClient.get<UserDTO[]>("/users");
-    return response.data;
-  }
+ // ================= USERS =================
 
-  async getUserById(id: number, headers?: Record<string, string>): Promise<UserDTO> {
-    const response = await this.userClient.get<UserDTO>(`/users/${id}`, { headers });
-    return response.data;
-  }
+async getAllUsers(headers?: Record<string, string>): Promise<UserDTO[]> {
+  const resp = await this.userClient.get<UserDTO[]>("/users", { headers });
+  return resp.data;
+}
 
+async getUserById(id: number, headers?: Record<string, string>): Promise<UserDTO> {
+  const resp = await this.userClient.get<UserDTO>(`/users/${id}`, { headers });
+  return resp.data;
+}
+
+async createUser(dto: Partial<UserDTO>, headers?: Record<string, string>): Promise<UserDTO> {
+  const resp = await this.userClient.post<UserDTO>("/users", dto, { headers });
+  return resp.data;
+}
+
+async updateUser(id: number, dto: Partial<UserDTO>, headers?: Record<string, string>): Promise<UserDTO> {
+  const resp = await this.userClient.put<UserDTO>(`/users/${id}`, dto, { headers });
+  return resp.data;
+}
+
+async deleteUser(id: number, headers?: Record<string, string>): Promise<void> {
+  await this.userClient.delete(`/users/${id}`, { headers });
+}
+
+async searchUsers(
+  query: { username?: string; email?: string; role?: string },
+  headers?: Record<string, string>
+): Promise<UserDTO[]> {
+  const resp = await this.userClient.get<UserDTO[]>("/users/search", {
+    params: query,
+    headers,
+  });
+  return resp.data;
+}
 
   // ================= PRODUCTION =================
 
