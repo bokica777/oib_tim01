@@ -627,8 +627,14 @@ private async getCurrentUser(req: Request, res: Response) {
         })
       );
 
+      const totalQty = sanitized.items.reduce(
+        (sum: number, it: any) => sum + Number(it.quantity ?? 1), 0
+      );
+
+      const tipProdaje = totalQty > 3 ? "VELEPRODAJA" : "MALOPRODAJA";
+
       const receiptDto = {
-        tipProdaje: "MALOPRODAJA",
+        tipProdaje,
         nacinPlacanja: sanitized.paymentType as "GOTOVINA" | "RACUN" | "KARTICA",
         stavke,
       };
