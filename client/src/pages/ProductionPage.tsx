@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { ProductionPlantTable } from "../components/production/ProductionPlantTable";
 import { ProductionLog } from "../components/production/ProductionLog";
 import ProcessingPage from "./ProcessingPage";
@@ -15,13 +15,7 @@ function getUserRoleFromToken(): string | null {
 
   try {
     const payload = JSON.parse(atob(token.split(".")[1]));
-
-    return (
-      payload.role ||
-      payload.userRole ||
-      payload.authorities?.[0] ||
-      null
-    );
+    return payload.role || payload.userRole || payload.authorities?.[0] || null;
   } catch {
     return null;
   }
@@ -29,7 +23,6 @@ function getUserRoleFromToken(): string | null {
 
 function formatRole(role: string | null): string {
   if (!role) return "Nepoznata uloga";
-
   const normalized = role.replace("ROLE_", "").toLowerCase();
 
   switch (normalized) {
@@ -44,22 +37,56 @@ function formatRole(role: string | null): string {
   }
 }
 
+// (Privremeno) placeholder dok ne napraviš audit ekran
+const AuditLogsPlaceholder: React.FC = () => {
+  return (
+    <div
+      style={{
+        border: "1px solid var(--win11-divider)",
+        background: "rgba(0,0,0,0.15)",
+        borderRadius: 10,
+        padding: 14,
+      }}
+    >
+      <h2 style={{ marginBottom: 8 }}>Audit logovi</h2>
+      <p style={{ marginBottom: 0 }}>
+        Ovdje ide ekran za audit logove. Ako imaš već komponentu/stranicu za audit, pošalji mi pa je ubacim.
+      </p>
+    </div>
+  );
+};
 
+type TopTab =
+  | "proizvodnja"
+  | "prerada"
+  | "pakovanje"
+  | "skladistenje"
+  | "prodaja"
+  | "analiza_performansi"
+  | "analiza_prodaje"
+  | "audit"
+  | "korisnici";
 
 export const ProductionPage: React.FC = () => {
-  const [activeTopTab, setActiveTopTab] = useState<
-    "proizvodnja" | "prerada" | "pakovanje" | "skladistenje" | "prodaja" | "analiza_performansi" | "analiza_prodaje" | "korisnici"
-  >("proizvodnja");
+  const tokenRole = getUserRoleFromToken();
+  const rawRole = (tokenRole ?? "").replace("ROLE_", "").toLowerCase();
+  const isAdmin = rawRole === "admin";
 
+  const initialTopTab: TopTab = isAdmin ? "analiza_performansi" : "proizvodnja";
+
+  const [activeTopTab, setActiveTopTab] = useState<TopTab>(initialTopTab);
 
   const [activeSubTab, setActiveSubTab] = useState<"servisProizvodnje" | "servisPrerade">(
     "servisProizvodnje"
   );
 
-  const role = formatRole(getUserRoleFromToken());
-  const rawRole = (getUserRoleFromToken() ?? "").replace("ROLE_", "").toLowerCase();
-  const isAdmin = rawRole === "admin";
+  const roleLabel = useMemo(() => formatRole(tokenRole), [tokenRole]);
 
+  useEffect(() => {
+    setActiveTopTab(isAdmin ? "analiza_performansi" : "proizvodnja");
+  }, [isAdmin]);
+
+  const showSubtabs = !isAdmin && (activeTopTab === "proizvodnja" || activeTopTab === "prerada");
 
   return (
     <div
@@ -117,39 +144,6 @@ export const ProductionPage: React.FC = () => {
           height: calc(100% - 118px);
         }
 
-        .prod-table {
-          width: 100%;
-          border-collapse: collapse;
-          font-size: 12px;
-        }
-        .prod-table thead th {
-          text-align: left;
-          font-weight: 700;
-          padding: 8px 10px;
-          border-bottom: 1px solid var(--win11-divider);
-          background: rgba(255,255,255,0.03);
-        }
-        .prod-table tbody td {
-          padding: 8px 10px;
-          border-bottom: 1px solid rgba(255,255,255,0.06);
-        }
-        .prod-table tbody tr:hover {
-          background: rgba(255,255,255,0.04);
-        }
-
-        .prod-badge {
-          display: inline-flex;
-          align-items: center;
-          padding: 2px 8px;
-          font-size: 11px;
-          border-radius: 6px;
-          border: 1px solid rgba(0,0,0,0.08);
-          color: #111;
-        }
-        .prod-badge.planted { background: #d1fae5; }
-        .prod-badge.harvested { background: #ffedd5; }
-        .prod-badge.processed { background: #dbeafe; }
-
         .prod-statusbar {
           position: absolute;
           left: 10px;
@@ -166,134 +160,120 @@ export const ProductionPage: React.FC = () => {
           font-size: 12px;
           color: var(--win11-text-primary);
         }
-
         .prod-muted { opacity: 0.75; }
       `}</style>
 
       <div className="window" style={{ height: "100%", position: "relative" }}>
         <div className="titlebar">
-          <span className="titlebar-title">Parfimerija O&apos;Sinel De Or - Proizvodnja i prerada</span>
+          <span className="titlebar-title">
+            {isAdmin
+              ? "Parfimerija O'Sinel De Or - Administracija"
+              : "Parfimerija O'Sinel De Or - Proizvodnja i prerada"}
+          </span>
         </div>
 
         <div className="window-content" style={{ padding: 10, height: "calc(100vh - 160px)", overflowY: "auto" }}>
-
+          {/* TOP TABS */}
           <div className="prod-menubar" style={{ display: "flex", gap: 6, padding: "6px 10px" }}>
-            <button
-              className={activeTopTab === "proizvodnja" ? "active" : ""}
-              onClick={() => setActiveTopTab("proizvodnja")}
-            >
-              Proizvodnja
-            </button>
-            <button
-              className={activeTopTab === "prerada" ? "active" : ""}
-              onClick={() => setActiveTopTab("prerada")}
-            >
-              Prerada
-            </button>
-            <button
-              className={activeTopTab === "pakovanje" ? "active" : ""}
-              onClick={() => setActiveTopTab("pakovanje")}
-            >
-              Pakovanje
-            </button>
-            <button
-              className={activeTopTab === "skladistenje" ? "active" : ""}
-              onClick={() => setActiveTopTab("skladistenje")}
-            >
-              Skladištenje
-            </button>
-            <button
-              className={activeTopTab === "prodaja" ? "active" : ""}
-              onClick={() => setActiveTopTab("prodaja")}
-            >
-              Prodaja
-            </button>
-            {isAdmin && (
-              <button
-                className={activeTopTab === "analiza_performansi" ? "active" : ""}
-                onClick={() => setActiveTopTab("analiza_performansi")}
-              >
-                Analiza performansi
-              </button>
+            {!isAdmin && (
+              <>
+                <button className={activeTopTab === "proizvodnja" ? "active" : ""} onClick={() => setActiveTopTab("proizvodnja")}>
+                  Proizvodnja
+                </button>
+                <button className={activeTopTab === "prerada" ? "active" : ""} onClick={() => setActiveTopTab("prerada")}>
+                  Prerada
+                </button>
+                <button className={activeTopTab === "pakovanje" ? "active" : ""} onClick={() => setActiveTopTab("pakovanje")}>
+                  Pakovanje
+                </button>
+                <button className={activeTopTab === "skladistenje" ? "active" : ""} onClick={() => setActiveTopTab("skladistenje")}>
+                  Skladištenje
+                </button>
+                <button className={activeTopTab === "prodaja" ? "active" : ""} onClick={() => setActiveTopTab("prodaja")}>
+                  Prodaja
+                </button>
+              </>
             )}
 
             {isAdmin && (
-              <button
-                className={activeTopTab === "analiza_prodaje" ? "active" : ""}
-                onClick={() => setActiveTopTab("analiza_prodaje")}
-              >
-                Analiza prodaje
-              </button>
-            )}
+              <>
+                <button
+                  className={activeTopTab === "analiza_performansi" ? "active" : ""}
+                  onClick={() => setActiveTopTab("analiza_performansi")}
+                >
+                  Analiza performansi
+                </button>
 
-            {isAdmin && (
-              <button
-                className={activeTopTab === "korisnici" ? "active" : ""}
-                onClick={() => setActiveTopTab("korisnici")}
-              >
-                Korisnici
-              </button>
-            )}
+                <button
+                  className={activeTopTab === "analiza_prodaje" ? "active" : ""}
+                  onClick={() => setActiveTopTab("analiza_prodaje")}
+                >
+                  Analiza prodaje
+                </button>
 
+                <button className={activeTopTab === "audit" ? "active" : ""} onClick={() => setActiveTopTab("audit")}>
+                  Audit logovi
+                </button>
+
+                <button
+                  className={activeTopTab === "korisnici" ? "active" : ""}
+                  onClick={() => setActiveTopTab("korisnici")}
+                >
+                  Korisnici
+                </button>
+              </>
+            )}
           </div>
 
-          <div className="prod-subtabs">
-            <button
-              className={activeSubTab === "servisProizvodnje" ? "active" : ""}
-              onClick={() => setActiveSubTab("servisProizvodnje")}
-              title="Servis proizvodnje"
-            >
-              <span>🧪</span> Servis proizvodnje
-            </button>
-            <button
-              className={activeSubTab === "servisPrerade" ? "active" : ""}
-              onClick={() => setActiveSubTab("servisPrerade")}
-              title="Servis prerade"
-            >
-              <span>💧</span> Servis prerade
-            </button>
-          </div>
+          {/* SUBTABS samo za proizvodnju/preradu i samo kad nije admin */}
+          {showSubtabs && (
+            <div className="prod-subtabs">
+              <button
+                className={activeSubTab === "servisProizvodnje" ? "active" : ""}
+                onClick={() => setActiveSubTab("servisProizvodnje")}
+                title="Servis proizvodnje"
+              >
+                <span>🧪</span> Servis proizvodnje
+              </button>
 
-          <div className="window-content" style={{ padding: 10 }}>
-            {activeTopTab === "proizvodnja" && (
+              <button
+                className={activeSubTab === "servisPrerade" ? "active" : ""}
+                onClick={() => setActiveSubTab("servisPrerade")}
+                title="Servis prerade"
+              >
+                <span>💧</span> Servis prerade
+              </button>
+            </div>
+          )}
+
+          {/* CONTENT */}
+          <div style={{ padding: 10 }}>
+            {!isAdmin && activeTopTab === "proizvodnja" && (
               <div className="prod-grid">
                 <ProductionPlantTable />
                 <ProductionLog />
               </div>
             )}
 
-            {activeTopTab === "prerada" && (
-              <ProcessingPage />
-            )}
-            {activeTopTab === "pakovanje" && (
-              <PackagingPage />
-            )}
-            {activeTopTab === "skladistenje" && (
-              <StoragePage />
-            )}
-            {activeTopTab == "prodaja" && (
-              <SalesPage />
-            )}
-            {isAdmin && activeTopTab === "analiza_performansi" && (
-              <PerformancePage />
-            )}
-            {activeTopTab === "analiza_prodaje" && (
-              <AnalysisSalesPage />
-            )}
+            {!isAdmin && activeTopTab === "prerada" && <ProcessingPage />}
+            {!isAdmin && activeTopTab === "pakovanje" && <PackagingPage />}
+            {!isAdmin && activeTopTab === "skladistenje" && <StoragePage />}
+            {!isAdmin && activeTopTab === "prodaja" && <SalesPage />}
 
-            {isAdmin && activeTopTab === "korisnici" && (
-              <AdminUsersPage />
-            )}
+            {isAdmin && activeTopTab === "analiza_performansi" && <PerformancePage />}
+            {isAdmin && activeTopTab === "analiza_prodaje" && <AnalysisSalesPage />}
+            {isAdmin && activeTopTab === "audit" && <AuditLogsPlaceholder />}
 
+            {/* Ovo sad više NE SMIJE da prekriva ekran */}
+            {isAdmin && activeTopTab === "korisnici" && <AdminUsersPage />}
           </div>
-
         </div>
 
         <div className="prod-statusbar">
           <div className="prod-muted">
-            Korisnik: <strong>{role}</strong> &nbsp; | &nbsp; Status: <strong>Povezan</strong>
+            Korisnik: <strong>{roleLabel}</strong> &nbsp; | &nbsp; Status: <strong>Povezan</strong>
           </div>
-          <div className="prod-muted">22.10.2025 15:12</div>
+          <div className="prod-muted">{new Date().toLocaleString()}</div>
         </div>
       </div>
     </div>

@@ -10,7 +10,7 @@ type FormState = {
   role: string;
   firstName?: string;
   lastName?: string;
-  profileImage?: string; 
+  profileImage?: string;
 };
 
 const emptyForm: FormState = {
@@ -27,8 +27,6 @@ const roles = ["admin", "sales_manager", "seller"];
 const AdminUsersPage: React.FC = () => {
   const { token } = useAuth();
   const user_api = useMemo(() => new UserAPI(), []);
-
-  const [activeTab, setActiveTab] = useState<"korisnici">("korisnici");
 
   const [users, setUsers] = useState<UserDTO[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -66,6 +64,7 @@ const AdminUsersPage: React.FC = () => {
 
   useEffect(() => {
     loadAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const startCreate = () => {
@@ -195,36 +194,12 @@ const AdminUsersPage: React.FC = () => {
   };
 
   return (
-    <div
-      className="overlay-blur-none"
-      style={{
-        position: "fixed",
-        inset: 0,
-        padding: "10px",
-        backgroundColor: "var(--win11-bg)",
-      }}
-    >
+    <div>
       <style>{`
-        .admin-menubar button {
-          background: transparent;
-          border: none;
-          padding: 8px 10px;
-          font-size: 13px;
-          cursor: pointer;
-          color: var(--win11-text-primary);
-          opacity: 0.85;
-        }
-        .admin-menubar button.active {
-          font-weight: 700;
-          opacity: 1;
-          border-bottom: 2px solid var(--win11-accent);
-        }
-
         .admin-grid {
           display: grid;
           grid-template-columns: 2fr 1fr;
           gap: 10px;
-          height: calc(100% - 72px);
         }
 
         .admin-table {
@@ -263,240 +238,195 @@ const AdminUsersPage: React.FC = () => {
         .admin-muted { opacity: 0.75; font-size: 12px; }
       `}</style>
 
-      <div className="window" style={{ height: "100%", position: "relative" }}>
-        <div className="titlebar">
-          <span className="titlebar-title">Parfimerija O&apos;Sinel De Or - Administracija</span>
-        </div>
+      <div className="admin-panel">
+        <h2 style={{ marginBottom: 10 }}>Korisnici</h2>
 
-        <div className="window-content" style={{ padding: 10, height: "calc(100vh - 160px)", overflowY: "auto" }}>
-          <div className="admin-menubar" style={{ display: "flex", gap: 6, padding: "6px 10px" }}>
-            <button
-              className={activeTab === "korisnici" ? "active" : ""}
-              onClick={() => setActiveTab("korisnici")}
-            >
-              Korisnici
+        {/* SEARCH */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 220px auto", gap: 10 }}>
+          <div>
+            <label className="admin-muted">Username</label>
+            <input
+              type="text"
+              value={qUsername}
+              onChange={(e) => setQUsername(e.target.value)}
+              placeholder="npr. maja"
+            />
+          </div>
+
+          <div>
+            <label className="admin-muted">Email</label>
+            <input
+              type="email"
+              value={qEmail}
+              onChange={(e) => setQEmail(e.target.value)}
+              placeholder="npr. maja@gmail.com"
+            />
+          </div>
+
+          <div>
+            <label className="admin-muted">Uloga</label>
+            <select value={qRole} onChange={(e) => setQRole(e.target.value)}>
+              <option value="">(bilo koja)</option>
+              {roles.map((r) => (
+                <option key={r} value={r}>
+                  {r}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "end", gap: 8 }}>
+            <button className="btn btn-accent" onClick={doSearch} disabled={isLoading || busy}>
+              Pretraži
+            </button>
+            <button className="btn btn-standard" onClick={clearSearch} disabled={isLoading || busy}>
+              Reset
+            </button>
+            <button className="btn btn-standard" onClick={loadAll} disabled={isLoading || busy}>
+              Osveži
             </button>
           </div>
-
-          {activeTab === "korisnici" && (
-            <>
-              {/* SEARCH */}
-              <div className="admin-panel" style={{ marginTop: 10 }}>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 220px auto", gap: 10 }}>
-                  <div>
-                    <label className="admin-muted">Username</label>
-                    <input
-                      type="text"
-                      value={qUsername}
-                      onChange={(e) => setQUsername(e.target.value)}
-                      placeholder="npr. maja"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="admin-muted">Email</label>
-                    <input
-                      type="email"
-                      value={qEmail}
-                      onChange={(e) => setQEmail(e.target.value)}
-                      placeholder="npr. maja@gmail.com"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="admin-muted">Uloga</label>
-                    <select value={qRole} onChange={(e) => setQRole(e.target.value)}>
-                      <option value="">(bilo koja)</option>
-                      {roles.map((r) => (
-                        <option key={r} value={r}>
-                          <span>{r}</span>
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div style={{ display: "flex", alignItems: "end", gap: 8 }}>
-                    <button className="btn btn-accent" onClick={doSearch} disabled={isLoading || busy}>
-                      Pretraži
-                    </button>
-                    <button className="btn btn-standard" onClick={clearSearch} disabled={isLoading || busy}>
-                      Reset
-                    </button>
-                    <button className="btn btn-standard" onClick={loadAll} disabled={isLoading || busy}>
-                      Osveži
-                    </button>
-                  </div>
-                </div>
-
-                {error && (
-                  <div style={{ marginTop: 10, padding: 10, border: "1px solid rgba(255,0,0,0.25)", borderRadius: 10 }}>
-                    <strong style={{ color: "crimson" }}>Greška:</strong> {error}
-                  </div>
-                )}
-              </div>
-
-              <div className="admin-grid" style={{ marginTop: 10 }}>
-                {/* TABLE */}
-                <div className="admin-panel" style={{ overflow: "hidden" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 8px" }}>
-                    <div style={{ fontWeight: 700 }}>Lista korisnika</div>
-                    <div className="admin-muted">
-                      {isLoading ? "Učitavanje..." : `${users.length} rezultat(a)`}
-                    </div>
-                  </div>
-
-                  <div style={{ overflow: "auto" }}>
-                    <table className="admin-table">
-                      <thead>
-                        <tr>
-                          <th>ID</th>
-                          <th>Username</th>
-                          <th>Email</th>
-                          <th>Role</th>
-                          <th>Akcije</th>
-                        </tr>
-                      </thead>
-
-                      <tbody>
-                        {!isLoading && users.length === 0 && (
-                          <tr>
-                            <td colSpan={5} style={{ padding: 12, opacity: 0.75 }}>
-                              Nema korisnika za prikaz.
-                            </td>
-                          </tr>
-                        )}
-
-                        {users.map((u) => (
-                          <tr key={u.id}>
-                            <td>{u.id}</td>
-                            <td>{u.username}</td>
-                            <td>{u.email}</td>
-                            <td>{u.role}</td>
-                            <td>
-                              <div className="admin-actions">
-                                <button className="btn btn-standard" onClick={() => startEdit(u)} disabled={busy}>
-                                  Izmeni
-                                </button>
-                                <button className="btn btn-standard" onClick={() => handleDelete(u.id)} disabled={busy}>
-                                  Obriši
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                {/* FORM */}
-                <div className="admin-panel">
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <div style={{ fontWeight: 700 }}>
-                      {formMode === "create" ? "Novi korisnik" : `Izmena korisnika #${form.id}`}
-                    </div>
-
-                    {formMode === "edit" && (
-                      <button className="btn btn-ghost" onClick={startCreate} disabled={busy}>
-                        Otkaži
-                      </button>
-                    )}
-                  </div>
-
-                  <div style={{ display: "grid", gap: 10, marginTop: 10 }}>
-                    <div>
-                      <label className="admin-muted">Username</label>
-                      <input
-                        type="text"
-                        value={form.username}
-                        onChange={(e) => setForm((p) => ({ ...p, username: e.target.value }))}
-                        placeholder="username"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="admin-muted">Email</label>
-                      <input
-                        type="email"
-                        value={form.email}
-                        onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
-                        placeholder="email"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="admin-muted">Uloga</label>
-                      <select value={form.role} onChange={(e) => setForm((p) => ({ ...p, role: e.target.value }))}>
-                        {roles.map((r) => (
-                          <option key={r} value={r}>
-                            {r}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                      <div>
-                        <label className="admin-muted">Ime</label>
-                        <input
-                          type="text"
-                          value={form.firstName ?? ""}
-                          onChange={(e) => setForm((p) => ({ ...p, firstName: e.target.value }))}
-                          placeholder="ime"
-                        />
-                      </div>
-                      <div>
-                        <label className="admin-muted">Prezime</label>
-                        <input
-                          type="text"
-                          value={form.lastName ?? ""}
-                          onChange={(e) => setForm((p) => ({ ...p, lastName: e.target.value }))}
-                          placeholder="prezime"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="admin-muted">Profilna slika (base64)</label>
-                      <textarea
-                        value={form.profileImage ?? ""}
-                        onChange={(e) => setForm((p) => ({ ...p, profileImage: e.target.value }))}
-                        placeholder="data:image/png;base64,... (opciono)"
-                      />
-                    </div>
-
-                    <button className="btn btn-accent" onClick={onSubmit} disabled={busy}>
-                      {busy ? "Radim..." : formMode === "create" ? "Kreiraj" : "Sačuvaj"}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
         </div>
 
-        <div
-          style={{
-            position: "absolute",
-            left: 10,
-            right: 10,
-            bottom: 10,
-            height: 32,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            padding: "0 10px",
-            border: "1px solid var(--win11-divider)",
-            background: "rgba(0,0,0,0.15)",
-            borderRadius: 10,
-            fontSize: 12,
-            color: "var(--win11-text-primary)",
-          }}
-        >
-          <div style={{ opacity: 0.75 }}>
-            Admin panel &nbsp;|&nbsp; Status: <strong>{isLoading ? "Učitavam..." : "Spremno"}</strong>
+        {error && (
+          <div style={{ marginTop: 10, padding: 10, border: "1px solid rgba(255,0,0,0.25)", borderRadius: 10 }}>
+            <strong style={{ color: "crimson" }}>Greška:</strong> {error}
           </div>
-          <div style={{ opacity: 0.75 }}>{new Date().toLocaleString()}</div>
+        )}
+      </div>
+
+      <div className="admin-grid" style={{ marginTop: 10 }}>
+        {/* TABLE */}
+        <div className="admin-panel" style={{ overflow: "hidden" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 8px" }}>
+            <div style={{ fontWeight: 700 }}>Lista korisnika</div>
+            <div className="admin-muted">{isLoading ? "Učitavanje..." : `${users.length} rezultat(a)`}</div>
+          </div>
+
+          <div style={{ overflow: "auto" }}>
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Username</th>
+                  <th>Email</th>
+                  <th>Role</th>
+                  <th>Akcije</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {!isLoading && users.length === 0 && (
+                  <tr>
+                    <td colSpan={5} style={{ padding: 12, opacity: 0.75 }}>
+                      Nema korisnika za prikaz.
+                    </td>
+                  </tr>
+                )}
+
+                {users.map((u) => (
+                  <tr key={u.id}>
+                    <td>{u.id}</td>
+                    <td>{u.username}</td>
+                    <td>{u.email}</td>
+                    <td>{u.role}</td>
+                    <td>
+                      <div className="admin-actions">
+                        <button className="btn btn-standard" onClick={() => startEdit(u)} disabled={busy}>
+                          Izmeni
+                        </button>
+                        <button className="btn btn-standard" onClick={() => handleDelete(u.id)} disabled={busy}>
+                          Obriši
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* FORM */}
+        <div className="admin-panel">
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ fontWeight: 700 }}>
+              {formMode === "create" ? "Novi korisnik" : `Izmena korisnika #${form.id}`}
+            </div>
+
+            {formMode === "edit" && (
+              <button className="btn btn-ghost" onClick={startCreate} disabled={busy}>
+                Otkaži
+              </button>
+            )}
+          </div>
+
+          <div style={{ display: "grid", gap: 10, marginTop: 10 }}>
+            <div>
+              <label className="admin-muted">Username</label>
+              <input
+                type="text"
+                value={form.username}
+                onChange={(e) => setForm((p) => ({ ...p, username: e.target.value }))}
+                placeholder="username"
+              />
+            </div>
+
+            <div>
+              <label className="admin-muted">Email</label>
+              <input
+                type="email"
+                value={form.email}
+                onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
+                placeholder="email"
+              />
+            </div>
+
+            <div>
+              <label className="admin-muted">Uloga</label>
+              <select value={form.role} onChange={(e) => setForm((p) => ({ ...p, role: e.target.value }))}>
+                {roles.map((r) => (
+                  <option key={r} value={r}>
+                    {r}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              <div>
+                <label className="admin-muted">Ime</label>
+                <input
+                  type="text"
+                  value={form.firstName ?? ""}
+                  onChange={(e) => setForm((p) => ({ ...p, firstName: e.target.value }))}
+                  placeholder="ime"
+                />
+              </div>
+              <div>
+                <label className="admin-muted">Prezime</label>
+                <input
+                  type="text"
+                  value={form.lastName ?? ""}
+                  onChange={(e) => setForm((p) => ({ ...p, lastName: e.target.value }))}
+                  placeholder="prezime"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="admin-muted">Profilna slika (base64)</label>
+              <textarea
+                value={form.profileImage ?? ""}
+                onChange={(e) => setForm((p) => ({ ...p, profileImage: e.target.value }))}
+                placeholder="data:image/png;base64,... (opciono)"
+              />
+            </div>
+
+            <button className="btn btn-accent" onClick={onSubmit} disabled={busy}>
+              {busy ? "Radim..." : formMode === "create" ? "Kreiraj" : "Sačuvaj"}
+            </button>
+          </div>
         </div>
       </div>
     </div>
