@@ -67,47 +67,78 @@ export class StorageService {
     return sent;
   }
 
-  async consumePackagesForSale(perfumeId: number, quantity: number): Promise<void> {
-    const sentPackages = await this.pkgRepo.find({
-      where: { status: PackageStatus.SENT },
-      order: { createdAt: "ASC" }
-    });
-
-    const relevantPackages = sentPackages.filter(pkg => {
-      const ids = Array.isArray(pkg.perfumeIds) ? pkg.perfumeIds : [];
-      return ids.some(id => Number(id) === perfumeId);
-    });
-
-    if (relevantPackages.length === 0) {
-      throw new Error(`Nema SENT paketa za parfem ID ${perfumeId}`);
+  async consumeForSale(
+    items: { perfumeId: number; quantity: number }[],
+    orderSerial?: string
+  ): Promise<void> {
+    if (!Array.isArray(items) || items.length === 0) {
+      throw new Error("items is required");
     }
 
-    let remaining = quantity;
-    const packagesToUpdate: number[] = [];
+    const normalized = items.map(i => ({
+      perfumeId: Number(i.perfumeId),
+      quantity: Math.max(1, Number(i.quantity) || 1),
+    }));
 
-    for (const pkg of relevantPackages) {
-      if (remaining <= 0) break;
+    if (normalized.some(x => !Number.isFinite(x.perfumeId) || x.perfumeId <= 0)) {
+      throw new Error("Invalid perfumeId in items");
+    }
 
-      const ids = Array.isArray(pkg.perfumeIds) ? pkg.perfumeIds : [];
-      const countInPackage = ids.filter(id => Number(id) === perfumeId).length;
+    const sentPackages = await this.pkgRepo.find({
+      where: { status: PackageStatus.SENT },
+      order: { createdAt: "ASC" },
+    });
 
-      if (countInPackage > 0) {
-        packagesToUpdate.push(pkg.id);
-        remaining -= countInPackage;
+    const available: Record<number, number> = {};
+    for (const p of sentPackages) {
+      const ids = Array.isArray(p.perfumeIds) ? p.perfumeIds : [];
+      for (const raw of ids) {
+        const id = Number(raw);
+        if (!Number.isFinite(id) || id <= 0) continue;
+        available[id] = (available[id] || 0) + 1;
       }
     }
 
-    if (remaining > 0) {
-      throw new Error(
-        `Nedovoljno spakovanih jedinica za parfem ID ${perfumeId}. ` +
-        `Potrebno: ${quantity}, dostupno: ${quantity - remaining}`
-      );
+    for (const it of normalized) {
+      const have = available[it.perfumeId] || 0;
+      if (have < it.quantity) {
+        const e: any = new Error(
+          `Nema dovoljno stock-a za perfumeId=${it.perfumeId} (ima ${have}, treba ${it.quantity})`
+        );
+        e.status = 409;
+        throw e;
+      }
     }
 
-    await this.pkgRepo.update(
-      { id: In(packagesToUpdate) },
-      { status: PackageStatus.DELIVERED }
-    );
+    for (const it of normalized) {
+      let remaining = it.quantity;
+
+      for (const pkg of sentPackages) {
+        if (remaining <= 0) break;
+
+        const ids = Array.isArray(pkg.perfumeIds) ? [...pkg.perfumeIds] : [];
+        let changed = false;
+
+        for (let i = ids.length - 1; i >= 0 && remaining > 0; i--) {
+          if (Number(ids[i]) === it.perfumeId) {
+            ids.splice(i, 1);
+            remaining--;
+            changed = true;
+          }
+        }
+
+        if (changed) {
+          pkg.perfumeIds = ids;
+
+          if (ids.length === 0) {
+            pkg.status = PackageStatus.SOLD;
+            if (orderSerial) pkg.name = `${pkg.name} [SOLD:${orderSerial}]`;
+          }
+
+          await this.pkgRepo.save(pkg);
+        }
+      }
+    }
   }
 
   async listAvailable(status?: PackageStatus): Promise<StoragePackage[]> {

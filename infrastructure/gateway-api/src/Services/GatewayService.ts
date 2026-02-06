@@ -176,40 +176,40 @@ export class GatewayService implements IGatewayService {
 
   // ================= USERS =================
 
-async getAllUsers(headers?: Record<string, string>): Promise<UserDTO[]> {
-  const resp = await this.userClient.get<UserDTO[]>("/users", { headers });
-  return resp.data;
-}
+  async getAllUsers(headers?: Record<string, string>): Promise<UserDTO[]> {
+    const resp = await this.userClient.get<UserDTO[]>("/users", { headers });
+    return resp.data;
+  }
 
-async getUserById(id: number, headers?: Record<string, string>): Promise<UserDTO> {
-  const resp = await this.userClient.get<UserDTO>(`/users/${id}`, { headers });
-  return resp.data;
-}
+  async getUserById(id: number, headers?: Record<string, string>): Promise<UserDTO> {
+    const resp = await this.userClient.get<UserDTO>(`/users/${id}`, { headers });
+    return resp.data;
+  }
 
-async createUser(dto: Partial<UserDTO>, headers?: Record<string, string>): Promise<UserDTO> {
-  const resp = await this.userClient.post<UserDTO>("/users", dto, { headers });
-  return resp.data;
-}
+  async createUser(dto: Partial<UserDTO>, headers?: Record<string, string>): Promise<UserDTO> {
+    const resp = await this.userClient.post<UserDTO>("/users", dto, { headers });
+    return resp.data;
+  }
 
-async updateUser(id: number, dto: Partial<UserDTO>, headers?: Record<string, string>): Promise<UserDTO> {
-  const resp = await this.userClient.put<UserDTO>(`/users/${id}`, dto, { headers });
-  return resp.data;
-}
+  async updateUser(id: number, dto: Partial<UserDTO>, headers?: Record<string, string>): Promise<UserDTO> {
+    const resp = await this.userClient.put<UserDTO>(`/users/${id}`, dto, { headers });
+    return resp.data;
+  }
 
-async deleteUser(id: number, headers?: Record<string, string>): Promise<void> {
-  await this.userClient.delete(`/users/${id}`, { headers });
-}
+  async deleteUser(id: number, headers?: Record<string, string>): Promise<void> {
+    await this.userClient.delete(`/users/${id}`, { headers });
+  }
 
-async searchUsers(
-  query: { username?: string; email?: string; role?: string },
-  headers?: Record<string, string>
-): Promise<UserDTO[]> {
-  const resp = await this.userClient.get<UserDTO[]>("/users/search", {
-    params: query,
-    headers,
-  });
-  return resp.data;
-}
+  async searchUsers(
+    query: { username?: string; email?: string; role?: string },
+    headers?: Record<string, string>
+  ): Promise<UserDTO[]> {
+    const resp = await this.userClient.get<UserDTO[]>("/users/search", {
+      params: query,
+      headers,
+    });
+    return resp.data;
+  }
 
   // ================= PRODUCTION =================
 
@@ -282,7 +282,7 @@ async searchUsers(
     headers: Record<string, string>,
     commonName?: string,
     mode: "inc" | "scale" = "inc"
-  ): Promise<any>{
+  ): Promise<any> {
     if (!this.productionClient) {
       throw new Error("PRODUCTION_URL not configured");
     }
@@ -355,34 +355,34 @@ async searchUsers(
 
   // ================= STORAGE =================
 
-private async getStoragePackages(
-  headers: Record<string, string>,
-  status?: "PACKED" | "SENT" | "STORED"
-): Promise<any[]> {
-  if (!this.storageClient) throw new Error("STORAGE_URL not configured");
+  private async getStoragePackages(
+    headers: Record<string, string>,
+    status?: "PACKED" | "SENT" | "STORED"
+  ): Promise<any[]> {
+    if (!this.storageClient) throw new Error("STORAGE_URL not configured");
 
-  const candidates = ["/packages", "/storage/packages"];
+    const candidates = ["/packages", "/storage/packages"];
 
-  for (const path of candidates) {
-    try {
-      const resp = await this.storageClient.get(path, {
-        headers,
-        timeout: 10000,
-        params: status ? { status } : undefined,
-      });
+    for (const path of candidates) {
+      try {
+        const resp = await this.storageClient.get(path, {
+          headers,
+          timeout: 10000,
+          params: status ? { status } : undefined,
+        });
 
-      return Array.isArray(resp.data) ? resp.data : [];
-    } catch (err: any) {
-      const code = err?.response?.status;
-      if (code === 404) continue;
-      handleAxiosError(err);
+        return Array.isArray(resp.data) ? resp.data : [];
+      } catch (err: any) {
+        const code = err?.response?.status;
+        if (code === 404) continue;
+        handleAxiosError(err);
+      }
     }
-  }
 
-  const e = new Error("Packages endpoint not found on storage service (tried /packages and /storage/packages)");
-  (e as any).status = 404;
-  throw e;
-}
+    const e = new Error("Packages endpoint not found on storage service (tried /packages and /storage/packages)");
+    (e as any).status = 404;
+    throw e;
+  }
 
   async listWarehouses(headers: Record<string, string>): Promise<any[]> {
     if (!this.storageClient) throw new Error("STORAGE_URL not configured");
@@ -427,8 +427,8 @@ private async getStoragePackages(
   }
 
   async listPackages(headers: Record<string, string>): Promise<any[]> {
-  return this.getStoragePackages(headers);
-}
+    return this.getStoragePackages(headers);
+  }
 
 
   // ================= PACKAGING =================
@@ -442,60 +442,27 @@ private async getStoragePackages(
   }
 
   // ================= SALES =================
-  async createOrder(dto: any, headers: Record<string, string>): Promise<any> {
+  async createOrder(dto: any, headers: Record<string, string>) {
     if (!this.salesClient) throw new Error("SALES_URL not configured");
     if (!this.storageClient) throw new Error("STORAGE_URL not configured");
-    
-    try {
-      const packages = await this.getStoragePackages(headers, "SENT");
-      
-      const availableStock: Record<number, number> = {};
-      for (const pkg of packages) {
-        const ids = Array.isArray(pkg.perfumeIds) ? pkg.perfumeIds : [];
-        for (const raw of ids) {
-          const pid = Number(raw);
-          if (!Number.isFinite(pid) || pid <= 0) continue;
-          availableStock[pid] = (availableStock[pid] || 0) + 1;
-        }
-      }
 
-      const items = Array.isArray(dto.items) ? dto.items : [];
-      for (const item of items) {
-        const perfumeId = Number(item.perfumeId);
-        const quantity = Number(item.quantity || 1);
-        const available = availableStock[perfumeId] || 0;
+    const orderResp = await this.salesClient.post("/order", dto, { headers });
+    const order = orderResp.data;
 
-        if (available < quantity) {
-          throw new Error(
-            `Nedovoljno spakovanih jedinica. Parfem ID ${perfumeId}: ` +
-            `dostupno ${available}, traženo ${quantity}`
-          );
-        }
-      }
+    const items = (dto.items ?? []).map((it: any) => ({
+      perfumeId: Number(it.perfumeId),
+      quantity: Number(it.quantity),
+    }));
 
-      const resp = await this.salesClient.post("/order", dto, { headers });
-      const order = resp.data;
+    await this.storageClient.post(
+      "/consume",
+      { items, orderSerial: order.serial },
+      { headers }
+    );
 
-      for (const item of items) {
-        const perfumeId = Number(item.perfumeId);
-        const quantity = Number(item.quantity || 1);
-
-        try {
-          await this.storageClient.post(
-            "/consume", 
-            { perfumeId, quantity }, 
-            { headers }
-          );
-        } catch (err) {
-          console.error(`Failed to consume packages for perfume ${perfumeId}:`, err);
-        }
-      }
-
-      return order;
-    } catch (err) {
-      handleAxiosError(err);
-    }
+    return order;
   }
+
 
   async getOrderById(id: number, headers: Record<string, string>): Promise<any> {
     if (!this.salesClient) throw new Error("SALES_URL not configured");
@@ -518,95 +485,95 @@ private async getStoragePackages(
   }
 
   private normalizePerfumeName(name: string) {
-  return String(name ?? "")
-    .replace(/\(?\s*\d+\s*ml\s*\)?/gi, "") 
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-async getSalePackages(headers: Record<string, string>): Promise<any[]> {
-  if (!this.processingClient) throw new Error("PROCESSING_URL not configured");
-
-  const packages = await this.getStoragePackages(headers, "SENT");
-
-  const stockMap: Record<number, number> = {};
-  for (const pkg of packages) {
-    const ids = Array.isArray(pkg.perfumeIds) ? pkg.perfumeIds : [];
-    for (const raw of ids) {
-      const pid = Number(raw);
-      if (!Number.isFinite(pid) || pid <= 0) continue;
-      stockMap[pid] = (stockMap[pid] || 0) + 1;
-    }
+    return String(name ?? "")
+      .replace(/\(?\s*\d+\s*ml\s*\)?/gi, "")
+      .replace(/\s+/g, " ")
+      .trim();
   }
 
-  const perfumeIds = Object.keys(stockMap).map(Number);
-  if (perfumeIds.length === 0) return [];
+  async getSalePackages(headers: Record<string, string>): Promise<any[]> {
+    if (!this.processingClient) throw new Error("PROCESSING_URL not configured");
 
-  const perfumes = await Promise.all(
-    perfumeIds.map(async (id) => {
-      try {
-        const r = await this.processingClient!.get(`/perfumes/${id}`, { headers });
-        const p: any = r.data;
+    const packages = await this.getStoragePackages(headers, "SENT");
 
-        return {
-          id: Number(p.id ?? id),
-          name: String(p.name ?? `Perfume ${id}`),
-          netVolumeMl: Number(p.netVolumeMl ?? p.volume ?? 150),
-          price: Number(p.price ?? 0),
-          stock: stockMap[id] ?? 0,
-        };
-      } catch {
-        return {
-          id,
-          name: `Perfume ${id}`,
-          netVolumeMl: 150,
-          price: 0,
-          stock: stockMap[id] ?? 0,
-        };
+    const stockMap: Record<number, number> = {};
+    for (const pkg of packages) {
+      const ids = Array.isArray(pkg.perfumeIds) ? pkg.perfumeIds : [];
+      for (const raw of ids) {
+        const pid = Number(raw);
+        if (!Number.isFinite(pid) || pid <= 0) continue;
+        stockMap[pid] = (stockMap[pid] || 0) + 1;
       }
-    })
-  );
-
-  type Variant = { perfumeId: number; volumeMl: number; price: number; stock: number };
-  type SaleProduct = { name: string; variants: Variant[]; stockTotal: number };
-
-  const productMap = new Map<string, SaleProduct>();
-
-  for (const p of perfumes) {
-    const baseName = this.normalizePerfumeName(p.name);
-    const vol = Number(p.netVolumeMl ?? 150);
-
-    const ex = productMap.get(baseName) ?? { name: baseName, variants: [], stockTotal: 0 };
-
-    const idx = ex.variants.findIndex(v => Number(v.volumeMl) === vol);
-    if (idx >= 0) {
-      ex.variants[idx] = {
-        ...ex.variants[idx],
-        stock: (ex.variants[idx].stock ?? 0) + (p.stock ?? 0),
-        price: ex.variants[idx].price ?? (p.price ?? 0),
-      };
-    } else {
-      ex.variants.push({
-        perfumeId: p.id,
-        volumeMl: vol,
-        price: p.price ?? 0,
-        stock: p.stock ?? 0,
-      });
     }
 
-    ex.stockTotal += (p.stock ?? 0);
-    productMap.set(baseName, ex);
+    const perfumeIds = Object.keys(stockMap).map(Number);
+    if (perfumeIds.length === 0) return [];
+
+    const perfumes = await Promise.all(
+      perfumeIds.map(async (id) => {
+        try {
+          const r = await this.processingClient!.get(`/perfumes/${id}`, { headers });
+          const p: any = r.data;
+
+          return {
+            id: Number(p.id ?? id),
+            name: String(p.name ?? `Perfume ${id}`),
+            netVolumeMl: Number(p.netVolumeMl ?? p.volume ?? 150),
+            price: Number(p.price ?? 0),
+            stock: stockMap[id] ?? 0,
+          };
+        } catch {
+          return {
+            id,
+            name: `Perfume ${id}`,
+            netVolumeMl: 150,
+            price: 0,
+            stock: stockMap[id] ?? 0,
+          };
+        }
+      })
+    );
+
+    type Variant = { perfumeId: number; volumeMl: number; price: number; stock: number };
+    type SaleProduct = { name: string; variants: Variant[]; stockTotal: number };
+
+    const productMap = new Map<string, SaleProduct>();
+
+    for (const p of perfumes) {
+      const baseName = this.normalizePerfumeName(p.name);
+      const vol = Number(p.netVolumeMl ?? 150);
+
+      const ex = productMap.get(baseName) ?? { name: baseName, variants: [], stockTotal: 0 };
+
+      const idx = ex.variants.findIndex(v => Number(v.volumeMl) === vol);
+      if (idx >= 0) {
+        ex.variants[idx] = {
+          ...ex.variants[idx],
+          stock: (ex.variants[idx].stock ?? 0) + (p.stock ?? 0),
+          price: ex.variants[idx].price ?? (p.price ?? 0),
+        };
+      } else {
+        ex.variants.push({
+          perfumeId: p.id,
+          volumeMl: vol,
+          price: p.price ?? 0,
+          stock: p.stock ?? 0,
+        });
+      }
+
+      ex.stockTotal += (p.stock ?? 0);
+      productMap.set(baseName, ex);
+    }
+
+    const result = Array.from(productMap.values()).map(prod => ({
+      ...prod,
+      variants: prod.variants.slice().sort((a, b) => a.volumeMl - b.volumeMl),
+    }));
+
+    result.sort((a, b) => (b.stockTotal ?? 0) - (a.stockTotal ?? 0));
+
+    return result;
   }
-
-  const result = Array.from(productMap.values()).map(prod => ({
-    ...prod,
-    variants: prod.variants.slice().sort((a, b) => a.volumeMl - b.volumeMl),
-  }));
-
-  result.sort((a, b) => (b.stockTotal ?? 0) - (a.stockTotal ?? 0));
-
-  return result;
-}
 
   // ================= PERFORMANCE =================
   async runSimulation(algorithmName: string, headers: Record<string, string>): Promise<any> {

@@ -32,41 +32,29 @@ export class SalesController {
         return res.status(400).json({ message: "Items array is required and must not be empty" });
       }
 
-      for (const item of items) {
-        if (!item.price || typeof item.price !== 'number') {
-          return res.status(400).json({ 
-            message: `Item ${item.perfumeId} missing valid price. Price must be provided from backend.` 
-          });
-        }
-      }
-
-      if (!totalPrice || typeof totalPrice !== 'number') {
+      if (typeof totalPrice !== "number") {
         return res.status(400).json({ message: "Total price is required" });
       }
 
       const order = await this.service.createOrder(
-        customerName, 
-        deliveryAddress, 
-        items, 
-        totalPrice,  
+        customerName,
+        deliveryAddress,
+        items,
+        totalPrice,
         role,
         paymentType
       );
 
       await this.logger.log(
-        `Order created id=${order.id} for ${customerName}, total: ${order.totalPrice} RSD`, 
+        `Order created id=${order.id} for ${customerName}, total: ${order.totalPrice} RSD`,
         "INFO",
-        { 
-          items: order.items,
-          totalPrice: order.totalPrice,
-          paymentType: order.paymentType
-        }
+        { items: order.items, totalPrice: order.totalPrice, paymentType: order.paymentType }
       );
 
-      res.status(201).json(order);
+      return res.status(201).json(order);
     } catch (err: any) {
       await this.logger.log(err.message ?? String(err), "ERROR");
-      res.status(400).json({ message: err.message ?? "Error creating order" });
+      return res.status(400).json({ message: err.message ?? "Error creating order" });
     }
   }
 
@@ -74,14 +62,14 @@ export class SalesController {
     try {
       const id = Number(req.params.id);
       const order = await this.service.getOrderById(id);
-      res.status(200).json(order);
+      return res.status(200).json(order);
     } catch (err: any) {
-      res.status(404).json({ message: err.message });
+      return res.status(404).json({ message: err.message });
     }
   }
 
   private async getAll(req: Request, res: Response) {
     const list = await this.service.listOrders();
-    res.status(200).json(list);
+    return res.status(200).json(list);
   }
 }

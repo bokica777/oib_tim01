@@ -1,12 +1,28 @@
 import { Type } from "class-transformer";
-import { IsString, IsInt, Min, ValidateNested, IsArray, IsIn, IsNumber } from "class-validator";
+import {
+  IsArray,
+  IsEnum,
+  IsInt,
+  IsNotEmpty,
+  IsString,
+  Min,
+  ValidateNested,
+} from "class-validator";
 import { OrderItemDTO } from "./OrderItemDTO";
+
+export enum PaymentType {
+  GOTOVINA = "GOTOVINA",
+  RACUN = "RACUN",
+  KARTICA = "KARTICA",
+}
 
 export class CreateOrderDTO {
   @IsString()
+  @IsNotEmpty()
   customerName!: string;
 
   @IsString()
+  @IsNotEmpty()
   deliveryAddress!: string;
 
   @IsArray()
@@ -14,11 +30,11 @@ export class CreateOrderDTO {
   @Type(() => OrderItemDTO)
   items!: OrderItemDTO[];
 
-  @IsString()
-  @IsIn(["GOTOVINA", "RACUN", "KARTICA"])
-  paymentType!: "GOTOVINA" | "RACUN" | "KARTICA";
+  @IsEnum(PaymentType)
+  paymentType!: PaymentType;
 
-  @IsNumber()
-  @Min(0)
-  totalPrice!: number;  
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  totalPrice!: number;
 }

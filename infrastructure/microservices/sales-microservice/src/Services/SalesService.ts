@@ -2,37 +2,33 @@ import { Repository } from "typeorm";
 import { SaleOrder } from "../Domain/models/SaleOrder";
 import { OrderItem } from "../Domain/types/OrderItem";
 
-
 export class SalesService {
-  constructor(private readonly orderRepo: Repository<SaleOrder>) {}
+  constructor(private readonly orderRepo: Repository<SaleOrder>) { }
 
   async createOrder(
     customer: string,
     address: string,
     items: OrderItem[],
-    totalPrice: number, 
+    totalPrice: number,
     role?: string,
     paymentType: "GOTOVINA" | "RACUN" | "KARTICA" = "GOTOVINA"
   ) {
     if (!Array.isArray(items) || items.length === 0) {
       throw new Error("Order must contain at least one item");
     }
-    
+
     const normalized = items.map(it => ({
       perfumeId: Number(it.perfumeId),
       quantity: Math.max(1, Number(it.quantity) || 1),
       name: it.name,
-      price: it.price  
+      price: it.price
     }));
 
     if (normalized.some(i => !Number.isFinite(i.perfumeId) || i.perfumeId <= 0)) {
       throw new Error("Invalid perfumeId in items");
     }
-    const calculatedTotal = normalized.reduce((sum, it) => {
-      const itemPrice = it.price ?? 0;
-      return sum + (itemPrice * it.quantity);
-    }, 0);
 
+    const calculatedTotal = normalized.reduce((sum, it) => sum + ((it.price ?? 0) * it.quantity), 0);
     if (Math.abs(calculatedTotal - totalPrice) > 1) {
       console.warn(`Total price mismatch: expected ${calculatedTotal}, got ${totalPrice}`);
     }
@@ -45,14 +41,13 @@ export class SalesService {
       items: normalized,
       totalItems,
       paymentType,
-      totalPrice: Math.round(totalPrice)  
+      totalPrice: Math.round(totalPrice),
     });
 
     const saved = await this.orderRepo.save(order);
     saved.serial = `ORD-2025-${saved.id}`;
     return this.orderRepo.save(saved);
   }
-
   async getOrderById(id: number) {
     const order = await this.orderRepo.findOne({ where: { id } });
     if (!order) throw new Error("Order not found");
