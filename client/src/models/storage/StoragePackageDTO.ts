@@ -1,12 +1,13 @@
-export type PackageStatus = "PACKED" | "SENT";
+import { PackageStatus } from "../../enums/PackageStatus";
 
 export type StoragePackageDTO = {
   id: string;
   name: string;
   senderAddress: string;
   warehouseId: string;
-  perfumeIds: number[];            
+  perfumeId: number;            
   status: PackageStatus;
   serialNumber?: string;
+  volume? :number;
   createdAt?: string;
 };

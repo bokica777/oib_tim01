@@ -13,6 +13,16 @@ type PlantRow = {
   stanje: "PLANTED" | "HARVESTED" | "PROCESSED";
 };
 
+const CATALOG = [
+  { commonName: "Lavanda", latinName: "Lavandula angustifolia", countryOfOrigin: "Francuska" },
+  { commonName: "Ruža", latinName: "Rosa damascena", countryOfOrigin: "Bugarska" },
+  { commonName: "Jasmin", latinName: "Jasminum grandiflorum", countryOfOrigin: "Indija" },
+  { commonName: "Bergamot", latinName: "Citrus bergamia", countryOfOrigin: "Italija" },
+  { commonName: "Ylang-Ylang", latinName: "Cananga odorata", countryOfOrigin: "Indonezija" },
+  { commonName: "Sandalovina", latinName: "Santalum album", countryOfOrigin: "Australija" },
+] as const;
+
+
 export const ProductionPlantTable: React.FC = () => {
   const [rows, setRows] = useState<PlantRow[]>([]);
   const [search, setSearch] = useState("");
@@ -25,50 +35,73 @@ export const ProductionPlantTable: React.FC = () => {
 
   const token = localStorage.getItem("accessToken") ?? "";
 
-  const loadPlants = async () => {
-    try {
-      setLoading(true);
+ const loadPlants = async () => {
+  try {
+    setLoading(true);
 
-      const data: Plant[] = await plantAPI.getPlants(token, 1000);
+    const data: Plant[] = await plantAPI.getPlants(token, 10000);
 
-      const map = new Map<string, PlantRow>();
+    const plantedCount = new Map<string, number>();
+    const plantedStrengthSum = new Map<string, number>();
+    const plantedStrengthCnt = new Map<string, number>();
 
-      data.forEach((p) => {
-        const key = `${p.commonName}_${p.status}`;
-
-        if (!map.has(key)) {
-          map.set(key, {
-            id: p.id, 
-            naziv: p.commonName,
-            latinski: p.latinName,
-            jacina: p.aromaticOilStrength,
-            kolicina: 1, 
-            stanje: p.status,
-          });
-        } else {
-          map.get(key)!.kolicina += 1;
-        }
-      });
-
-      setRows(Array.from(map.values()));
-    } catch (err) {
-      console.error("Greška pri učitavanju biljaka", err);
-    } finally {
-      setLoading(false);
+    for (const p of data) {
+      if (p.status !== "PLANTED") continue; 
+      plantedCount.set(p.commonName, (plantedCount.get(p.commonName) ?? 0) + 1);
+      plantedStrengthSum.set(p.commonName, (plantedStrengthSum.get(p.commonName) ?? 0) + (p.aromaticOilStrength ?? 0));
+      plantedStrengthCnt.set(p.commonName, (plantedStrengthCnt.get(p.commonName) ?? 0) + 1);
     }
-  };
 
+    const next: PlantRow[] = CATALOG.map((c) => {
+      const kolicina = plantedCount.get(c.commonName) ?? 0;
+      const cnt = plantedStrengthCnt.get(c.commonName) ?? 0;
+      const avgStrength = cnt ? plantedStrengthSum.get(c.commonName)! / cnt : 0;
 
+      return {
+        id: 0, 
+        naziv: c.commonName,
+        latinski: c.latinName,
+        jacina: Number(avgStrength.toFixed(2)),
+        kolicina,
+        stanje: "PLANTED",
+      };
+    });
+
+    setRows(next);
+  } catch (err) {
+    console.error("Greška pri učitavanju biljaka", err);
+  } finally {
+    setLoading(false);
+  }
+};
 
   useEffect(() => {
     loadPlants();
   }, []);
 
  const plantNew = async () => {
+  if (!selectedRow) {
+    alert("Odaberi biljku koju želiš da zasadiš.");
+    return;
+  }
+
   try {
     setActionLoading(true);
 
-    await plantAPI.plantNew({}, token); // ✅ 1 klik = 1 sadnja
+    const cat = CATALOG.find(c => c.commonName === selectedRow.naziv);
+    if (!cat) {
+      alert("Nepoznata biljka u katalogu.");
+      return;
+    }
+
+    await plantAPI.plantNew(
+      {
+        commonName: cat.commonName,
+        latinName: cat.latinName,
+        countryOfOrigin: cat.countryOfOrigin,
+      },
+      token
+    );
 
     await loadPlants();
   } catch (err) {
@@ -78,13 +111,17 @@ export const ProductionPlantTable: React.FC = () => {
   }
 };
 
-
-
   const harvest = async () => {
     if (!selectedRow) {
       alert("Odaberi biljku za berbu.");
       return;
     }
+
+    if (selectedRow.stanje !== "PLANTED") {
+      alert("Možeš brati samo posađene biljke.");
+      return;
+    }
+
 
     if (harvestCount <= 0 || harvestCount > selectedRow.kolicina) {
       alert("Neispravna količina za berbu.");
@@ -110,9 +147,14 @@ export const ProductionPlantTable: React.FC = () => {
     }
   };
 
- const adjustStrength = async () => {
+const adjustStrength = async () => {
   if (!selectedRow) {
     alert("Odaberi biljku.");
+    return;
+  }
+
+  if (selectedRow.kolicina <= 0) {
+    alert("Nema posađenih biljaka ove vrste.");
     return;
   }
 
@@ -124,11 +166,7 @@ export const ProductionPlantTable: React.FC = () => {
   try {
     setActionLoading(true);
 
-    await plantAPI.adjustStrength(
-      selectedRow.id,
-      strengthPercent,
-      token
-    );
+    await plantAPI.adjustStrength(0, strengthPercent, token, selectedRow.naziv);
 
     setStrengthPercent(0);
     await loadPlants();
@@ -138,6 +176,7 @@ export const ProductionPlantTable: React.FC = () => {
     setActionLoading(false);
   }
 };
+
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -164,7 +203,6 @@ export const ProductionPlantTable: React.FC = () => {
       </div>
 
       <div className="window-content">
-        {/* ACTION BUTTONS */}
         <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
           <button className="btn btn-accent" onClick={plantNew} disabled={actionLoading}>
             + Zasadi biljku

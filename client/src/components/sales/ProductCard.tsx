@@ -23,7 +23,10 @@ const ProductCard: React.FC<Props> = ({ product, onAdd }) => {
   const [qty, setQty] = useState<number>(1);
   const [volume, setVolume] = useState<number>(defaultVolume);
 
-  const selectedVariant = useMemo(() => variants.find(v => Number(v.volume) === Number(volume)) ?? variants[0], [variants, volume]);
+  const selectedVariant = useMemo(
+    () => variants.find(v => Number(v.volume) === Number(volume)) ?? variants[0],
+    [variants, volume]
+  );
 
   const unitPricePerMl = useMemo(() => {
     if (selectedVariant && typeof selectedVariant.price === "number" && typeof selectedVariant.volume === "number") {
@@ -36,6 +39,9 @@ const ProductCard: React.FC<Props> = ({ product, onAdd }) => {
   }, [selectedVariant, product]);
 
   const computedPrice = Math.round(unitPricePerMl * Number(volume));
+  
+  const availableStock = selectedVariant?.stock ?? 0;
+  const hasEnoughStock = availableStock >= qty;
 
   return (
     <div
@@ -68,9 +74,23 @@ const ProductCard: React.FC<Props> = ({ product, onAdd }) => {
         </div>
 
         <div style={{ textAlign: "right" }}>
-          <div style={{ color: "#10b981", fontWeight: 700, fontSize: 18 }}>{computedPrice.toLocaleString()} </div>
+          <div style={{ color: "#10b981", fontWeight: 700, fontSize: 18 }}>
+            {computedPrice.toLocaleString()} RSD
+          </div>
           <div style={{ fontSize: 12, opacity: 0.75, marginTop: 4 }}>
             <em style={{ opacity: 0.85 }}>Izabrana zapremina: {volume} ml</em>
+          </div>
+
+          {/* ✅ Prikaz stvarnog stanja */}
+          <div style={{ 
+            fontSize: 12, 
+            opacity: 0.85, 
+            marginTop: 6,
+            color: availableStock > 0 ? "#10b981" : "#ef4444"
+          }}>
+            {availableStock > 0
+              ? `Na stanju: ${availableStock}`
+              : "Nema na stanju"}
           </div>
         </div>
       </div>
@@ -81,8 +101,18 @@ const ProductCard: React.FC<Props> = ({ product, onAdd }) => {
           <select
             aria-label="Izaberi zapreminu"
             value={volume}
-            onChange={(e) => setVolume(Number(e.target.value))}
-            style={{width: 80, marginTop: 6, padding: 8, borderRadius: 8, border: "1px solid rgba(0,0,0,0.08)" }}
+            onChange={(e) => {
+              const newVolume = Number(e.target.value);
+              setVolume(newVolume);
+              setQty(1);
+            }}
+            style={{
+              width: 80,
+              marginTop: 6,
+              padding: 8,
+              borderRadius: 8,
+              border: "1px solid rgba(0,0,0,0.08)",
+            }}
           >
             {variants.map(v => (
               <option key={String(v.volume)} value={v.volume}>
@@ -97,9 +127,18 @@ const ProductCard: React.FC<Props> = ({ product, onAdd }) => {
           <input
             type="number"
             min={1}
+            max={availableStock}
             value={qty}
-            onChange={(e) => setQty(Math.max(1, Number(e.target.value) || 1))}
-            style={{  marginTop: 6, padding: 8, borderRadius: 8, border: "1px solid rgba(0,0,0,0.08)" }}
+            onChange={(e) => {
+              const newQty = Math.max(1, Number(e.target.value) || 1);
+              setQty(Math.min(newQty, availableStock));
+            }}
+            style={{
+              marginTop: 6,
+              padding: 8,
+              borderRadius: 8,
+              border: "1px solid rgba(0,0,0,0.08)",
+            }}
           />
         </label>
 
@@ -108,18 +147,26 @@ const ProductCard: React.FC<Props> = ({ product, onAdd }) => {
         <button
           onClick={() => onAdd(qty, volume)}
           aria-label={`Dodaj ${product.name} ${volume}ml u korpu`}
+          disabled={!hasEnoughStock || availableStock === 0}
           style={{
             padding: "10px 14px",
             borderRadius: 8,
             border: "none",
-            background: "linear-gradient(135deg, #34d399, #10b981)",
+            background: (!hasEnoughStock || availableStock === 0)
+              ? "#6b7280"
+              : "linear-gradient(135deg, #34d399, #10b981)",
             color: "#fff",
-            cursor: "pointer",
+            cursor: (!hasEnoughStock || availableStock === 0)
+              ? "not-allowed"
+              : "pointer",
             fontWeight: 700,
             minWidth: 140,
+            opacity: (!hasEnoughStock || availableStock === 0) ? 0.6 : 1,
+            transition: "all 0.2s ease",
           }}
+          title={availableStock === 0 ? "Nema na stanju" : !hasEnoughStock ? "Nedovoljno na stanju" : "Dodaj u korpu"}
         >
-          Dodaj ({computedPrice.toLocaleString()} RSD)
+          {availableStock === 0 ? "Nema na stanju" : `Dodaj (${computedPrice.toLocaleString()} RSD)`}
         </button>
       </div>
     </div>

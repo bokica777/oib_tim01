@@ -36,25 +36,28 @@ export class ProductionController {
   }
 
   async adjustStrength(req: Request, res: Response) {
-    try {
-      const id = Number(req.params.id);
-      const { value, mode } = req.body;
-      if (!Number.isFinite(value)) throw new Error("Invalid value");
+  try {
+    const id = Number(req.params.id);
+    const { value, mode, commonName } = req.body;
 
-      const updated = await this.service.adjustAromaticStrength(
-        id,
-        value,
-        mode === "scale" ? "scale" : "inc"
-      );
+    if (!Number.isFinite(value)) throw new Error("Invalid value");
 
-      await this.logger.log("Adjusted aromatic strength", "INFO", { plantId: id, value, mode }, "production");
-      res.json(updated);
-    } catch (err) {
-      const errMsg = (err as Error).message ?? String(err);
-      await this.logger.log(errMsg, "ERROR", { error: errMsg, params: req.params }, "production");
-      res.status(400).json({ message: errMsg });
-    }
+    const updated = await this.service.adjustAromaticStrength(
+      id,
+      value,
+      mode === "scale" ? "scale" : "inc",
+      commonName
+    );
+
+    await this.logger.log("Adjusted aromatic strength", "INFO", { id, value, mode, commonName }, "production");
+    res.json(updated);
+  } catch (err) {
+    const errMsg = (err as Error).message ?? String(err);
+    await this.logger.log(errMsg, "ERROR", { error: errMsg, params: req.params }, "production");
+    res.status(400).json({ message: errMsg });
   }
+}
+
 
   async harvestMany(req: Request, res: Response) {
     try {

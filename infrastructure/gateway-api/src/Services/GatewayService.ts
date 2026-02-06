@@ -175,16 +175,41 @@ export class GatewayService implements IGatewayService {
   }
 
   // ================= USERS =================
-  async getAllUsers(): Promise<UserDTO[]> {
-    const response = await this.userClient.get<UserDTO[]>("/users");
-    return response.data;
-  }
 
-  async getUserById(id: number, headers?: Record<string, string>): Promise<UserDTO> {
-    const response = await this.userClient.get<UserDTO>(`/users/${id}`, { headers });
-    return response.data;
-  }
+async getAllUsers(headers?: Record<string, string>): Promise<UserDTO[]> {
+  const resp = await this.userClient.get<UserDTO[]>("/users", { headers });
+  return resp.data;
+}
 
+async getUserById(id: number, headers?: Record<string, string>): Promise<UserDTO> {
+  const resp = await this.userClient.get<UserDTO>(`/users/${id}`, { headers });
+  return resp.data;
+}
+
+async createUser(dto: Partial<UserDTO>, headers?: Record<string, string>): Promise<UserDTO> {
+  const resp = await this.userClient.post<UserDTO>("/users", dto, { headers });
+  return resp.data;
+}
+
+async updateUser(id: number, dto: Partial<UserDTO>, headers?: Record<string, string>): Promise<UserDTO> {
+  const resp = await this.userClient.put<UserDTO>(`/users/${id}`, dto, { headers });
+  return resp.data;
+}
+
+async deleteUser(id: number, headers?: Record<string, string>): Promise<void> {
+  await this.userClient.delete(`/users/${id}`, { headers });
+}
+
+async searchUsers(
+  query: { username?: string; email?: string; role?: string },
+  headers?: Record<string, string>
+): Promise<UserDTO[]> {
+  const resp = await this.userClient.get<UserDTO[]>("/users/search", {
+    params: query,
+    headers,
+  });
+  return resp.data;
+}
 
   // ================= PRODUCTION =================
 
@@ -254,8 +279,10 @@ export class GatewayService implements IGatewayService {
   async adjustStrength(
     plantId: number,
     value: number,
-    headers: Record<string, string>
-  ): Promise<any> {
+    headers: Record<string, string>,
+    commonName?: string,
+    mode: "inc" | "scale" = "inc"
+  ): Promise<any>{
     if (!this.productionClient) {
       throw new Error("PRODUCTION_URL not configured");
     }
@@ -263,7 +290,7 @@ export class GatewayService implements IGatewayService {
     try {
       const resp = await this.productionClient.put(
         `/adjust/${plantId}`,
-        { value, mode: "inc" },
+        { value, commonName, mode },
         { headers }
       );
 
@@ -417,9 +444,54 @@ private async getStoragePackages(
   // ================= SALES =================
   async createOrder(dto: any, headers: Record<string, string>): Promise<any> {
     if (!this.salesClient) throw new Error("SALES_URL not configured");
+    if (!this.storageClient) throw new Error("STORAGE_URL not configured");
+    
     try {
+      const packages = await this.getStoragePackages(headers, "SENT");
+      
+      const availableStock: Record<number, number> = {};
+      for (const pkg of packages) {
+        const ids = Array.isArray(pkg.perfumeIds) ? pkg.perfumeIds : [];
+        for (const raw of ids) {
+          const pid = Number(raw);
+          if (!Number.isFinite(pid) || pid <= 0) continue;
+          availableStock[pid] = (availableStock[pid] || 0) + 1;
+        }
+      }
+
+      const items = Array.isArray(dto.items) ? dto.items : [];
+      for (const item of items) {
+        const perfumeId = Number(item.perfumeId);
+        const quantity = Number(item.quantity || 1);
+        const available = availableStock[perfumeId] || 0;
+
+        if (available < quantity) {
+          throw new Error(
+            `Nedovoljno spakovanih jedinica. Parfem ID ${perfumeId}: ` +
+            `dostupno ${available}, traženo ${quantity}`
+          );
+        }
+      }
+
       const resp = await this.salesClient.post("/order", dto, { headers });
-      return resp.data;
+      const order = resp.data;
+
+      for (const item of items) {
+        const perfumeId = Number(item.perfumeId);
+        const quantity = Number(item.quantity || 1);
+
+        try {
+          await this.storageClient.post(
+            "/consume", 
+            { perfumeId, quantity }, 
+            { headers }
+          );
+        } catch (err) {
+          console.error(`Failed to consume packages for perfume ${perfumeId}:`, err);
+        }
+      }
+
+      return order;
     } catch (err) {
       handleAxiosError(err);
     }
@@ -447,7 +519,7 @@ private async getStoragePackages(
 
   private normalizePerfumeName(name: string) {
   return String(name ?? "")
-    .replace(/\(?\s*\d+\s*ml\s*\)?/gi, "") // skida "(150 ml)", "250ml", itd.
+    .replace(/\(?\s*\d+\s*ml\s*\)?/gi, "") 
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -455,10 +527,8 @@ private async getStoragePackages(
 async getSalePackages(headers: Record<string, string>): Promise<any[]> {
   if (!this.processingClient) throw new Error("PROCESSING_URL not configured");
 
-  // 1) Uzimamo samo SENT pakete iz storage
   const packages = await this.getStoragePackages(headers, "SENT");
 
-  // 2) Stock po perfumeId (koliko komada je poslato prodaji)
   const stockMap: Record<number, number> = {};
   for (const pkg of packages) {
     const ids = Array.isArray(pkg.perfumeIds) ? pkg.perfumeIds : [];
@@ -472,7 +542,6 @@ async getSalePackages(headers: Record<string, string>): Promise<any[]> {
   const perfumeIds = Object.keys(stockMap).map(Number);
   if (perfumeIds.length === 0) return [];
 
-  // 3) Fetch detalji iz processing za svaki perfumeId
   const perfumes = await Promise.all(
     perfumeIds.map(async (id) => {
       try {
@@ -498,7 +567,6 @@ async getSalePackages(headers: Record<string, string>): Promise<any[]> {
     })
   );
 
-  // 4) Grupisanje po imenu -> varijante (150/250)
   type Variant = { perfumeId: number; volumeMl: number; price: number; stock: number };
   type SaleProduct = { name: string; variants: Variant[]; stockTotal: number };
 
@@ -512,11 +580,9 @@ async getSalePackages(headers: Record<string, string>): Promise<any[]> {
 
     const idx = ex.variants.findIndex(v => Number(v.volumeMl) === vol);
     if (idx >= 0) {
-      // ako iz nekog razloga imamo više perfumeId sa istim volumenom, saberi stock
       ex.variants[idx] = {
         ...ex.variants[idx],
         stock: (ex.variants[idx].stock ?? 0) + (p.stock ?? 0),
-        // price ostavljamo postojeći ako je već setovan
         price: ex.variants[idx].price ?? (p.price ?? 0),
       };
     } else {
@@ -532,7 +598,6 @@ async getSalePackages(headers: Record<string, string>): Promise<any[]> {
     productMap.set(baseName, ex);
   }
 
-  // 5) Sort varijanti (150 pa 250) + sort proizvoda po ukupnom stock-u
   const result = Array.from(productMap.values()).map(prod => ({
     ...prod,
     variants: prod.variants.slice().sort((a, b) => a.volumeMl - b.volumeMl),
@@ -542,12 +607,6 @@ async getSalePackages(headers: Record<string, string>): Promise<any[]> {
 
   return result;
 }
-
-
-
-
-
-
 
   // ================= PERFORMANCE =================
   async runSimulation(algorithmName: string, headers: Record<string, string>): Promise<any> {

@@ -10,6 +10,8 @@ import { DashboardNavbar } from "./components/dashboard/navbar/Navbar";
 import SalesPage from "./pages/SalesPage";
 import PerformancePage from "./pages/PerformancePage";
 import OAuthSuccessPage from "./components/auth/OAuthSuccessPage";
+import { ProtectedRoute } from "./components/protected_route/ProtectedRoute";
+import AdminUsersPage from "./pages/AdminUsersPage";
 
 
 const auth_api: IAuthAPI = new AuthAPI();
@@ -30,6 +32,14 @@ function App() {
           <Route path="/storage" element={<StoragePage />} />
           <Route path="/sales" element={<SalesPage />} />
           <Route path="/performance" element={<PerformancePage />} />
+           <Route
+            path="/admin/users"
+            element={
+              <ProtectedRoute requiredRoles={["admin"]} redirectTo="/">
+                <AdminUsersPage />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/oauth/success" element={<OAuthSuccessPage />} />
           <Route path="*" element={<AuthPage authAPI={auth_api} />} />
         </Routes>
