@@ -10,6 +10,7 @@ import { LogerService } from "../../Services/LogerService";
 import { DistributiveCenter } from "../../Services/DistributiveCenterService";
 import { WarehouseCenter } from "../../Services/WarehouseCenterService";
 import { PackageStatus } from "../../Domain/enums/PackageStatus";
+import { ConsumeStockDTO } from "../../Domain/DTOs/ConsumeStockDTO";
 
 export class StorageController {
   public router: Router;
@@ -31,7 +32,7 @@ export class StorageController {
   private initializeRoutes() {
     this.router.post("/store", validateDTO(StorePackageDTO), this.storePackage.bind(this));
     this.router.post("/send", validateDTO(SendRequestDTO), this.sendPackages.bind(this));
-    this.router.post("/consume", this.consumePackages.bind(this));
+    this.router.post("/consume", validateDTO(ConsumeStockDTO), this.consumePackages.bind(this));
     this.router.get("/packages", this.listAvailable.bind(this));
     this.router.get("/warehouses", this.listWarehouses.bind(this));
   }
@@ -69,37 +70,20 @@ export class StorageController {
     }
   }
 
+
+
   private async consumePackages(req: Request, res: Response) {
     try {
-      const { perfumeId, quantity } = req.body;
+      const { items, orderSerial } = req.body as ConsumeStockDTO;
 
-      if (!perfumeId || !quantity) {
-        return res.status(400).json({
-          message: "perfumeId i quantity su obavezni"
-        });
-      }
+      await this.service.consumeForSale(items, orderSerial);
 
-      await this.logger.log(
-        `Consume request perfumeId=${perfumeId} qty=${quantity}`,
-        "INFO"
-      );
-
-      await this.service.consumePackagesForSale(
-        Number(perfumeId),
-        Number(quantity)
-      );
-
-      res.json({
-        success: true,
-        message: `Konzumirano ${quantity} paketa za parfem ${perfumeId}`
-      });
+      res.json({ success: true, message: "Stock consumed" });
     } catch (error: any) {
-      await this.logger.log(error.message, "ERROR");
-      res.status(500).json({
-        message: error.message || "Greška pri konzumiranju paketa"
-      });
+      res.status(error.status || 500).json({ message: error.message || "Greška pri konzumiranju paketa" });
     }
   }
+
 
   private async listAvailable(req: Request, res: Response) {
     try {

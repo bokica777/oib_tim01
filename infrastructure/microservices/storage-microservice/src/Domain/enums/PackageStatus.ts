@@ -2,5 +2,6 @@ export enum PackageStatus {
   PACKED = "PACKED",
   SENT = "SENT",
   STORED = "STORED",
-  DELIVERED = "DELIVERED"
+  DELIVERED = "DELIVERED",
+  SOLD = "SOLD"
 }

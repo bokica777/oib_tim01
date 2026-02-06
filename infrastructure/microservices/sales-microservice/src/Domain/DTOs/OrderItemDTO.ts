@@ -1,6 +1,5 @@
 import { Type } from "class-transformer";
-import { IsString, IsInt, Min, ValidateNested, IsArray } from "class-validator";
-
+import { IsInt, Min, IsOptional, IsString } from "class-validator";
 
 export class OrderItemDTO {
   @Type(() => Number)
@@ -8,7 +7,7 @@ export class OrderItemDTO {
   @Min(1)
   perfumeId!: number;
 
-   @Type(() => Number)
+  @Type(() => Number)
   @IsInt()
   @Min(1)
   price!: number;
@@ -17,4 +16,8 @@ export class OrderItemDTO {
   @IsInt()
   @Min(1)
   quantity!: number;
+
+  @IsOptional()
+  @IsString()
+  name?: string;
 }
