@@ -210,11 +210,7 @@ export const ProductionPage: React.FC = () => {
                 >
                   Analiza prodaje
                 </button>
-
-                <button className={activeTopTab === "audit" ? "active" : ""} onClick={() => setActiveTopTab("audit")}>
-                  Audit logovi
-                </button>
-
+                
                 <button
                   className={activeTopTab === "korisnici" ? "active" : ""}
                   onClick={() => setActiveTopTab("korisnici")}
