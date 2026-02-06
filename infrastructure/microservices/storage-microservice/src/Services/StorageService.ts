@@ -67,6 +67,49 @@ export class StorageService {
     return sent;
   }
 
+  async consumePackagesForSale(perfumeId: number, quantity: number): Promise<void> {
+    const sentPackages = await this.pkgRepo.find({
+      where: { status: PackageStatus.SENT },
+      order: { createdAt: "ASC" }
+    });
+
+    const relevantPackages = sentPackages.filter(pkg => {
+      const ids = Array.isArray(pkg.perfumeIds) ? pkg.perfumeIds : [];
+      return ids.some(id => Number(id) === perfumeId);
+    });
+
+    if (relevantPackages.length === 0) {
+      throw new Error(`Nema SENT paketa za parfem ID ${perfumeId}`);
+    }
+
+    let remaining = quantity;
+    const packagesToUpdate: number[] = [];
+
+    for (const pkg of relevantPackages) {
+      if (remaining <= 0) break;
+
+      const ids = Array.isArray(pkg.perfumeIds) ? pkg.perfumeIds : [];
+      const countInPackage = ids.filter(id => Number(id) === perfumeId).length;
+
+      if (countInPackage > 0) {
+        packagesToUpdate.push(pkg.id);
+        remaining -= countInPackage;
+      }
+    }
+
+    if (remaining > 0) {
+      throw new Error(
+        `Nedovoljno spakovanih jedinica za parfem ID ${perfumeId}. ` +
+        `Potrebno: ${quantity}, dostupno: ${quantity - remaining}`
+      );
+    }
+
+    await this.pkgRepo.update(
+      { id: In(packagesToUpdate) },
+      { status: PackageStatus.DELIVERED }
+    );
+  }
+
   async listAvailable(status?: PackageStatus): Promise<StoragePackage[]> {
     if (status) {
       return this.pkgRepo.find({ where: { status }, order: { createdAt: "ASC" } });

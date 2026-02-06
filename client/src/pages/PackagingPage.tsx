@@ -8,6 +8,7 @@ import PackagingTable from "../components/packaging/PackageTable";
 import { saveLocalPackagesToStorage } from "../helpers/SaveLocalPackagesToStorage";
 import { loadLocalPackagesFromStorage } from "../helpers/LoadLocalPackagesFromStorage";
 import { Message } from "../types/Message";
+import { PackageStatus } from "../enums/PackageStatus";
 
 const GATEWAY_ROOT = (import.meta.env.VITE_GATEWAY_URL ?? "http://localhost:4000");
 
@@ -136,7 +137,7 @@ export const PackagingPage: React.FC = () => {
           senderAddress: p.senderAddress ?? p.sender ?? "Centar za pakovanje",
           warehouseId: String(p.warehouseId ?? p.warehouse?.id ?? ""),
           perfumeId: p.perfumeId,
-          status: (p.status ?? "PACKED") as "PACKED" | "SENT" | "STORED",
+          status: (p.status ?? PackageStatus.PACKED) as PackageStatus.PACKED | PackageStatus.SENT | PackageStatus.STORED,
           serialNumber: p.serialNumber ?? undefined,
           createdAt: p.createdAt ? String(p.createdAt) : undefined,
           volume: p.volume ?? p.netVolumeMl ?? undefined,
@@ -208,7 +209,7 @@ export const PackagingPage: React.FC = () => {
           senderAddress: "Centar za pakovanje",
           warehouseId: String(warehouseId),
           perfumeId: Number(rid),
-          status: "PACKED",
+          status: PackageStatus.PACKED,
           createdAt: new Date().toISOString(),
           volume: Number(volumePerBottle),
         };

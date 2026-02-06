@@ -175,7 +175,6 @@ export class GatewayService implements IGatewayService {
   }
 
   // ================= USERS =================
- // ================= USERS =================
 
 async getAllUsers(headers?: Record<string, string>): Promise<UserDTO[]> {
   const resp = await this.userClient.get<UserDTO[]>("/users", { headers });
@@ -445,9 +444,54 @@ private async getStoragePackages(
   // ================= SALES =================
   async createOrder(dto: any, headers: Record<string, string>): Promise<any> {
     if (!this.salesClient) throw new Error("SALES_URL not configured");
+    if (!this.storageClient) throw new Error("STORAGE_URL not configured");
+    
     try {
+      const packages = await this.getStoragePackages(headers, "SENT");
+      
+      const availableStock: Record<number, number> = {};
+      for (const pkg of packages) {
+        const ids = Array.isArray(pkg.perfumeIds) ? pkg.perfumeIds : [];
+        for (const raw of ids) {
+          const pid = Number(raw);
+          if (!Number.isFinite(pid) || pid <= 0) continue;
+          availableStock[pid] = (availableStock[pid] || 0) + 1;
+        }
+      }
+
+      const items = Array.isArray(dto.items) ? dto.items : [];
+      for (const item of items) {
+        const perfumeId = Number(item.perfumeId);
+        const quantity = Number(item.quantity || 1);
+        const available = availableStock[perfumeId] || 0;
+
+        if (available < quantity) {
+          throw new Error(
+            `Nedovoljno spakovanih jedinica. Parfem ID ${perfumeId}: ` +
+            `dostupno ${available}, traženo ${quantity}`
+          );
+        }
+      }
+
       const resp = await this.salesClient.post("/order", dto, { headers });
-      return resp.data;
+      const order = resp.data;
+
+      for (const item of items) {
+        const perfumeId = Number(item.perfumeId);
+        const quantity = Number(item.quantity || 1);
+
+        try {
+          await this.storageClient.post(
+            "/consume", 
+            { perfumeId, quantity }, 
+            { headers }
+          );
+        } catch (err) {
+          console.error(`Failed to consume packages for perfume ${perfumeId}:`, err);
+        }
+      }
+
+      return order;
     } catch (err) {
       handleAxiosError(err);
     }

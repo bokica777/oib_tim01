@@ -29,9 +29,9 @@ export class StorageController {
   }
 
   private initializeRoutes() {
-
     this.router.post("/store", validateDTO(StorePackageDTO), this.storePackage.bind(this));
     this.router.post("/send", validateDTO(SendRequestDTO), this.sendPackages.bind(this));
+    this.router.post("/consume", this.consumePackages.bind(this));
     this.router.get("/packages", this.listAvailable.bind(this));
     this.router.get("/warehouses", this.listWarehouses.bind(this));
   }
@@ -53,11 +53,14 @@ export class StorageController {
       const dto: SendRequestDTO = req.body;
       const role = (req as any).user?.role;
       await this.logger.log(`Send request from role=${role} count=${dto.count}`, "INFO");
+
       const sent = await this.service.sendPackagesForRole(role, dto.count);
+
       if (!sent || sent.length === 0) {
         await this.logger.log("No packages available to send", "WARNING");
         return res.status(404).json({ message: "No packages available" });
       }
+
       await this.logger.log(`Sent ${sent.length} packages`, "INFO", { packageIds: sent.map((s: StoragePackage) => s.id) });
       res.status(200).json(sent);
     } catch (err) {
@@ -66,7 +69,37 @@ export class StorageController {
     }
   }
 
+  private async consumePackages(req: Request, res: Response) {
+    try {
+      const { perfumeId, quantity } = req.body;
 
+      if (!perfumeId || !quantity) {
+        return res.status(400).json({
+          message: "perfumeId i quantity su obavezni"
+        });
+      }
+
+      await this.logger.log(
+        `Consume request perfumeId=${perfumeId} qty=${quantity}`,
+        "INFO"
+      );
+
+      await this.service.consumePackagesForSale(
+        Number(perfumeId),
+        Number(quantity)
+      );
+
+      res.json({
+        success: true,
+        message: `Konzumirano ${quantity} paketa za parfem ${perfumeId}`
+      });
+    } catch (error: any) {
+      await this.logger.log(error.message, "ERROR");
+      res.status(500).json({
+        message: error.message || "Greška pri konzumiranju paketa"
+      });
+    }
+  }
 
   private async listAvailable(req: Request, res: Response) {
     try {
@@ -83,7 +116,6 @@ export class StorageController {
       res.status(500).json({ message: (err as Error).message });
     }
   }
-
 
   private async listWarehouses(req: Request, res: Response) {
     try {
