@@ -89,15 +89,26 @@ export function configurePassport(userRepo: Repository<User>) {
       }
     )
   );
+              console.log("[AUTH] FACEBOOK_CLIENT_ID =", process.env.FACEBOOK_CLIENT_ID);
+              console.log("[AUTH] FACEBOOK_CALLBACK_URL =", process.env.FACEBOOK_CALLBACK_URL);
+              console.log("[AUTH] OAUTH_SUCCESS_REDIRECT =", process.env.OAUTH_SUCCESS_REDIRECT);
 
+              const fbClientId = process.env.FACEBOOK_CLIENT_ID;
+              const fbSecret = process.env.FACEBOOK_CLIENT_SECRET;
+              const fbCb = process.env.FACEBOOK_CALLBACK_URL;
+
+              if (!fbClientId || !/^\d+$/.test(fbClientId)) {
+                throw new Error(`FACEBOOK_CLIENT_ID invalid: "${fbClientId}"`);
+              }
+              if (!fbSecret) throw new Error("FACEBOOK_CLIENT_SECRET missing");
+              if (!fbCb) throw new Error("FACEBOOK_CALLBACK_URL missing");
   passport.use(
-    new FacebookStrategy(
-      {
-        clientID: process.env.FACEBOOK_CLIENT_ID ?? "",
-        clientSecret: process.env.FACEBOOK_CLIENT_SECRET ?? "",
-        callbackURL: process.env.FACEBOOK_CALLBACK_URL ?? "",
-        profileFields: ["id", "displayName", "photos", "email"],
-      },
+    new FacebookStrategy({
+      clientID: fbClientId,
+      clientSecret: fbSecret,
+      callbackURL: fbCb,
+      profileFields: ["id", "displayName", "photos", "email"],
+    },
       async (_accessToken, _refreshToken, profile, done) => {
         try {
           const email = (profile.emails as any)?.[0]?.value;

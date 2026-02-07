@@ -43,10 +43,28 @@ export class AuthController {
       this.oauthSuccess.bind(this)
     );
 
-    this.router.get("/auth/facebook", passport.authenticate("facebook", { scope: ["email"] }));
+    this.router.get("/auth/facebook", (req, res, next) => {
+      const cb = process.env.FACEBOOK_CALLBACK_URL;
+      if (!cb) return res.status(500).json({ message: "FACEBOOK_CALLBACK_URL missing" });
+
+      return (passport.authenticate("facebook", {
+        scope: ["email"],
+        callbackURL: cb,
+      } as any) as any)(req, res, next);
+    });
+
     this.router.get(
       "/auth/facebook/callback",
-      passport.authenticate("facebook", { session: false, failureRedirect: "/api/v1/auth/oauth-failed" }),
+      (req, res, next) => {
+        const cb = process.env.FACEBOOK_CALLBACK_URL;
+        if (!cb) return res.status(500).json({ message: "FACEBOOK_CALLBACK_URL missing" });
+
+        return (passport.authenticate("facebook", {
+          session: false,
+          failureRedirect: "/api/v1/auth/oauth-failed",
+          callbackURL: cb,
+        } as any) as any)(req, res, next);
+      },
       this.oauthSuccess.bind(this)
     );
 
